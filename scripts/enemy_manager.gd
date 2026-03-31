@@ -1,0 +1,151 @@
+extends Node
+
+@export var enemy_scene: PackedScene
+@export var max_enemies: int = 6
+@export var spawn_interval: float = 3.0
+@export var spawn_radius: float = 14.0
+
+var enemies_root: Node3D
+var players_root: Node3D
+var objective: Node3D
+var _spawn_timer: float = 0.0
+var _next_enemy_id: int = 1
+var _session_active: bool = false
+var _objective_destroyed: bool = false
+
+
+func set_roots(enemy_root: Node3D, player_root: Node3D) -> void:
+	enemies_root = enemy_root
+	players_root = player_root
+
+
+func set_objective(target_objective: Node3D) -> void:
+	objective = target_objective
+	if objective != null and objective.has_signal("destroyed"):
+		objective.destroyed.connect(_on_objective_destroyed)
+
+
+func bind_network_manager(manager: Node) -> void:
+	if manager.has_signal("session_changed"):
+		manager.session_changed.connect(_on_session_changed)
+	if manager.has_signal("peer_registered"):
+		manager.peer_registered.connect(_on_peer_registered)
+
+
+func _physics_process(delta: float) -> void:
+	if not _session_active:
+		return
+	if not multiplayer.is_server():
+		return
+	if enemies_root == null or players_root == null:
+		return
+	if _objective_destroyed:
+		return
+	if players_root.get_child_count() == 0:
+		return
+
+	_spawn_timer += delta
+	if _spawn_timer < spawn_interval:
+		return
+	if enemies_root.get_child_count() >= max_enemies:
+		return
+
+	_spawn_timer = 0.0
+	_spawn_enemy_for_all(_next_enemy_id, _next_spawn_position(_next_enemy_id))
+	_next_enemy_id += 1
+
+
+func _on_session_changed(in_session: bool) -> void:
+	_session_active = in_session
+	_spawn_timer = 0.0
+	_objective_destroyed = false
+	if not in_session:
+		_next_enemy_id = 1
+		_clear_enemies_local()
+
+
+func _on_objective_destroyed() -> void:
+	_objective_destroyed = true
+
+
+func _on_peer_registered(peer_id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	if enemies_root == null:
+		return
+
+	for enemy in enemies_root.get_children():
+		if not enemy.has_method("get_enemy_id") or not enemy.has_method("get_current_health"):
+			continue
+		_spawn_enemy_remote.rpc_id(peer_id, enemy.get_enemy_id(), enemy.global_position, enemy.get_current_health())
+
+
+func _spawn_enemy_for_all(enemy_id: int, spawn_position: Vector3) -> void:
+	_spawn_enemy_local(enemy_id, spawn_position)
+	if multiplayer.is_server():
+		var node_name := _enemy_name(enemy_id)
+		if enemies_root != null and enemies_root.has_node(node_name):
+			var enemy = enemies_root.get_node(node_name)
+			if enemy.has_method("get_current_health"):
+				_spawn_enemy_remote.rpc(enemy_id, spawn_position, enemy.get_current_health())
+
+
+func _spawn_enemy_local(enemy_id: int, spawn_position: Vector3, start_health: float = -1.0) -> void:
+	if enemies_root == null or enemy_scene == null:
+		return
+
+	var node_name := _enemy_name(enemy_id)
+	if enemies_root.has_node(node_name):
+		return
+
+	var enemy = enemy_scene.instantiate()
+	enemy.name = node_name
+	if enemy.has_method("setup"):
+		enemy.setup(enemy_id, spawn_position, start_health)
+	if enemy.has_method("set_manager"):
+		enemy.set_manager(self)
+	enemies_root.add_child(enemy)
+
+
+func despawn_enemy_for_all(enemy_id: int) -> void:
+	_remove_enemy_local(enemy_id)
+	if multiplayer.is_server():
+		_remove_enemy_remote.rpc(enemy_id)
+
+
+func _remove_enemy_local(enemy_id: int) -> void:
+	if enemies_root == null:
+		return
+
+	var node_name := _enemy_name(enemy_id)
+	if not enemies_root.has_node(node_name):
+		return
+
+	enemies_root.get_node(node_name).queue_free()
+
+
+func _clear_enemies_local() -> void:
+	if enemies_root == null:
+		return
+
+	for child in enemies_root.get_children():
+		child.queue_free()
+
+
+func _enemy_name(enemy_id: int) -> String:
+	return "Enemy_%d" % enemy_id
+
+
+func _next_spawn_position(enemy_id: int) -> Vector3:
+	var angle := float(enemy_id) * 0.9
+	return Vector3(cos(angle) * spawn_radius, 0.6, sin(angle) * spawn_radius)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _spawn_enemy_remote(enemy_id: int, spawn_position: Vector3, start_health: float = -1.0) -> void:
+	_spawn_enemy_local(enemy_id, spawn_position, start_health)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _remove_enemy_remote(enemy_id: int) -> void:
+	_remove_enemy_local(enemy_id)

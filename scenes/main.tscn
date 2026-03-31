@@ -1,0 +1,104 @@
+[gd_scene load_steps=10 format=3 uid="uid://d22mxn05ovfgp"]
+
+[ext_resource type="Script" uid="uid://cxbwn16t2ibag" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" uid="uid://c3isij7yd6ujx" path="res://scripts/network_manager.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="3"]
+[ext_resource type="Script" uid="uid://c7fcygnmlve6o" path="res://scripts/enemy_manager.gd" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/enemy.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/core_objective.tscn" id="6"]
+
+[sub_resource type="BoxShape3D" id="1"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="StandardMaterial3D" id="3"]
+albedo_color = Color(0.228, 0.278, 0.353, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="2"]
+size = Vector3(40, 1, 40)
+
+[node name="Main" type="Node3D" unique_id=1861883003]
+script = ExtResource("1")
+
+[node name="NetworkManager" type="Node" parent="." unique_id=2013302394]
+script = ExtResource("2")
+player_scene = ExtResource("3")
+
+[node name="EnemyManager" type="Node" parent="." unique_id=1576400001]
+script = ExtResource("4")
+enemy_scene = ExtResource("5")
+
+[node name="World" type="Node3D" parent="." unique_id=1330850204]
+
+[node name="Floor" type="StaticBody3D" parent="World" unique_id=349709775]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/Floor" unique_id=1463279843]
+shape = SubResource("1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="World/Floor" unique_id=1620916819]
+material_override = SubResource("3")
+mesh = SubResource("2")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="World" unique_id=1281557970]
+transform = Transform3D(0.76604444, 0.52654076, -0.3686878, 0, 0.57357645, 0.81915206, 0.6427876, -0.62750685, 0.43938506, 0, 8, 0)
+light_energy = 2.0
+shadow_enabled = true
+
+[node name="StartupCamera" type="Camera3D" parent="World" unique_id=1958176595]
+transform = Transform3D(1, 0, 0, 0, 0.81915206, 0.57357645, 0, -0.57357645, 0.81915206, 0, 16, 18)
+current = true
+
+[node name="CoreObjective" parent="World" instance=ExtResource("6")]
+
+[node name="Players" type="Node3D" parent="World" unique_id=90220261]
+
+[node name="Enemies" type="Node3D" parent="World" unique_id=333000212]
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1506509462]
+
+[node name="Panel" type="PanelContainer" parent="UI" unique_id=636919107]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 336.0
+offset_bottom = 250.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/Panel" unique_id=2144960709]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="UI/Panel/VBoxContainer" unique_id=675620091]
+layout_mode = 2
+text = "Core Defense Prototype"
+horizontal_alignment = 1
+
+[node name="AddressInput" type="LineEdit" parent="UI/Panel/VBoxContainer" unique_id=1251823151]
+layout_mode = 2
+text = "127.0.0.1"
+placeholder_text = "Server address"
+
+[node name="PortInput" type="LineEdit" parent="UI/Panel/VBoxContainer" unique_id=2087904572]
+layout_mode = 2
+text = "7000"
+placeholder_text = "Port"
+
+[node name="HostButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=2083758483]
+layout_mode = 2
+text = "Host Session"
+
+[node name="JoinButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=474207484]
+layout_mode = 2
+text = "Join Session"
+
+[node name="LeaveButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649416]
+layout_mode = 2
+disabled = true
+text = "Leave Session"
+
+[node name="StatusLabel" type="Label" parent="UI/Panel/VBoxContainer" unique_id=636461634]
+layout_mode = 2
+text = "Offline. Host or join to begin."
+autowrap_mode = 3
+
+[connection signal="pressed" from="UI/Panel/VBoxContainer/HostButton" to="." method="_on_host_pressed"]
+[connection signal="pressed" from="UI/Panel/VBoxContainer/JoinButton" to="." method="_on_join_pressed"]
+[connection signal="pressed" from="UI/Panel/VBoxContainer/LeaveButton" to="." method="_on_leave_pressed"]
