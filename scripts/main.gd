@@ -2,6 +2,7 @@ extends Node3D
 
 @onready var network_manager = $NetworkManager
 @onready var enemy_manager = $EnemyManager
+@onready var building_manager = $BuildingManager
 @onready var core_objective = $World/CoreObjective
 @onready var startup_camera: Camera3D = $World/StartupCamera
 @onready var address_input: LineEdit = $UI/Panel/VBoxContainer/AddressInput
@@ -17,8 +18,11 @@ func _ready() -> void:
 	enemy_manager.set_roots($World/Enemies, $World/Players)
 	enemy_manager.set_objective(core_objective)
 	enemy_manager.bind_network_manager(network_manager)
+	building_manager.set_roots($World/Walls, $World/Players, core_objective)
+	building_manager.bind_network_manager(network_manager)
 	core_objective.bind_network_manager(network_manager)
 	network_manager.status_changed.connect(_on_status_changed)
+	building_manager.status_changed.connect(_on_status_changed)
 	network_manager.session_changed.connect(_on_session_changed)
 	core_objective.destroyed.connect(_on_core_destroyed)
 
@@ -54,7 +58,7 @@ func _on_session_changed(in_session: bool) -> void:
 	if not in_session:
 		startup_camera.current = true
 	else:
-		status_label.text = "Defend the core."
+		status_label.text = "Defend the core. Space attacks, Q places a wall."
 
 
 func _on_core_destroyed() -> void:

@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Planned
+Wall Prototype Implemented
 
 ---
 
@@ -27,22 +27,26 @@ Main structure categories:
 ---
 
 ## Implemented
-- No gameplay implementation yet
-- Base-building role is defined conceptually
-- Wall/turret-first direction is chosen
+- One server-authoritative wall placement prototype
+- Grid-snapped wall placement validation on the server
+- Local valid/invalid wall placement preview for the active player
+- Preview wall orientation now matches the final placed wall
+- Preview now shows explicit valid/blocked readability text
+- Wall health and destruction
+- Wall replication to connected clients and late joiners
+- Enemies can now attack nearby placed walls before reaching the core
 
 ---
 
 ## In Progress
 - Clarifying how building differs between main base and gates
-- Defining first placement rules
-- Deciding how much freedom building should have in prototype
+- Tuning first wall placement spacing and build distance
+- Deciding how freeform the first placement loop should remain before adding stronger snapping or more advanced ghost presentation
 
 ---
 
 ## Blockers / Problems
-- No placement prototype yet
-- No final decision on snap system vs freer placement
+- No turret prototype yet
 - No final decision on shared resources vs individual building permissions
 - Building in gates is not yet finalized
 
@@ -97,12 +101,13 @@ Main structure categories:
 - Building is a core pillar, not optional flavor
 - Walls and turrets are the first two important structure types
 - Building should support combat rather than replace combat
+- The first building step should be one simple wall with server-validated placement before adding turrets
 
 ---
 
 ## Next Recommended Task
-Prototype the smallest useful building loop:
-- place one wall
-- place one turret
-- validate placement on server
-- let enemies meaningfully interact with placed structures
+Extend the first building loop:
+- validate the wall in multiplayer sessions
+- build the first turret prototype
+- improve the placement preview presentation further if needed
+- decide whether resources stay free in testing or become constrained next

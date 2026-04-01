@@ -8,6 +8,7 @@ extends CharacterBody3D
 @export var body_radius: float = 0.4
 @export var hit_flash_duration: float = 0.12
 @export var death_feedback_duration: float = 0.25
+@export var structure_notice_range: float = 4.5
 
 var enemy_id: int = 0
 var spawn_position: Vector3 = Vector3.ZERO
@@ -77,7 +78,8 @@ func _physics_process(delta: float) -> void:
 		_sync_state.rpc(global_position, velocity, rotation.y)
 		return
 
-	var to_target: Vector3 = objective.global_position - global_position
+	var movement_target = _current_movement_target(objective)
+	var to_target: Vector3 = movement_target.global_position - global_position
 	var planar: Vector3 = Vector3(to_target.x, 0.0, to_target.z)
 	if planar.length_squared() > 0.001:
 		var direction := planar.normalized()
@@ -152,10 +154,20 @@ func _current_objective() -> Node3D:
 	return null
 
 
+func _current_movement_target(objective: Node3D) -> Node3D:
+	var structure_target = _nearest_structure_target(structure_notice_range)
+	if structure_target != null:
+		return structure_target
+	return objective
+
+
 func _current_attack_target(objective: Node3D) -> Node3D:
 	var player_target = _nearest_player_in_attack_range()
 	if player_target != null:
 		return player_target
+	var structure_target = _nearest_structure_target(attack_range + 1.0)
+	if structure_target != null and _is_target_in_attack_range(structure_target):
+		return structure_target
 	if _is_target_in_attack_range(objective):
 		return objective
 	return null
@@ -176,6 +188,21 @@ func _nearest_player_in_attack_range() -> CharacterBody3D:
 			best_distance = distance
 			best_player = node
 	return best_player
+
+
+func _nearest_structure_target(max_distance: float) -> StaticBody3D:
+	var best_structure: StaticBody3D = null
+	var best_distance := max_distance * max_distance
+	for node in get_tree().get_nodes_in_group("blocking_structures"):
+		if not node is StaticBody3D:
+			continue
+		if node.has_method("can_be_targeted") and not node.can_be_targeted():
+			continue
+		var distance := global_position.distance_squared_to(node.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best_structure = node
+	return best_structure
 
 
 func _is_target_in_attack_range(target: Node3D) -> bool:

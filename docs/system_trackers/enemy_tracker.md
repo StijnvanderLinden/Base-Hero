@@ -37,6 +37,7 @@ Current role direction:
 - Enemies now target the shared core objective by default
 - Readable overhead enemy health bars
 - Enemy hit flash and short death feedback before despawn
+- Enemies can attack nearby wall structures before reaching the core
 
 ---
 

@@ -37,6 +37,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - server-authoritative enemy spawning and enemy movement replication
 - server-authoritative core objective with replicated health and destroyed state
 - basic player attack, enemy health, enemy death, and player/enemy health bars
+- first server-authoritative wall placement prototype with replicated walls and wall health
 
 ### Design Direction
 - core game identity is defined
@@ -50,12 +51,12 @@ The project now has a working multiplayer gameplay prototype with shared players
 - the smallest multiplayer-safe defense loop exists, but it still uses placeholder visuals and placeholder combat feel
 - enemy behavior currently uses direct pursuit and objective pressure only
 - lose-state messaging exists, but full match restart/recovery flow is not implemented
-- building, gate flow, raid flow, and progression are still not connected to the prototype loop
+- building has a first wall prototype only; turrets, previews, and costs are not implemented yet
+- gate flow, raid flow, and progression are still not connected to the prototype loop
 
 ---
 
 ## Not Yet Implemented
-- building system
 - gate prototype
 - raid prototype
 - progression systems
@@ -70,7 +71,7 @@ That means the next practical targets are:
 - stabilize the shared core-defense loop
 - improve enemy pressure around the core
 - improve combat feedback and readability
-- prepare the prototype for first building interactions
+- validate and expand the first building interactions
 
 ---
 

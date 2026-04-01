@@ -14,9 +14,14 @@ var _input_vector: Vector2 = Vector2.ZERO
 var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
 var _attack_was_pressed: bool = false
+var _build_was_pressed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color.WHITE
 var _health_bar_local_offset: Vector3 = Vector3.ZERO
+var _preview_valid_color: Color = Color(0.28, 0.95, 0.45, 0.45)
+var _preview_invalid_color: Color = Color(0.95, 0.3, 0.25, 0.45)
+var _preview_valid_text_color: Color = Color(0.72, 1.0, 0.78, 1.0)
+var _preview_invalid_text_color: Color = Color(1.0, 0.76, 0.76, 1.0)
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var camera_pivot: Node3D = $CameraPivot
@@ -24,6 +29,9 @@ var _health_bar_local_offset: Vector3 = Vector3.ZERO
 @onready var label: Label3D = $Label3D
 @onready var health_bar_root: Node3D = $HealthBar
 @onready var health_bar_fill: MeshInstance3D = $HealthBar/Fill
+@onready var build_preview_root: Node3D = $BuildPreview
+@onready var build_preview_mesh: MeshInstance3D = $BuildPreview/PreviewMesh
+@onready var build_preview_label: Label3D = $BuildPreview/PreviewLabel
 
 
 func setup(player_peer_id: int, start_position: Vector3) -> void:
@@ -42,12 +50,17 @@ func _ready() -> void:
 	_update_health_bar_anchor()
 	_update_health_bar()
 	if _is_local_player():
+		build_preview_root.top_level = true
+		build_preview_root.visible = true
 		camera_pivot.top_level = true
 		camera.current = true
 		_update_camera_anchor()
+		_update_build_preview()
 	else:
+		build_preview_root.visible = false
 		camera.current = false
 	_apply_player_color()
+	_configure_build_preview_feedback()
 
 
 func _process(delta: float) -> void:
@@ -55,6 +68,7 @@ func _process(delta: float) -> void:
 
 	if _is_local_player():
 		_update_camera_anchor()
+		_update_build_preview()
 
 	if _hit_flash_time_remaining <= 0.0:
 		return
@@ -65,12 +79,15 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	_attack_cooldown_remaining = max(_attack_cooldown_remaining - delta, 0.0)
 	var attack_pressed := _consume_attack_pressed()
+	var build_pressed := _consume_build_pressed()
 
 	if multiplayer.is_server():
 		if _is_local_player():
 			_input_vector = _read_input_vector()
 			if attack_pressed:
 				_perform_server_attack()
+			if build_pressed:
+				_perform_server_wall_build()
 		_simulate_movement(delta)
 		_sync_state.rpc(global_position, velocity, rotation.y)
 		return
@@ -79,6 +96,8 @@ func _physics_process(delta: float) -> void:
 		_submit_input.rpc_id(1, _read_input_vector())
 		if attack_pressed:
 			_request_attack.rpc_id(1)
+		if build_pressed:
+			_request_wall_build.rpc_id(1)
 
 
 func _simulate_movement(delta: float) -> void:
@@ -117,6 +136,13 @@ func _consume_attack_pressed() -> bool:
 	var is_pressed := Input.is_key_pressed(KEY_SPACE)
 	var just_pressed := is_pressed and not _attack_was_pressed
 	_attack_was_pressed = is_pressed
+	return just_pressed
+
+
+func _consume_build_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_Q)
+	var just_pressed := is_pressed and not _build_was_pressed
+	_build_was_pressed = is_pressed
 	return just_pressed
 
 
@@ -182,6 +208,33 @@ func _update_health_bar_anchor() -> void:
 	health_bar_root.global_rotation = Vector3.ZERO
 
 
+func _update_build_preview() -> void:
+	var manager = _building_manager()
+	if manager == null or not manager.has_method("get_wall_preview_for_peer"):
+		build_preview_root.visible = false
+		return
+
+	var preview: Dictionary = manager.get_wall_preview_for_peer(peer_id)
+	if not preview.get("visible", false):
+		build_preview_root.visible = false
+		return
+
+	build_preview_root.visible = true
+	build_preview_root.global_position = preview.get("position", global_position)
+	build_preview_root.global_rotation = Vector3(0.0, preview.get("rotation_y", 0.0), 0.0)
+	_configure_build_preview_feedback(preview.get("valid", false))
+
+
+func _configure_build_preview_feedback(is_valid: bool = true) -> void:
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = _preview_valid_color if is_valid else _preview_invalid_color
+	build_preview_mesh.material_override = material
+	build_preview_label.text = "VALID" if is_valid else "BLOCKED"
+	build_preview_label.modulate = _preview_valid_text_color if is_valid else _preview_invalid_text_color
+
+
 func _update_camera_anchor() -> void:
 	camera_pivot.global_position = global_position + Vector3(0.0, 1.5, 0.0)
 	camera_pivot.global_rotation = Vector3.ZERO
@@ -233,6 +286,23 @@ func _nearest_enemy_in_range() -> CharacterBody3D:
 	return best_enemy
 
 
+func _perform_server_wall_build() -> void:
+	if not multiplayer.is_server():
+		return
+	var manager = _building_manager()
+	if manager == null:
+		return
+	if manager.has_method("request_wall_placement"):
+		manager.request_wall_placement(peer_id)
+
+
+func _building_manager() -> Node:
+	var managers = get_tree().get_nodes_in_group("building_manager")
+	if managers.is_empty():
+		return null
+	return managers[0]
+
+
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func _submit_input(new_input: Vector2) -> void:
 	if not multiplayer.is_server():
@@ -249,6 +319,15 @@ func _request_attack() -> void:
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
 	_perform_server_attack()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_wall_build() -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_perform_server_wall_build()
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")

@@ -12,6 +12,7 @@ radius = 0.35
 [sub_resource type="StandardMaterial3D" id="4"]
 shading_mode = 0
 albedo_color = Color(0.06, 0.06, 0.06, 1)
+billboard_mode = 1
 
 [sub_resource type="BoxMesh" id="3"]
 size = Vector3(1, 0.08, 0.08)
@@ -19,6 +20,10 @@ size = Vector3(1, 0.08, 0.08)
 [sub_resource type="StandardMaterial3D" id="5"]
 shading_mode = 0
 albedo_color = Color(0.2, 0.86, 0.28, 1)
+billboard_mode = 1
+
+[sub_resource type="BoxMesh" id="6"]
+size = Vector3(2, 1.6, 0.7)
 
 [node name="Player" type="CharacterBody3D" unique_id=1524497241]
 script = ExtResource("1")
@@ -47,6 +52,19 @@ mesh = SubResource("3")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.01)
 material_override = SubResource("5")
 mesh = SubResource("3")
+
+[node name="BuildPreview" type="Node3D" parent="." unique_id=1793412054]
+visible = false
+
+[node name="PreviewMesh" type="MeshInstance3D" parent="BuildPreview" unique_id=148732821]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("6")
+
+[node name="PreviewLabel" type="Label3D" parent="BuildPreview" unique_id=1011239013]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.95, 0)
+billboard = 1
+font_size = 26
+text = "VALID"
 
 [node name="CameraPivot" type="Node3D" parent="." unique_id=736462767]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
