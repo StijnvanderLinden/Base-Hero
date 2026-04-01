@@ -26,21 +26,22 @@ The combat system should be:
 - Server-authoritative attack requests and damage resolution
 - Enemy health and death handling wired into combat flow
 - Player and enemy overhead health bars for readability
+- Player and core hit flash feedback for clearer incoming damage
 
 ---
 
 ## In Progress
 - Clarifying how strongly combat vs structures should carry defense moments
-- Defining the first proper weapon presentation and feedback
+- Defining the first proper weapon presentation beyond the prototype flash feedback
 - Deciding whether the first lasting weapon should stay melee or move to projectile/hitscan
 
 ---
 
 ## Blockers / Problems
-- No hit flash, impact, or death feedback yet
 - No final decision on first lasting weapon type
 - No weapon-specific animation or presentation layer yet
 - Combat is functional but still very placeholder in feel
+- There is still no real impact effect, audio, or weapon-specific presentation
 
 ---
 
@@ -100,7 +101,7 @@ The combat system should be:
 
 ## Next Recommended Task
 Improve combat feedback and clarity:
-- add hit feedback or hit flash
-- add enemy death feedback
 - decide the first durable weapon format
+- add weapon-specific impact feedback
+- add attack animation or timing presentation
 - confirm combat supports defending the core instead of replacing it

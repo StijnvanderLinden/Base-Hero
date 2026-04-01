@@ -12,6 +12,7 @@ var _spawn_timer: float = 0.0
 var _next_enemy_id: int = 1
 var _session_active: bool = false
 var _objective_destroyed: bool = false
+var _pending_despawns: Dictionary = {}
 
 
 func set_roots(enemy_root: Node3D, player_root: Node3D) -> void:
@@ -33,6 +34,9 @@ func bind_network_manager(manager: Node) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if multiplayer.is_server():
+		_update_pending_despawns(delta)
+
 	if not _session_active:
 		return
 	if not multiplayer.is_server():
@@ -59,6 +63,7 @@ func _on_session_changed(in_session: bool) -> void:
 	_session_active = in_session
 	_spawn_timer = 0.0
 	_objective_destroyed = false
+	_pending_despawns.clear()
 	if not in_session:
 		_next_enemy_id = 1
 		_clear_enemies_local()
@@ -75,6 +80,8 @@ func _on_peer_registered(peer_id: int) -> void:
 		return
 
 	for enemy in enemies_root.get_children():
+		if enemy.has_method("is_alive") and not enemy.is_alive():
+			continue
 		if not enemy.has_method("get_enemy_id") or not enemy.has_method("get_current_health"):
 			continue
 		_spawn_enemy_remote.rpc_id(peer_id, enemy.get_enemy_id(), enemy.global_position, enemy.get_current_health())
@@ -97,6 +104,7 @@ func _spawn_enemy_local(enemy_id: int, spawn_position: Vector3, start_health: fl
 	var node_name := _enemy_name(enemy_id)
 	if enemies_root.has_node(node_name):
 		return
+	_pending_despawns.erase(enemy_id)
 
 	var enemy = enemy_scene.instantiate()
 	enemy.name = node_name
@@ -105,6 +113,14 @@ func _spawn_enemy_local(enemy_id: int, spawn_position: Vector3, start_health: fl
 	if enemy.has_method("set_manager"):
 		enemy.set_manager(self)
 	enemies_root.add_child(enemy)
+
+
+func schedule_enemy_despawn(enemy_id: int, delay: float) -> void:
+	if not multiplayer.is_server():
+		return
+	if _pending_despawns.has(enemy_id):
+		return
+	_pending_despawns[enemy_id] = max(delay, 0.0)
 
 
 func despawn_enemy_for_all(enemy_id: int) -> void:
@@ -121,6 +137,7 @@ func _remove_enemy_local(enemy_id: int) -> void:
 	if not enemies_root.has_node(node_name):
 		return
 
+	_pending_despawns.erase(enemy_id)
 	enemies_root.get_node(node_name).queue_free()
 
 
@@ -128,6 +145,7 @@ func _clear_enemies_local() -> void:
 	if enemies_root == null:
 		return
 
+	_pending_despawns.clear()
 	for child in enemies_root.get_children():
 		child.queue_free()
 
@@ -139,6 +157,22 @@ func _enemy_name(enemy_id: int) -> String:
 func _next_spawn_position(enemy_id: int) -> Vector3:
 	var angle := float(enemy_id) * 0.9
 	return Vector3(cos(angle) * spawn_radius, 0.6, sin(angle) * spawn_radius)
+
+
+func _update_pending_despawns(delta: float) -> void:
+	if _pending_despawns.is_empty():
+		return
+
+	var to_remove: Array[int] = []
+	for enemy_id in _pending_despawns.keys():
+		var time_remaining: float = _pending_despawns[enemy_id]
+		time_remaining = max(time_remaining - delta, 0.0)
+		_pending_despawns[enemy_id] = time_remaining
+		if time_remaining <= 0.0:
+			to_remove.append(enemy_id)
+
+	for enemy_id in to_remove:
+		despawn_enemy_for_all(enemy_id)
 
 
 @rpc("authority", "call_remote", "reliable")

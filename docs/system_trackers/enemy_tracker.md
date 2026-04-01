@@ -36,6 +36,7 @@ Current role direction:
 - Enemy health, death, and late-join replication
 - Enemies now target the shared core objective by default
 - Readable overhead enemy health bars
+- Enemy hit flash and short death feedback before despawn
 
 ---
 
@@ -43,6 +44,7 @@ Current role direction:
 - Tuning spawn pressure and enemy count pacing
 - Deciding when enemies should switch from objective pressure to player pressure
 - Evaluating pathing and readability around the core objective
+- Improving enemy presentation beyond placeholder flash/death feedback
 
 ---
 
@@ -109,6 +111,6 @@ Current role direction:
 ## Next Recommended Task
 Tune and validate the first enemy defense loop:
 - confirm core targeting works in multiplayer
-- add better hit and death feedback
 - test spawn pacing around the objective
+- add stronger death and impact presentation
 - decide the first useful second enemy type

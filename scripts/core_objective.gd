@@ -6,6 +6,8 @@ signal destroyed
 
 var current_health: float = 300.0
 var is_destroyed: bool = false
+var _hit_flash_time_remaining: float = 0.0
+var _base_color: Color = Color(0.35, 0.8, 1.0)
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
@@ -17,6 +19,13 @@ func _ready() -> void:
 	add_to_group("primary_objective")
 	_apply_default_material()
 	_reset_local_state()
+
+
+func _process(delta: float) -> void:
+	if _hit_flash_time_remaining <= 0.0:
+		return
+	_hit_flash_time_remaining = max(_hit_flash_time_remaining - delta, 0.0)
+	_update_body_visuals()
 
 
 func bind_network_manager(manager: Node) -> void:
@@ -34,6 +43,8 @@ func apply_server_damage(amount: float) -> void:
 
 	current_health = max(current_health - amount, 0.0)
 	_update_visuals()
+	_start_hit_flash()
+	_play_hit_feedback.rpc()
 	_sync_state.rpc(current_health, is_destroyed)
 	if current_health <= 0.0:
 		_handle_server_destroyed()
@@ -87,12 +98,12 @@ func _update_visuals() -> void:
 		label.text = "Core Destroyed"
 		_apply_destroyed_material()
 	else:
-		_apply_default_material()
+		_update_body_visuals()
 
 
 func _apply_default_material() -> void:
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.35, 0.8, 1.0)
+	material.albedo_color = _base_color
 	body_mesh.material_override = material
 
 
@@ -100,6 +111,26 @@ func _apply_destroyed_material() -> void:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(0.22, 0.22, 0.24)
 	body_mesh.material_override = material
+
+
+func _start_hit_flash() -> void:
+	_hit_flash_time_remaining = 0.12
+	_update_body_visuals()
+
+
+func _update_body_visuals() -> void:
+	if body_mesh.material_override == null:
+		return
+	var material := body_mesh.material_override as StandardMaterial3D
+	if material == null:
+		return
+	if is_destroyed:
+		material.albedo_color = Color(0.22, 0.22, 0.24)
+		return
+	if _hit_flash_time_remaining > 0.0:
+		material.albedo_color = Color(1.0, 1.0, 1.0)
+		return
+	material.albedo_color = _base_color
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -110,3 +141,10 @@ func _sync_state(server_health: float, server_destroyed: bool) -> void:
 	_update_visuals()
 	if not was_destroyed and is_destroyed:
 		destroyed.emit()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _play_hit_feedback() -> void:
+	if multiplayer.is_server():
+		return
+	_start_hit_flash()

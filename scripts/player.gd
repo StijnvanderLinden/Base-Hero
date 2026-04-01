@@ -6,6 +6,7 @@ extends CharacterBody3D
 @export var attack_range: float = 2.4
 @export var attack_damage: float = 34.0
 @export var attack_cooldown: float = 0.45
+@export var hit_flash_duration: float = 0.12
 
 var peer_id: int = 1
 var spawn_position: Vector3 = Vector3.ZERO
@@ -13,10 +14,15 @@ var _input_vector: Vector2 = Vector2.ZERO
 var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
 var _attack_was_pressed: bool = false
+var _hit_flash_time_remaining: float = 0.0
+var _base_color: Color = Color.WHITE
+var _health_bar_local_offset: Vector3 = Vector3.ZERO
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
+@onready var camera_pivot: Node3D = $CameraPivot
 @onready var camera: Camera3D = $CameraPivot/Camera3D
 @onready var label: Label3D = $Label3D
+@onready var health_bar_root: Node3D = $HealthBar
 @onready var health_bar_fill: MeshInstance3D = $HealthBar/Fill
 
 
@@ -31,9 +37,29 @@ func _ready() -> void:
 	global_position = spawn_position
 	current_health = max_health
 	_update_label()
+	_health_bar_local_offset = health_bar_root.position
+	health_bar_root.top_level = true
+	_update_health_bar_anchor()
 	_update_health_bar()
-	camera.current = _is_local_player()
+	if _is_local_player():
+		camera_pivot.top_level = true
+		camera.current = true
+		_update_camera_anchor()
+	else:
+		camera.current = false
 	_apply_player_color()
+
+
+func _process(delta: float) -> void:
+	_update_health_bar_anchor()
+
+	if _is_local_player():
+		_update_camera_anchor()
+
+	if _hit_flash_time_remaining <= 0.0:
+		return
+	_hit_flash_time_remaining = max(_hit_flash_time_remaining - delta, 0.0)
+	_update_body_visuals()
 
 
 func _physics_process(delta: float) -> void:
@@ -109,8 +135,10 @@ func get_hit_radius() -> float:
 func _apply_player_color() -> void:
 	var material := StandardMaterial3D.new()
 	var hue := float((peer_id * 57) % 360) / 360.0
-	material.albedo_color = Color.from_hsv(hue, 0.75, 0.95)
+	_base_color = Color.from_hsv(hue, 0.75, 0.95)
+	material.albedo_color = _base_color
 	body_mesh.material_override = material
+	_update_body_visuals()
 
 
 func apply_server_damage(amount: float) -> void:
@@ -123,6 +151,8 @@ func apply_server_damage(amount: float) -> void:
 	_sync_health.rpc(current_health)
 	_update_label()
 	_update_health_bar()
+	_start_hit_flash()
+	_play_hit_feedback.rpc()
 	if current_health <= 0.0:
 		_server_respawn()
 
@@ -145,6 +175,33 @@ func _update_health_bar() -> void:
 	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
 	health_bar_fill.scale.x = max(health_ratio, 0.001)
 	health_bar_fill.position.x = (health_ratio - 1.0) * 0.5
+
+
+func _update_health_bar_anchor() -> void:
+	health_bar_root.global_position = global_position + _health_bar_local_offset
+	health_bar_root.global_rotation = Vector3.ZERO
+
+
+func _update_camera_anchor() -> void:
+	camera_pivot.global_position = global_position + Vector3(0.0, 1.5, 0.0)
+	camera_pivot.global_rotation = Vector3.ZERO
+
+
+func _start_hit_flash() -> void:
+	_hit_flash_time_remaining = hit_flash_duration
+	_update_body_visuals()
+
+
+func _update_body_visuals() -> void:
+	if body_mesh.material_override == null:
+		return
+	var material := body_mesh.material_override as StandardMaterial3D
+	if material == null:
+		return
+	if _hit_flash_time_remaining > 0.0:
+		material.albedo_color = Color(1.0, 1.0, 1.0)
+		return
+	material.albedo_color = _base_color
 
 
 func _perform_server_attack() -> void:
@@ -210,3 +267,10 @@ func _sync_health(server_health: float) -> void:
 	current_health = server_health
 	_update_label()
 	_update_health_bar()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _play_hit_feedback() -> void:
+	if multiplayer.is_server():
+		return
+	_start_hit_flash()
