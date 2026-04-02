@@ -24,8 +24,10 @@ func _ready() -> void:
 	enemy_manager.bind_network_manager(network_manager)
 	building_manager.set_roots($World/Walls, $World/Projectiles, $World/Players, core_objective)
 	building_manager.bind_network_manager(network_manager)
+	building_manager.set_gate_manager(gate_manager)
 	gate_manager.set_roots($World/GateContent, $World/Players, core_objective)
 	gate_manager.set_enemy_manager(enemy_manager)
+	gate_manager.set_building_manager(building_manager)
 	gate_manager.bind_network_manager(network_manager)
 	core_objective.bind_network_manager(network_manager)
 	network_manager.status_changed.connect(_on_status_changed)
@@ -103,6 +105,8 @@ func _on_core_destroyed() -> void:
 
 
 func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
+	if gate_manager.is_gate_active():
+		return
 	if not network_manager.multiplayer.multiplayer_peer:
 		return
 	if is_breather:

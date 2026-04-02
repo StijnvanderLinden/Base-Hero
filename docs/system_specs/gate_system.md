@@ -38,12 +38,12 @@ The key emotional loop is:
 
 ## Core Loop
 1. Enter a gate
-2. Establish or defend a temporary objective
-3. Gain resources while under enemy pressure
-4. Move around the gate space to secure higher-value rewards
-5. Enemy pressure scales over time
-6. Choose when to extract
-7. Survive extraction countdown
+2. Use a short preparation phase to build defenses around the temporary objective
+3. Survive while the objective gathers resources
+4. Enemy pressure scales over time
+5. Choose when to stop gathering and start extraction
+6. Interact with the objective to begin extraction
+7. Survive the extraction countdown
 8. Return with rewards for main-base progression
 
 ---
@@ -80,6 +80,19 @@ The temporary objective:
 - creates a fallback safe zone
 - gives enemies a consistent target
 - supports the base-defense identity of the game
+- acts as the interaction point that begins extraction
+
+### First Prototype Rule
+For the first gate prototype, players get a short prep phase after entering the gate.
+
+During prep:
+- players may build defenses around the temporary objective
+- enemies have not started spawning yet
+
+After prep ends:
+- enemy pressure begins
+- players can no longer place new defenses
+- the temporary objective passively gathers the run reward
 
 ---
 
@@ -189,10 +202,10 @@ Possible sources:
 - successful extraction bonus
 
 ### Current Direction
-A likely combination is:
-- central objective generates core resources over time
-- map exploration provides rarer materials and components
-- milestone rewards create survival tension and pacing
+The first confirmed prototype direction is:
+- the temporary objective generates the core reward over time
+- staying longer under rising pressure yields more reward
+- the first prototype does not require an external reward node before extraction
 
 ---
 
@@ -239,9 +252,9 @@ Design rule:
 Players can attempt to leave with their rewards.
 
 ### Extraction Flow
-1. player or team initiates extraction
-2. extraction countdown begins
-3. enemy aggression rises or a final pressure wave begins
+1. player interacts with the temporary objective
+2. objective stops generating new resources immediately
+3. extraction countdown begins
 4. players must survive until extraction completes
 5. rewards are secured
 
@@ -252,10 +265,10 @@ Extraction should feel:
 - dangerous
 - rewarding
 
-### Current likely direction
-- extraction countdown around 15 seconds
-- enemies become more aggressive during extraction
-- successful extraction gives a payout bonus
+### First Prototype Direction
+- extraction countdown is 5 seconds
+- extraction is triggered at the temporary objective itself
+- successful extraction secures the reward gathered so far
 
 ---
 

@@ -9,9 +9,12 @@ var current_health: float = 300.0
 var is_destroyed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color(0.35, 0.8, 1.0)
+var _health_bar_local_offset: Vector3 = Vector3.ZERO
+var _health_bar_width: float = 1.0
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
+@onready var health_bar_root: Node3D = $HealthBar
 @onready var health_bar_fill: MeshInstance3D = $HealthBar/Fill
 
 
@@ -19,10 +22,14 @@ func _ready() -> void:
 	add_to_group("objectives")
 	add_to_group("primary_objective")
 	_apply_default_material()
+	_health_bar_local_offset = health_bar_root.position
+	health_bar_root.top_level = true
+	_update_health_bar_anchor()
 	_reset_local_state()
 
 
 func _process(delta: float) -> void:
+	_update_health_bar_anchor()
 	if _hit_flash_time_remaining <= 0.0:
 		return
 	_hit_flash_time_remaining = max(_hit_flash_time_remaining - delta, 0.0)
@@ -121,12 +128,23 @@ func _update_visuals() -> void:
 	label.text = "%s HP:%d" % [display_name, int(round(current_health))]
 	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
 	health_bar_fill.scale.x = max(health_ratio, 0.001)
-	health_bar_fill.position.x = (health_ratio - 1.0) * 0.5
+	health_bar_fill.position.x = (_health_bar_width * (health_ratio - 1.0)) * 0.5
 	if is_destroyed:
 		label.text = "%s Destroyed" % display_name
 		_apply_destroyed_material()
 	else:
 		_update_body_visuals()
+
+
+func _update_health_bar_anchor() -> void:
+	if health_bar_root == null:
+		return
+	var current_transform := health_bar_root.global_transform
+	current_transform.origin = global_position + _health_bar_local_offset
+	var active_camera := get_viewport().get_camera_3d()
+	if active_camera != null:
+		current_transform.basis = active_camera.global_transform.basis
+	health_bar_root.global_transform = current_transform
 
 
 func _apply_default_material() -> void:

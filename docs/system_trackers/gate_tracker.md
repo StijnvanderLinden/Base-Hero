@@ -26,8 +26,11 @@ Current likely direction:
 ## Implemented
 - First gate mode prototype in the shared multiplayer scene
 - Temporary defendable drill objective for gate runs
-- One passive scrap reward plus one external scrap cache away from the safe center
-- Extraction zone with countdown and success/failure return flow back to base
+- Short prep phase before enemy pressure begins
+- Gate building is allowed during prep and locked once combat starts
+- Drill passively generates scrap while the run continues
+- Extraction is triggered by interacting with the drill itself
+- Five-second extraction countdown with success/failure return flow back to base
 - Gate runs now reuse the shared enemy pressure loop against a temporary objective
 - High-level gate concept documented
 - Resource direction discussed at a design level
@@ -37,7 +40,7 @@ Current likely direction:
 ## In Progress
 - Deciding final gate structure direction
 - Deciding exact relationship between survival, exploration, and milestone rewards
-- Defining what rewards players seek in gates beyond the first scrap prototype
+- Deciding whether external side rewards are needed before the first persistence layer
 
 ---
 
@@ -46,7 +49,7 @@ Current likely direction:
 - Exact failure penalty is not finalized
 - Exact balance between central defense and exploration is not finalized
 - Difference between gates and main raids must stay clear
-- Gate building permissions inside runs are not defined yet
+- Gate structure persistence and rules still need multiplayer validation
 
 ---
 
@@ -105,12 +108,13 @@ Current likely direction:
 - Gates likely need both defense and outward risk-taking
 - Reward structure should include a main progression currency plus rarer special materials/components
 - The first gate slice should stay in the existing scene and prove the loop before any separate map pipeline is built
+- The confirmed first gate loop is prep-build, survive, interact with the drill, then survive a 5-second extraction
 
 ---
 
 ## Next Recommended Task
 Expand the first gate slice:
-- decide whether players can build during gates
-- add one stronger external reward or side objective
+- validate gate prep building in multiplayer sessions
+- decide whether to add one stronger external reward or keep the first loop centered on survival time only
 - add a clearer post-run results state
 - decide how gate rewards connect into upgrades

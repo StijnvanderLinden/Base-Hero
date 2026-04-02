@@ -24,6 +24,7 @@ var _wave_index: int = 1
 var _wave_spawned_count: int = 0
 var _breather_time_remaining: float = 0.0
 var _spawn_center: Vector3 = Vector3.ZERO
+var _spawning_paused: bool = false
 
 
 func set_roots(enemy_root: Node3D, player_root: Node3D) -> void:
@@ -68,6 +69,8 @@ func _physics_process(delta: float) -> void:
 	if _objective_destroyed:
 		return
 	if players_root.get_child_count() == 0:
+		return
+	if _spawning_paused:
 		return
 	if _breather_time_remaining > 0.0:
 		_breather_time_remaining = max(_breather_time_remaining - delta, 0.0)
@@ -197,6 +200,12 @@ func get_wave_index() -> int:
 
 func is_in_breather() -> bool:
 	return _breather_time_remaining > 0.0
+
+
+func set_spawning_paused(paused: bool) -> void:
+	_spawning_paused = paused
+	if paused:
+		_spawn_timer = 0.0
 
 
 func get_breather_time_remaining() -> float:

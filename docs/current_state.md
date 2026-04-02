@@ -39,7 +39,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - basic player attack, enemy health, enemy death, and player/enemy health bars
 - first server-authoritative wall and turret placement prototype with replicated defense structures, structure health, and turret bullet projectiles
 - simple wave pacing with breather windows and in-session host restart flow for repeated defense testing
-- first gate prototype with a temporary drill objective, scrap gain, an external scrap cache, and extraction return flow
+- first confirmed gate prototype with prep-phase building, a temporary drill objective, passive scrap gain, and drill-triggered five-second extraction
 
 ### Design Direction
 - core game identity is defined
@@ -54,12 +54,11 @@ The project now has a working multiplayer gameplay prototype with shared players
 - enemy behavior currently uses direct pursuit and objective pressure only, even though pacing now ramps by wave
 - restart flow exists for repeated testing, but full match recovery/results flow is not implemented
 - building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
-- gate flow now exists as a first slice, but rewards are not connected to progression and gate content variety is still minimal
+- gate flow now follows the confirmed prep/build/extract rule set, but rewards are not connected to progression and gate content variety is still minimal
 
 ---
 
 ## Not Yet Implemented
-- gate prototype
 - raid prototype
 - progression systems
 
@@ -70,8 +69,8 @@ The current focus is:
 **Phase 5: First Gate Prototype, built on the multiplayer-safe defense foundation**
 
 That means the next practical targets are:
-- expand gate interactions beyond one scrap cache
-- decide whether gate runs allow temporary building
+- validate gate prep building and extraction interaction in multiplayer
+- decide whether the first gate loop needs an external side reward at all
 - connect gate rewards into a first upgrade or persistence path
 - keep the base-defense foundation stable while gate flow grows
 

@@ -18,6 +18,7 @@ var structures_root: Node3D
 var projectiles_root: Node3D
 var players_root: Node3D
 var core_objective: Node3D
+var gate_manager: Node
 var _session_active: bool = false
 var _next_wall_id: int = 1
 var _next_turret_id: int = 1
@@ -41,6 +42,10 @@ func bind_network_manager(manager: Node) -> void:
 		manager.peer_registered.connect(_on_peer_registered)
 
 
+func set_gate_manager(manager: Node) -> void:
+	gate_manager = manager
+
+
 func get_wall_preview_for_peer(peer_id: int) -> Dictionary:
 	return get_build_preview_for_peer(peer_id, "wall")
 
@@ -56,9 +61,10 @@ func get_build_preview_for_peer(peer_id: int, structure_type: String) -> Diction
 
 	var structure_position := _build_position_for_player(player_node, structure_type)
 	var structure_rotation_y := _build_rotation_for_player(player_node)
+	var can_build_now := _is_building_allowed()
 	return {
 		"visible": true,
-		"valid": _is_valid_structure_position(structure_type, structure_position),
+		"valid": can_build_now and _is_valid_structure_position(structure_type, structure_position),
 		"position": structure_position,
 		"rotation_y": structure_rotation_y,
 		"type": structure_type,
@@ -81,6 +87,9 @@ func request_structure_placement(peer_id: int, structure_type: String) -> bool:
 		status_changed.emit("Start a session before building.")
 		return false
 	if structures_root == null or players_root == null:
+		return false
+	if not _is_building_allowed():
+		status_changed.emit("Building is currently locked.")
 		return false
 	if not _can_place_more_of_type(structure_type):
 		status_changed.emit("%s limit reached." % _structure_display_name(structure_type))
@@ -249,9 +258,10 @@ func _build_rotation_for_player(player_node: Node3D) -> float:
 
 
 func _is_valid_structure_position(structure_type: String, structure_position: Vector3) -> bool:
-	if absf(structure_position.x) > floor_limit or absf(structure_position.z) > floor_limit:
+	var area_center := _active_area_center()
+	if absf(structure_position.x - area_center.x) > floor_limit or absf(structure_position.z - area_center.z) > floor_limit:
 		return false
-	if core_objective != null and structure_position.distance_to(core_objective.global_position) < core_clear_radius:
+	if structure_position.distance_to(_active_objective_position()) < core_clear_radius:
 		return false
 	if structures_root == null:
 		return false
@@ -263,6 +273,31 @@ func _is_valid_structure_position(structure_type: String, structure_position: Ve
 	return true
 
 
+func _is_building_allowed() -> bool:
+	if gate_manager == null:
+		return true
+	if gate_manager.has_method("is_gate_active") and gate_manager.is_gate_active():
+		if gate_manager.has_method("is_build_phase_active"):
+			return gate_manager.is_build_phase_active()
+		return false
+	return true
+
+
+func _active_area_center() -> Vector3:
+	if gate_manager != null and gate_manager.has_method("is_gate_active") and gate_manager.is_gate_active():
+		if gate_manager.has_method("get_gate_center"):
+			return gate_manager.get_gate_center()
+	return Vector3.ZERO
+
+
+func _active_objective_position() -> Vector3:
+	if gate_manager != null and gate_manager.has_method("get_active_objective_position"):
+		return gate_manager.get_active_objective_position()
+	if core_objective != null:
+		return core_objective.global_position
+	return Vector3.ZERO
+
+
 func _can_place_more_of_type(structure_type: String) -> bool:
 	if structures_root == null:
 		return false
@@ -272,10 +307,12 @@ func _can_place_more_of_type(structure_type: String) -> bool:
 func _count_structures_of_type(structure_type: String) -> int:
 	if structures_root == null:
 		return 0
+	var area_center := _active_area_center()
 	var count := 0
 	for structure in structures_root.get_children():
 		if structure.has_method("get_structure_kind") and structure.get_structure_kind() == structure_type:
-			count += 1
+			if absf(structure.global_position.x - area_center.x) <= floor_limit and absf(structure.global_position.z - area_center.z) <= floor_limit:
+				count += 1
 	return count
 
 

@@ -15,11 +15,13 @@ var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
 var _attack_was_pressed: bool = false
 var _build_was_pressed: bool = false
+var _interact_was_pressed: bool = false
 var _select_wall_was_pressed: bool = false
 var _select_turret_was_pressed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color.WHITE
 var _health_bar_local_offset: Vector3 = Vector3.ZERO
+var _health_bar_width: float = 1.0
 var _preview_valid_color: Color = Color(0.28, 0.95, 0.45, 0.45)
 var _preview_invalid_color: Color = Color(0.95, 0.3, 0.25, 0.45)
 var _preview_valid_text_color: Color = Color(0.72, 1.0, 0.78, 1.0)
@@ -89,6 +91,7 @@ func _physics_process(delta: float) -> void:
 	_attack_cooldown_remaining = max(_attack_cooldown_remaining - delta, 0.0)
 	var attack_pressed := _consume_attack_pressed()
 	var build_pressed := _consume_build_pressed()
+	var interact_pressed := _consume_interact_pressed()
 
 	if multiplayer.is_server():
 		if _is_local_player():
@@ -97,6 +100,8 @@ func _physics_process(delta: float) -> void:
 				_perform_server_attack()
 			if build_pressed:
 				_perform_server_build()
+			if interact_pressed:
+				_perform_server_interact()
 		_simulate_movement(delta)
 		_sync_state.rpc(global_position, velocity, rotation.y)
 		return
@@ -107,6 +112,8 @@ func _physics_process(delta: float) -> void:
 			_request_attack.rpc_id(1)
 		if build_pressed:
 			_request_build.rpc_id(1, _current_build_type)
+		if interact_pressed:
+			_request_interact.rpc_id(1)
 
 
 func _simulate_movement(delta: float) -> void:
@@ -152,6 +159,13 @@ func _consume_build_pressed() -> bool:
 	var is_pressed := Input.is_key_pressed(KEY_Q)
 	var just_pressed := is_pressed and not _build_was_pressed
 	_build_was_pressed = is_pressed
+	return just_pressed
+
+
+func _consume_interact_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_E)
+	var just_pressed := is_pressed and not _interact_was_pressed
+	_interact_was_pressed = is_pressed
 	return just_pressed
 
 
@@ -247,12 +261,16 @@ func _update_label() -> void:
 func _update_health_bar() -> void:
 	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
 	health_bar_fill.scale.x = max(health_ratio, 0.001)
-	health_bar_fill.position.x = (health_ratio - 1.0) * 0.5
+	health_bar_fill.position.x = (_health_bar_width * (health_ratio - 1.0)) * 0.5
 
 
 func _update_health_bar_anchor() -> void:
-	health_bar_root.global_position = global_position + _health_bar_local_offset
-	health_bar_root.global_rotation = Vector3.ZERO
+	var current_transform := health_bar_root.global_transform
+	current_transform.origin = global_position + _health_bar_local_offset
+	var active_camera := get_viewport().get_camera_3d()
+	if active_camera != null:
+		current_transform.basis = active_camera.global_transform.basis
+	health_bar_root.global_transform = current_transform
 
 
 func _update_build_preview() -> void:
@@ -349,6 +367,16 @@ func _perform_server_build() -> void:
 	_perform_server_wall_build()
 
 
+func _perform_server_interact() -> void:
+	if not multiplayer.is_server():
+		return
+	var manager = _gate_manager()
+	if manager == null:
+		return
+	if manager.has_method("request_objective_interaction"):
+		manager.request_objective_interaction(peer_id)
+
+
 func _update_build_selection() -> void:
 	if _consume_select_wall_pressed():
 		_set_build_type("wall")
@@ -407,6 +435,13 @@ func _building_manager() -> Node:
 	return managers[0]
 
 
+func _gate_manager() -> Node:
+	var managers = get_tree().get_nodes_in_group("gate_manager")
+	if managers.is_empty():
+		return null
+	return managers[0]
+
+
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func _submit_input(new_input: Vector2) -> void:
 	if not multiplayer.is_server():
@@ -433,6 +468,15 @@ func _request_build(structure_type: String) -> void:
 		return
 	_current_build_type = _normalized_build_type(structure_type)
 	_perform_server_build()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_interact() -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_perform_server_interact()
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")

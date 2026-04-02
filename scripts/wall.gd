@@ -11,6 +11,7 @@ var wall_manager: Node
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color(0.74, 0.75, 0.8)
 var _health_bar_local_offset: Vector3 = Vector3.ZERO
+var _health_bar_width: float = 1.0
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
@@ -109,12 +110,16 @@ func _update_label() -> void:
 func _update_health_bar() -> void:
 	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
 	health_bar_fill.scale.x = max(health_ratio, 0.001)
-	health_bar_fill.position.x = (health_ratio - 1.0) * 0.5
+	health_bar_fill.position.x = (_health_bar_width * (health_ratio - 1.0)) * 0.5
 
 
 func _update_health_bar_anchor() -> void:
-	health_bar_root.global_position = global_position + _health_bar_local_offset
-	health_bar_root.global_rotation = Vector3.ZERO
+	var current_transform := health_bar_root.global_transform
+	current_transform.origin = global_position + _health_bar_local_offset
+	var active_camera := get_viewport().get_camera_3d()
+	if active_camera != null:
+		current_transform.basis = active_camera.global_transform.basis
+	health_bar_root.global_transform = current_transform
 
 
 func _start_hit_flash() -> void:

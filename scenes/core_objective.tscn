@@ -12,14 +12,14 @@ top_radius = 1.1
 bottom_radius = 1.1
 
 [sub_resource type="BoxMesh" id="3"]
-size = Vector3(1.6, 0.12, 0.08)
+size = Vector3(1, 0.08, 0.08)
 
 [sub_resource type="StandardMaterial3D" id="4"]
 albedo_color = Color(0.06, 0.06, 0.06, 1)
 shading_mode = 0
 
 [sub_resource type="StandardMaterial3D" id="5"]
-albedo_color = Color(0.24, 0.9, 0.95, 1)
+albedo_color = Color(0.2, 0.86, 0.28, 1)
 shading_mode = 0
 
 [node name="CoreObjective" type="StaticBody3D"]
