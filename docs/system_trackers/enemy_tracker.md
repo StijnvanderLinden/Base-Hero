@@ -37,14 +37,16 @@ Current role direction:
 - Enemies now target the shared core objective by default
 - Readable overhead enemy health bars
 - Enemy hit flash and short death feedback before despawn
-- Enemies can attack nearby wall structures before reaching the core
+- Enemies can attack nearby wall and turret structures before reaching the core
+- Enemy pressure now uses simple wave stages with brief breathers between pushes
 
 ---
 
 ## In Progress
-- Tuning spawn pressure and enemy count pacing
+- Tuning wave spawn pressure, breather timing, and enemy count pacing
 - Deciding when enemies should switch from objective pressure to player pressure
 - Evaluating pathing and readability around the core objective
+- Evaluating whether early turrets reduce enemy pressure too efficiently
 - Improving enemy presentation beyond placeholder flash/death feedback
 
 ---
@@ -112,6 +114,6 @@ Current role direction:
 ## Next Recommended Task
 Tune and validate the first enemy defense loop:
 - confirm core targeting works in multiplayer
-- test spawn pacing around the objective
-- add stronger death and impact presentation
+- test wave pacing around the objective
+- validate how enemies prioritize turret-heavy defenses
 - decide the first useful second enemy type

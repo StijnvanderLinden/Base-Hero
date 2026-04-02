@@ -3,6 +3,7 @@ extends StaticBody3D
 signal destroyed
 
 @export var max_health: float = 300.0
+@export var display_name: String = "Core"
 
 var current_health: float = 300.0
 var is_destroyed: bool = false
@@ -58,8 +59,19 @@ func get_current_health() -> float:
 	return current_health
 
 
+func is_currently_destroyed() -> bool:
+	return is_destroyed
+
+
 func get_hit_radius() -> float:
 	return 1.1
+
+
+func configure_objective(new_display_name: String, custom_max_health: float = -1.0) -> void:
+	display_name = new_display_name
+	if custom_max_health > 0.0:
+		max_health = custom_max_health
+	_reset_local_state()
 
 
 func _on_session_changed(in_session: bool) -> void:
@@ -68,6 +80,20 @@ func _on_session_changed(in_session: bool) -> void:
 		_sync_state.rpc(current_health, is_destroyed)
 	if not in_session:
 		_reset_local_state()
+
+
+func restart_match() -> void:
+	if not multiplayer.is_server():
+		return
+	_hit_flash_time_remaining = 0.0
+	_reset_local_state()
+	_sync_state.rpc(current_health, is_destroyed)
+
+
+func apply_synced_state(server_health: float, server_destroyed: bool) -> void:
+	current_health = server_health
+	is_destroyed = server_destroyed
+	_update_visuals()
 
 
 func _on_peer_registered(peer_id: int) -> void:
@@ -90,24 +116,30 @@ func _reset_local_state() -> void:
 
 
 func _update_visuals() -> void:
-	label.text = "Core HP:%d" % int(round(current_health))
+	if label == null or health_bar_fill == null:
+		return
+	label.text = "%s HP:%d" % [display_name, int(round(current_health))]
 	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
 	health_bar_fill.scale.x = max(health_ratio, 0.001)
 	health_bar_fill.position.x = (health_ratio - 1.0) * 0.5
 	if is_destroyed:
-		label.text = "Core Destroyed"
+		label.text = "%s Destroyed" % display_name
 		_apply_destroyed_material()
 	else:
 		_update_body_visuals()
 
 
 func _apply_default_material() -> void:
+	if body_mesh == null:
+		return
 	var material := StandardMaterial3D.new()
 	material.albedo_color = _base_color
 	body_mesh.material_override = material
 
 
 func _apply_destroyed_material() -> void:
+	if body_mesh == null:
+		return
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(0.22, 0.22, 0.24)
 	body_mesh.material_override = material
@@ -136,9 +168,7 @@ func _update_body_visuals() -> void:
 @rpc("authority", "call_remote", "reliable")
 func _sync_state(server_health: float, server_destroyed: bool) -> void:
 	var was_destroyed := is_destroyed
-	current_health = server_health
-	is_destroyed = server_destroyed
-	_update_visuals()
+	apply_synced_state(server_health, server_destroyed)
 	if not was_destroyed and is_destroyed:
 		destroyed.emit()
 

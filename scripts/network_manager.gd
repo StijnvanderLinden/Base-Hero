@@ -74,6 +74,20 @@ func leave_game(announce: bool = true) -> void:
 		status_changed.emit("Offline. Host or join to begin.")
 
 
+func restart_match() -> void:
+	if not multiplayer.is_server():
+		return
+	if players_root == null:
+		return
+	for peer_id in registered_peers:
+		var node_name := _player_name(peer_id)
+		if not players_root.has_node(node_name):
+			continue
+		var player = players_root.get_node(node_name)
+		if player.has_method("reset_for_match"):
+			player.reset_for_match()
+
+
 func _spawn_player(peer_id: int, spawn_position: Vector3) -> void:
 	if players_root == null or player_scene == null:
 		return

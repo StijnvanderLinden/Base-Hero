@@ -27,6 +27,7 @@ The combat system should be:
 - Enemy health and death handling wired into combat flow
 - Player and enemy overhead health bars for readability
 - Player and core hit flash feedback for clearer incoming damage
+- Turrets now use server-owned projectile bullets instead of instant hits
 
 ---
 
@@ -34,6 +35,7 @@ The combat system should be:
 - Clarifying how strongly combat vs structures should carry defense moments
 - Defining the first proper weapon presentation beyond the prototype flash feedback
 - Deciding whether the first lasting weapon should stay melee or move to projectile/hitscan
+- Evaluating whether turret bullets are readable enough in larger waves
 
 ---
 

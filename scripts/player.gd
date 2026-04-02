@@ -15,6 +15,8 @@ var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
 var _attack_was_pressed: bool = false
 var _build_was_pressed: bool = false
+var _select_wall_was_pressed: bool = false
+var _select_turret_was_pressed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color.WHITE
 var _health_bar_local_offset: Vector3 = Vector3.ZERO
@@ -22,6 +24,9 @@ var _preview_valid_color: Color = Color(0.28, 0.95, 0.45, 0.45)
 var _preview_invalid_color: Color = Color(0.95, 0.3, 0.25, 0.45)
 var _preview_valid_text_color: Color = Color(0.72, 1.0, 0.78, 1.0)
 var _preview_invalid_text_color: Color = Color(1.0, 0.76, 0.76, 1.0)
+var _current_build_type: String = "wall"
+var _wall_preview_mesh: BoxMesh
+var _turret_preview_mesh: CylinderMesh
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var camera_pivot: Node3D = $CameraPivot
@@ -54,6 +59,7 @@ func _ready() -> void:
 		build_preview_root.visible = true
 		camera_pivot.top_level = true
 		camera.current = true
+		_initialize_preview_meshes()
 		_update_camera_anchor()
 		_update_build_preview()
 	else:
@@ -77,6 +83,9 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _is_local_player():
+		_update_build_selection()
+
 	_attack_cooldown_remaining = max(_attack_cooldown_remaining - delta, 0.0)
 	var attack_pressed := _consume_attack_pressed()
 	var build_pressed := _consume_build_pressed()
@@ -87,7 +96,7 @@ func _physics_process(delta: float) -> void:
 			if attack_pressed:
 				_perform_server_attack()
 			if build_pressed:
-				_perform_server_wall_build()
+				_perform_server_build()
 		_simulate_movement(delta)
 		_sync_state.rpc(global_position, velocity, rotation.y)
 		return
@@ -97,7 +106,7 @@ func _physics_process(delta: float) -> void:
 		if attack_pressed:
 			_request_attack.rpc_id(1)
 		if build_pressed:
-			_request_wall_build.rpc_id(1)
+			_request_build.rpc_id(1, _current_build_type)
 
 
 func _simulate_movement(delta: float) -> void:
@@ -146,6 +155,20 @@ func _consume_build_pressed() -> bool:
 	return just_pressed
 
 
+func _consume_select_wall_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_1)
+	var just_pressed := is_pressed and not _select_wall_was_pressed
+	_select_wall_was_pressed = is_pressed
+	return just_pressed
+
+
+func _consume_select_turret_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_2)
+	var just_pressed := is_pressed and not _select_turret_was_pressed
+	_select_turret_was_pressed = is_pressed
+	return just_pressed
+
+
 func _is_local_player() -> bool:
 	return multiplayer.get_unique_id() == peer_id
 
@@ -187,10 +210,34 @@ func _server_respawn() -> void:
 	global_position = spawn_position
 	velocity = Vector3.ZERO
 	current_health = max_health
+	_hit_flash_time_remaining = 0.0
 	_sync_state.rpc(global_position, velocity, rotation.y)
 	_sync_health.rpc(current_health)
 	_update_label()
 	_update_health_bar()
+	_update_body_visuals()
+
+
+func reset_for_match() -> void:
+	if not multiplayer.is_server():
+		return
+	_input_vector = Vector2.ZERO
+	_attack_cooldown_remaining = 0.0
+	_server_respawn()
+
+
+func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refill_health: bool = true) -> void:
+	if not multiplayer.is_server():
+		return
+	global_position = target_position
+	velocity = Vector3.ZERO
+	rotation.y = facing_y
+	if refill_health:
+		current_health = max_health
+		_sync_health.rpc(current_health)
+		_update_label()
+		_update_health_bar()
+	_sync_state.rpc(global_position, velocity, rotation.y)
 
 
 func _update_label() -> void:
@@ -210,11 +257,11 @@ func _update_health_bar_anchor() -> void:
 
 func _update_build_preview() -> void:
 	var manager = _building_manager()
-	if manager == null or not manager.has_method("get_wall_preview_for_peer"):
+	if manager == null or not manager.has_method("get_build_preview_for_peer"):
 		build_preview_root.visible = false
 		return
 
-	var preview: Dictionary = manager.get_wall_preview_for_peer(peer_id)
+	var preview: Dictionary = manager.get_build_preview_for_peer(peer_id, _current_build_type)
 	if not preview.get("visible", false):
 		build_preview_root.visible = false
 		return
@@ -222,16 +269,18 @@ func _update_build_preview() -> void:
 	build_preview_root.visible = true
 	build_preview_root.global_position = preview.get("position", global_position)
 	build_preview_root.global_rotation = Vector3(0.0, preview.get("rotation_y", 0.0), 0.0)
-	_configure_build_preview_feedback(preview.get("valid", false))
+	_configure_build_preview_feedback(preview.get("valid", false), preview.get("type", _current_build_type))
 
 
-func _configure_build_preview_feedback(is_valid: bool = true) -> void:
+func _configure_build_preview_feedback(is_valid: bool = true, structure_type: String = "wall") -> void:
+	_apply_preview_shape(structure_type)
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.albedo_color = _preview_valid_color if is_valid else _preview_invalid_color
 	build_preview_mesh.material_override = material
-	build_preview_label.text = "VALID" if is_valid else "BLOCKED"
+	var state_text := "VALID" if is_valid else "BLOCKED"
+	build_preview_label.text = "%s %s" % [_build_type_label(structure_type), state_text]
 	build_preview_label.modulate = _preview_valid_text_color if is_valid else _preview_invalid_text_color
 
 
@@ -292,8 +341,63 @@ func _perform_server_wall_build() -> void:
 	var manager = _building_manager()
 	if manager == null:
 		return
-	if manager.has_method("request_wall_placement"):
-		manager.request_wall_placement(peer_id)
+	if manager.has_method("request_structure_placement"):
+		manager.request_structure_placement(peer_id, _current_build_type)
+
+
+func _perform_server_build() -> void:
+	_perform_server_wall_build()
+
+
+func _update_build_selection() -> void:
+	if _consume_select_wall_pressed():
+		_set_build_type("wall")
+	if _consume_select_turret_pressed():
+		_set_build_type("turret")
+
+
+func _set_build_type(new_build_type: String) -> void:
+	new_build_type = _normalized_build_type(new_build_type)
+	if _current_build_type == new_build_type:
+		return
+	_current_build_type = new_build_type
+	if _is_local_player():
+		_update_build_preview()
+
+
+func _initialize_preview_meshes() -> void:
+	if _wall_preview_mesh == null:
+		_wall_preview_mesh = BoxMesh.new()
+		_wall_preview_mesh.size = Vector3(2.0, 1.6, 0.7)
+	if _turret_preview_mesh == null:
+		_turret_preview_mesh = CylinderMesh.new()
+		_turret_preview_mesh.top_radius = 0.6
+		_turret_preview_mesh.bottom_radius = 0.72
+		_turret_preview_mesh.height = 1.8
+
+
+func _apply_preview_shape(structure_type: String) -> void:
+	if _wall_preview_mesh == null or _turret_preview_mesh == null:
+		_initialize_preview_meshes()
+	if structure_type == "turret":
+		build_preview_mesh.mesh = _turret_preview_mesh
+		build_preview_mesh.position = Vector3(0.0, 0.9, 0.0)
+		build_preview_label.position = Vector3(0.0, 2.35, 0.0)
+		return
+	build_preview_mesh.mesh = _wall_preview_mesh
+	build_preview_mesh.position = Vector3(0.0, 0.8, 0.0)
+	build_preview_label.position = Vector3(0.0, 1.95, 0.0)
+
+
+func _build_type_label(structure_type: String) -> String:
+	structure_type = _normalized_build_type(structure_type)
+	return structure_type.to_upper()
+
+
+func _normalized_build_type(structure_type: String) -> String:
+	if structure_type == "turret":
+		return structure_type
+	return "wall"
 
 
 func _building_manager() -> Node:
@@ -322,12 +426,13 @@ func _request_attack() -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _request_wall_build() -> void:
+func _request_build(structure_type: String) -> void:
 	if not multiplayer.is_server():
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
-	_perform_server_wall_build()
+	_current_build_type = _normalized_build_type(structure_type)
+	_perform_server_build()
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")

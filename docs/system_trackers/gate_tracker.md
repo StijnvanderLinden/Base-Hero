@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Concept Refinement
+First Prototype Implemented
 
 ---
 
@@ -24,7 +24,11 @@ Current likely direction:
 ---
 
 ## Implemented
-- No gameplay implementation yet
+- First gate mode prototype in the shared multiplayer scene
+- Temporary defendable drill objective for gate runs
+- One passive scrap reward plus one external scrap cache away from the safe center
+- Extraction zone with countdown and success/failure return flow back to base
+- Gate runs now reuse the shared enemy pressure loop against a temporary objective
 - High-level gate concept documented
 - Resource direction discussed at a design level
 
@@ -33,7 +37,7 @@ Current likely direction:
 ## In Progress
 - Deciding final gate structure direction
 - Deciding exact relationship between survival, exploration, and milestone rewards
-- Defining what rewards players seek in gates
+- Defining what rewards players seek in gates beyond the first scrap prototype
 
 ---
 
@@ -42,6 +46,7 @@ Current likely direction:
 - Exact failure penalty is not finalized
 - Exact balance between central defense and exploration is not finalized
 - Difference between gates and main raids must stay clear
+- Gate building permissions inside runs are not defined yet
 
 ---
 
@@ -99,12 +104,13 @@ Current likely direction:
 - Gates should not feel too similar to main raids
 - Gates likely need both defense and outward risk-taking
 - Reward structure should include a main progression currency plus rarer special materials/components
+- The first gate slice should stay in the existing scene and prove the loop before any separate map pipeline is built
 
 ---
 
 ## Next Recommended Task
-Finalize the first prototype gate structure:
-- central objective
-- one resource source
-- one external reward source
-- one extraction flow
+Expand the first gate slice:
+- decide whether players can build during gates
+- add one stronger external reward or side objective
+- add a clearer post-run results state
+- decide how gate rewards connect into upgrades

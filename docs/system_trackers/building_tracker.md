@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Wall Prototype Implemented
+Wall And Turret Prototype Implemented
 
 ---
 
@@ -28,25 +28,29 @@ Main structure categories:
 
 ## Implemented
 - One server-authoritative wall placement prototype
+- One server-authoritative turret placement prototype
 - Grid-snapped wall placement validation on the server
-- Local valid/invalid wall placement preview for the active player
+- Local valid/invalid structure placement preview for the active player
 - Preview wall orientation now matches the final placed wall
 - Preview now shows explicit valid/blocked readability text
+- Players can switch between wall and turret building during a live session
 - Wall health and destruction
+- Turret health, target scanning, and server-spawned bullet projectiles that hit enemies
 - Wall replication to connected clients and late joiners
-- Enemies can now attack nearby placed walls before reaching the core
+- Turret replication to connected clients and late joiners
+- Enemies can now attack nearby placed defenses before reaching the core
 
 ---
 
 ## In Progress
 - Clarifying how building differs between main base and gates
 - Tuning first wall placement spacing and build distance
+- Tuning turret range, bullet speed, rate of fire, and placement spacing
 - Deciding how freeform the first placement loop should remain before adding stronger snapping or more advanced ghost presentation
 
 ---
 
 ## Blockers / Problems
-- No turret prototype yet
 - No final decision on shared resources vs individual building permissions
 - Building in gates is not yet finalized
 
@@ -102,12 +106,13 @@ Main structure categories:
 - Walls and turrets are the first two important structure types
 - Building should support combat rather than replace combat
 - The first building step should be one simple wall with server-validated placement before adding turrets
+- The first turret should be a straightforward auto-fire defense, not a complex upgrade tree or ability platform
 
 ---
 
 ## Next Recommended Task
 Extend the first building loop:
-- validate the wall in multiplayer sessions
-- build the first turret prototype
+- validate wall and turret building in multiplayer sessions
+- decide whether turret placement should share the same budget as walls or use separate costs later
 - improve the placement preview presentation further if needed
 - decide whether resources stay free in testing or become constrained next

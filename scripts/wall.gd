@@ -55,6 +55,14 @@ func get_wall_id() -> int:
 	return wall_id
 
 
+func get_structure_kind() -> String:
+	return "wall"
+
+
+func get_structure_id() -> int:
+	return wall_id
+
+
 func get_current_health() -> float:
 	return current_health
 

@@ -37,7 +37,9 @@ The project now has a working multiplayer gameplay prototype with shared players
 - server-authoritative enemy spawning and enemy movement replication
 - server-authoritative core objective with replicated health and destroyed state
 - basic player attack, enemy health, enemy death, and player/enemy health bars
-- first server-authoritative wall placement prototype with replicated walls and wall health
+- first server-authoritative wall and turret placement prototype with replicated defense structures, structure health, and turret bullet projectiles
+- simple wave pacing with breather windows and in-session host restart flow for repeated defense testing
+- first gate prototype with a temporary drill objective, scrap gain, an external scrap cache, and extraction return flow
 
 ### Design Direction
 - core game identity is defined
@@ -49,10 +51,10 @@ The project now has a working multiplayer gameplay prototype with shared players
 
 ## Partially Implemented
 - the smallest multiplayer-safe defense loop exists, but it still uses placeholder visuals and placeholder combat feel
-- enemy behavior currently uses direct pursuit and objective pressure only
-- lose-state messaging exists, but full match restart/recovery flow is not implemented
-- building has a first wall prototype only; turrets, previews, and costs are not implemented yet
-- gate flow, raid flow, and progression are still not connected to the prototype loop
+- enemy behavior currently uses direct pursuit and objective pressure only, even though pacing now ramps by wave
+- restart flow exists for repeated testing, but full match recovery/results flow is not implemented
+- building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
+- gate flow now exists as a first slice, but rewards are not connected to progression and gate content variety is still minimal
 
 ---
 
@@ -65,13 +67,13 @@ The project now has a working multiplayer gameplay prototype with shared players
 
 ## Current Project Focus
 The current focus is:
-**Phase 2: Basic Objective Defense, with early enemy/combat validation**
+**Phase 5: First Gate Prototype, built on the multiplayer-safe defense foundation**
 
 That means the next practical targets are:
-- stabilize the shared core-defense loop
-- improve enemy pressure around the core
-- improve combat feedback and readability
-- validate and expand the first building interactions
+- expand gate interactions beyond one scrap cache
+- decide whether gate runs allow temporary building
+- connect gate rewards into a first upgrade or persistence path
+- keep the base-defense foundation stable while gate flow grows
 
 ---
 

@@ -116,6 +116,10 @@ func is_alive() -> bool:
 	return current_health > 0.0 and not _is_dying
 
 
+func get_hit_radius() -> float:
+	return body_radius
+
+
 func get_death_feedback_duration() -> float:
 	return death_feedback_duration
 
@@ -142,6 +146,10 @@ func apply_server_damage(amount: float) -> void:
 
 
 func _current_objective() -> Node3D:
+	if enemy_manager != null and enemy_manager.has_method("get_current_objective"):
+		var managed_objective = enemy_manager.get_current_objective()
+		if managed_objective != null:
+			return managed_objective
 	var objectives = get_tree().get_nodes_in_group("primary_objective")
 	if objectives.is_empty():
 		return null
