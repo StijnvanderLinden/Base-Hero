@@ -6,118 +6,110 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-First Prototype Implemented
+Direction Updated, First Prototype Partially Aligned
 
 ---
 
 ## Current Design Summary
-Gates are instanced, high-risk missions that players repeatedly enter for rewards that support the main base.
+Gates are now persistent biome expedition zones with layered depth progression.
 
-Current likely direction:
-- procedural or semi-procedural gate maps
-- a defendable temporary objective at the center
-- enemy pressure increases over time
-- players move outward for higher-value rewards
-- extraction is a core tension mechanic
-- gates should feel different from main raids
+Current confirmed direction:
+- each gate is one biome region
+- the map persists between runs
+- fog of war reveal persists
+- players revisit the same gate over time
+- pylons are the key progression objectives
+- captured pylons create footholds
+- drills are placed at captured pylons for escalating reward defense loops
+- building in gates is limited and local to pylons
 
 ---
 
 ## Implemented
-- First gate mode prototype in the shared multiplayer scene
-- Temporary defendable drill objective for gate runs
-- Short prep phase before enemy pressure begins
-- Gate building is allowed during prep and locked once combat starts
-- Drill passively generates scrap while the run continues
-- Extraction is triggered by interacting with the drill itself
-- Five-second extraction countdown with success/failure return flow back to base
-- Gate runs now reuse the shared enemy pressure loop against a temporary objective
-- Successful extractions now add to a shared session scrap pool at base
-- Gate scrap can now be spent on a first persistent-in-session core health upgrade
-- High-level gate concept documented
-- Resource direction discussed at a design level
+- First gate prototype exists in the shared multiplayer scene
+- Temporary drill objective and extraction flow are implemented in prototype form
+- Gate reward flow already feeds back into base progression in a basic way
+- A short build-then-defend prototype loop exists for testing
+- High-level gate concept is documented
 
 ---
 
 ## In Progress
-- Deciding final gate structure direction
-- Deciding exact relationship between survival, exploration, and milestone rewards
-- Deciding whether external side rewards are needed beyond the first persistence layer
+- Reframing the current prototype from temporary survival run to persistent gate expedition structure
+- Defining how pylon capture, drills, and extraction fit together in the first real gate version
+- Defining what persistent map state must exist in the first gate milestone
 
 ---
 
 ## Blockers / Problems
-- Persistent progression inside gate worlds is not finalized
-- Exact failure penalty is not finalized
-- Exact balance between central defense and exploration is not finalized
-- Difference between gates and main raids must stay clear
-- Gate structure persistence and rules still need multiplayer validation
+- Current prototype is still closer to a temporary survival drill than a persistent layered gate
+- Pylon capture flow is not implemented yet
+- Persistent map reveal and gate revisit state are not implemented yet
+- Building rules near captured pylons are not implemented yet
+- Exploration enemy families are not separated from construct event enemies in runtime yet
 
 ---
 
 ## Must Have
-- Instanced gate mission structure
-- Temporary objective to defend
-- Time-based or pressure-based escalation
-- Extraction countdown
-- One reliable core resource
-- Clear success/failure flow
-- Clear reason to leave the safe center temporarily
+- One persistent gate biome
+- Layered depth progression
+- Pylon capture events
+- Construct enemies for pylon defense
+- Limited building near captured pylons
+- Drill reward loop at secured pylons
+- Return and revisit flow
 
 ---
 
 ## Should Have
-- Milestone reward system
-- Rare materials from side objectives or exploration
-- Components for structures and traps
-- Distinct biome identity
-- Optional elite or mini-boss pressure
-- Better difference from main raid gameplay
+- Fast travel between unlocked pylons
+- Persistent fog-of-war reveal
+- Rare materials from deeper layers
+- Clear depth-based reward improvement
+- A stronger distinction between exploration flow and defense events
 
 ---
 
 ## Could Have
-- Procedural gate-world persistence
-- Revisit-able gate regions with saved progress
-- Unlockable starting threshold/milestone choice
-- Local gate progression state
+- Local gate threat states
+- Biome hazards beyond combat
+- More than one drill type
+- Layer-specific elite encounters
 - Gate-specific mutators
-- Special environmental events
 
 ---
 
 ## Won’t Have (for now)
-- Full open-world gate sandbox
-- Deep procedural simulation
-- Large narrative gate event chains
-- Multiple major objective types at once
-- Complex economy with too many resource types
+- Full open-world sandbox behavior
+- Fully clearable gate completion in one early tier
+- Many simultaneous gate objective types
+- Deep procedural simulation of gate worlds
+- Complex economy layers tied to gates too early
 
 ---
 
 ## Open Questions
-- Are gates primarily survival arenas, exploration spaces, or a hybrid?
-- How much progression inside a gate world should persist?
-- Does the player begin with a small base kit in gates?
-- Is milestone progress tied to time, kills, generated resources, or all three?
-- Should failed extraction lose everything or only some rewards?
-- Should players be able to choose a previously reached milestone tier as a starting point?
+- What is the minimum persistent state for the first real gate milestone?
+- Should captured pylons stay permanently safe or just easier to reclaim?
+- How long should drill defense loops last before players usually stop?
+- When should deeper layers start requiring new town hall tiers?
+- How much gate travel convenience should unlock per captured pylon?
 
 ---
 
 ## Recent Decisions
-- Gates should not feel too similar to main raids
-- Gates likely need both defense and outward risk-taking
-- Reward structure should include a main progression currency plus rarer special materials/components
-- The first gate slice should stay in the existing scene and prove the loop before any separate map pipeline is built
-- The confirmed first gate loop is prep-build, survive, interact with the drill, then survive a 5-second extraction
-- The first reward hookup should stay simple: shared scrap first, then one clear base upgrade before wider progression is added
+- Gates are layered progression zones, not one-off missions
+- Gates are not expected to be fully cleared in one tier
+- Pylons are the main gate objectives
+- Pylon defense events use engineered construct enemies
+- Drills are placed at captured pylons rather than being the sole gate objective
+- Building in gates is limited and local rather than fortress-scale
 
 ---
 
 ## Next Recommended Task
-Expand the first gate slice:
-- validate gate prep building in multiplayer sessions
-- decide whether to add one stronger external reward or keep the first loop centered on survival time plus scrap payout only
-- add a clearer post-run results state
-- validate that the shared scrap payout and base upgrade feel worth the run
+Define and implement the first true persistent gate slice:
+- replace the current temporary-run framing with a single persistent gate region
+- implement one pylon capture event
+- implement one simple local reveal or foothold unlock
+- split gate exploration enemies from construct event enemies

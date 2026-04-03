@@ -42,6 +42,63 @@ This makes it easier to:
 
 ---
 
+### Raids are player-triggered through town hall upgrades
+Decision:
+Major raids only begin when players start a town hall upgrade.
+
+Reason:
+This makes raids intentional progression checkpoints instead of random interruptions.
+It lets players decide when they are ready for the next big test and keeps the base at the center of the game.
+
+---
+
+### Gates are persistent layered progression zones
+Decision:
+Each gate is a persistent biome region with multiple depth layers that players revisit over time.
+
+Reason:
+This creates a stronger long-term exploration structure, gives gate progress a sense of place, and prevents gates from feeling like disposable one-off arenas.
+
+---
+
+### Gates are not expected to be fully cleared in one tier
+Decision:
+Players are not expected to fully clear a gate in a single progression tier.
+
+Reason:
+This preserves long-term goals inside a gate, supports depth-based progression, and allows players to push too far early without breaking the intended pacing.
+
+---
+
+### Gate progression is depth-based
+Decision:
+Progression inside gates is primarily about pushing deeper through outer, mid, inner, and deep layers.
+
+Reason:
+This creates readable escalation, clear expectations for revisit value, and a strong structure for biome rewards and pylon difficulty.
+
+---
+
+### Biome mechanics are biome-specific
+Decision:
+Gate mechanics should be driven by individual biome rules rather than a single global gimmick set.
+
+Reason:
+This keeps biomes distinct, prevents repetitive gate design, and allows later biomes to introduce stronger identity without overcomplicating the first one.
+
+---
+
+### Enemy system is split between exploration enemies and constructs
+Decision:
+Enemy design is split into two categories:
+- exploration enemies used in gate traversal and biome pressure
+- engineered construct enemies used in pylon defense events and main raids
+
+Reason:
+This keeps exploration pressure and organized defense events distinct, strengthens biome identity, and gives raids a more deliberate and readable enemy language.
+
+---
+
 ### Host-authoritative multiplayer
 Decision:
 The multiplayer model is hosted co-op with the host acting as the authoritative server.

@@ -1,374 +1,243 @@
 # Gate System Specification
 
 ## Purpose
-The Gate System provides repeatable, high-risk missions that players enter to gather resources and progression for the main base.
+The Gate System provides persistent biome expedition zones that players revisit to gather resources, unlock footholds, and progress deeper over time.
 
 Gates should feel different from main base raids:
-- more reactive
+- more exploratory
+- more layered
 - more opportunistic
-- more risky
-- less prepared
-- more about short-term decisions under pressure
+- more about long-term depth progress
+- less about one-time all-in defense
 
-Gates are one of the main engines of progression in the game.
+Gates are one of the main engines of progression for the main base.
 
 ---
 
 ## Design Goals
-- Create tense, replayable missions
-- Reward risk-taking and greed
-- Support co-op teamwork
-- Feed resources back into the main base
-- Feel different from main raid gameplay
-- Be scalable and readable in 3D multiplayer
+- Create replayable expedition spaces with persistence
+- Reward risk-taking and deeper pushes
+- Support co-op exploration and defense moments
+- Feed resources and materials back into the main base
+- Feel structurally different from raid gameplay
+- Stay readable in 3D multiplayer
 
 ---
 
 ## Core Fantasy
-Players enter a dangerous world or arena through a gate, deploy or protect a temporary objective, gather rewards under pressure, and decide whether to stay longer for more value or extract before losing too much.
+Players enter a dangerous biome through a gate, push into deeper layers, capture pylons under pressure, establish footholds, and return later to go farther than before.
 
 The key emotional loop is:
-- stabilize
-- push outward
-- get greedy
-- panic
-- extract
+- enter
+- scout
+- secure ground
+- survive a defense event
+- extract with progress
+- return stronger
+- push deeper next time
 
 ---
 
 ## Core Loop
-1. Enter a gate
-2. Use a short preparation phase to build defenses around the temporary objective
-3. Survive while the objective gathers resources
-4. Enemy pressure scales over time
-5. Choose when to stop gathering and start extraction
-6. Interact with the objective to begin extraction
-7. Survive the extraction countdown
-8. Return with rewards for main-base progression
+1. Enter a persistent gate biome
+2. Explore the current reachable layer
+3. Fight biome enemies while locating pylons and resources
+4. Channel and defend a pylon capture event
+5. Secure the area and unlock a foothold
+6. Optionally deploy drills at captured pylons for escalating defense rewards
+7. Extract or return to base
+8. Re-enter later and progress deeper into the same gate
 
 ---
 
 ## Gate Structure
-A gate is an instanced mission.
+Each gate is one biome region.
+
+Core rules:
+- procedurally generated once
+- revisited over multiple runs
+- map persistence across visits
+- permanent fog-of-war reveal within explored regions
+- progress deeper over time instead of clearing everything in one visit
 
 A gate contains:
-- a defendable central objective
-- enemy spawn pressure
-- resource opportunities
-- optional exploration or side objectives
-- an extraction flow
+- multiple depth layers
+- pylon objectives
+- biome exploration enemies
+- local resources and rare materials
+- footholds earned through capture success
 
-A gate is not intended to be a fully open-world sandbox.
-
----
-
-## Temporary Objective
-The temporary objective is the center of the gate run.
-
-Possible versions:
-- drill
-- portable core
-- extractor
-- signal beacon
-
-Current intended direction:
-- a drill or temporary core that must survive while rewards are gathered
-
-### Design Role
-The temporary objective:
-- anchors player attention
-- creates a fallback safe zone
-- gives enemies a consistent target
-- supports the base-defense identity of the game
-- acts as the interaction point that begins extraction
-
-### First Prototype Rule
-For the first gate prototype, players get a short prep phase after entering the gate.
-
-During prep:
-- players may build defenses around the temporary objective
-- enemies have not started spawning yet
-
-After prep ends:
-- enemy pressure begins
-- players can no longer place new defenses
-- the temporary objective passively gathers the run reward
+Gates are not intended to be fully cleared in one tier.
 
 ---
 
-## Gate Layout Direction
-Current likely direction:
-- procedural gate maps with a defendable center area
-- surrounding points of interest
-- players temporarily leave safety to secure rewards or opportunities
+## Layered Progression
+Each gate contains multiple layers of escalating danger.
 
-This is intended to create a hybrid of:
-- defense
-- movement
-- risk-taking
-- map awareness
+### Outer Layer
+- easiest enemies
+- starter pylons
+- basic resources
 
-### Points of Interest may include:
-- treasure nodes
-- rare material deposits
-- elite enemies
-- temporary buffs
-- side objectives
-- milestone encounters
+### Mid Layer
+- stronger enemies
+- more complex encounters
+- better rewards
 
----
+### Inner Layer
+- high difficulty
+- rarer materials
+- more demanding pylon events
 
-## Resource Categories
-Gate runs should provide multiple reward types with different purposes.
+### Deep Or Core Layer
+- extreme difficulty
+- elite encounters
+- strongest resource and progression opportunities
 
-### 1. Core Resource
-Examples:
-- gold
-- energy
-- scrap
-
-Purpose:
-- main base progression
-- wall upgrades
-- turret upgrades
-- build radius growth
-- town hall/core upgrades
-
-Design rule:
-- this is the primary reliable reward from gates
+Players can attempt to go deeper early, but they are not expected to fully overcome those layers before their current tier supports it.
 
 ---
 
-### 2. Exotic Materials
-Examples:
-- crystals
-- rare ore
-- volatile essence
-- biome materials
+## Pylon System
+Pylons are the main objectives inside gates.
 
-Purpose:
-- unlock fun gear
-- unlock special weapons
-- unlock turret or trap variants
-- enable more unusual builds
+### Activation
+Players begin a capture by channeling at a pylon.
+This starts a defense event.
 
-Design rule:
-- these should feel exciting and worth taking risks for
+### Defense Event Rule
+Pylon defense events spawn engineered construct enemies.
 
----
+This is important because pylon events are organized defense moments, not just ambient biome pressure.
 
-### 3. Components
-Examples:
-- targeting modules
-- reinforced plating
-- cooling systems
-- power cores
+### Success
+Capturing a pylon should:
+- secure the local area
+- reveal the surrounding map region
+- unlock fast travel to that pylon
+- unlock teleport or return access back to base
+- allow limited building near that pylon
 
-Purpose:
-- structure modifications
-- special turret behavior
-- traps and engineering upgrades
-
-Design rule:
-- components should support customization, not just raw progression
+### Failure
+Failure should end the event without permanently removing the pylon from the gate.
+Players can regroup and try again later.
 
 ---
 
-### 4. Temporary Run Rewards
-Examples:
-- temporary buffs
-- short-term augments
-- bonus drop effects
-- stronger turrets for the current run only
+## Drill System
+Drills are placed at captured pylons.
 
-Purpose:
-- make each run feel different
-- create memorable moments
-- support on-the-fly adaptation
+Drills:
+- trigger escalating waves
+- generate increasing rewards
+- create a localized push-your-luck defense loop
+- let players choose when to stop
 
----
-
-## Reward Distribution
-Rewards should come from multiple sources.
-
-Possible sources:
-- passive objective generation
-- milestone bar thresholds
-- side objectives
-- elite enemy kills
-- treasure caches
-- biome-specific nodes
-- boss rewards
-- successful extraction bonus
-
-### Current Direction
-The first confirmed prototype direction is:
-- the temporary objective generates the core reward over time
-- staying longer under rising pressure yields more reward
-- the first prototype does not require an external reward node before extraction
+Drills are not the same as pylon capture.
+Pylon capture creates the foothold.
+Drills exploit the foothold for rewards.
 
 ---
 
-## Milestone System
-A milestone bar may fill during the run.
+## Building Rules In Gates
+Building in gates is limited.
 
-Possible sources of progress:
-- time survived
-- resource generated
-- enemies defeated
-- side objectives completed
+Core rules:
+- only near captured pylons
+- small tactical setups only
+- not full fortress-scale construction
 
-At certain thresholds:
-- bonus rewards are granted
-- difficulty may escalate
-- elite pressure may increase
-- the player may unlock a stronger extraction payout
-
-This system encourages:
-- “just one more milestone”
-- push-your-luck gameplay
-- visible progression within a single run
+Design reason:
+- keeps the main base as the center of large-scale building
+- preserves gate readability
+- makes pylon capture meaningfully change the local space
 
 ---
 
-## Difficulty Scaling
-Enemy pressure should scale over time.
+## Rewards
+Gate rewards should support longer-term progression.
 
-Possible scaling methods:
-- spawn count
-- enemy composition
-- elite frequency
-- enemy aggression
-- spawn directions
-- siege/flying pressure
-- event triggers
+Gate regions provide:
+- a dependable progression resource
+- rarer materials from deeper layers
+- biome-specific materials
+- components or special rewards later
 
-Design rule:
-- scaling should increase tension without turning into unreadable chaos
-
----
-
-## Extraction
-Players can attempt to leave with their rewards.
-
-### Extraction Flow
-1. player interacts with the temporary objective
-2. objective stops generating new resources immediately
-3. extraction countdown begins
-4. players must survive until extraction completes
-5. rewards are secured
-
-### Intended Feel
-Extraction should feel:
-- urgent
-- exciting
-- dangerous
-- rewarding
-
-### First Prototype Direction
-- extraction countdown is 5 seconds
-- extraction is triggered at the temporary objective itself
-- successful extraction secures the reward gathered so far
+Reward quality should generally improve with:
+- gate depth
+- pylon difficulty
+- drill risk
 
 ---
 
-## Failure States
-A gate run may fail by:
-- temporary objective destroyed
-- team wipe, if that rule is used
-- failed extraction under active pressure
+## Persistence
+Persistent gate progression may include:
+- revealed map areas
+- captured pylons
+- unlocked travel points
+- known routes and resource locations
+- gate-specific world state later
 
-### Reward Loss Direction
-Not finalized, but likely:
-- partial reward loss rather than full wipe
-
-Reason:
-- preserves tension without making runs too frustrating
-
----
-
-## Progress Persistence
-Open design direction:
-- procedural gate worlds may be revisit-able
-- some progression in a gate region may persist
-
-This is not yet finalized.
-
-Possible persistent elements:
-- unlocked milestones
-- discovered regions
-- world threat level
-- local resource depletion/recovery
-- starting difficulty tier
-
-For the early prototype, this should remain simple.
+This persistence is part of the core gate identity, not a side feature.
 
 ---
 
 ## Biomes
-Gates may differ by biome.
+Each gate is tied to a biome.
 
-Biomes can affect:
+Biome affects:
 - visuals
-- enemy composition
-- resource types
-- hazards
-- side objective types
+- exploration enemy families
+- local hazards
+- material types
+- later mechanic identity
 
-Examples:
-- forest
-- frost
-- lava
-- void
-- corrupted ruins
-- mechanical wasteland
+Biome mechanics are biome-specific, not global.
 
-Design rule:
-- biome should affect gameplay, not just appearance
+The first biome should stay simple and readable.
+Later biomes may introduce stronger mechanics, such as environmental visibility pressure or traversal-specific constraints.
 
 ---
 
 ## Co-op Considerations
-Gate runs must work cleanly in co-op.
+Gate expeditions must work cleanly in co-op.
 
 Requirements:
-- shared objective state
-- synchronized scaling
-- extraction understood by all players
+- shared pylon state
+- synchronized map progress
+- clear capture and drill event readability
 - fair reward presentation
-- good readability under pressure
+- good navigation clarity under pressure
 
 Authority rule:
-- all real gate state is server-authoritative
+- all gate state is server-authoritative
 
 Server handles:
-- objective health
+- pylon capture state
+- drill state
 - enemy spawns
-- milestone progress
+- map progression
 - reward generation
-- extraction state
-- success/failure
+- success and failure outcomes
 
 ---
 
-## Early Prototype Scope
-The first playable gate prototype should include:
-- one gate map
-- one temporary objective
-- one enemy type
-- time-based pressure scaling
-- one main resource
-- extraction countdown
-- success/failure flow
+## Early Prototype Direction
+The early playable gate direction should prove:
+- one persistent gate biome
+- one basic pylon capture flow
+- one limited drill reward loop
+- one simple depth structure
+- one basic exploration enemy family
+- construct enemies for defense events
 
 ---
 
 ## Future Extensions
 Possible future additions:
-- persistent gate-region progression
+- more layered gate events
+- elite deep-layer encounters
 - biome mutators
-- elite trigger events
-- temporary deployables
-- bosses
-- special weather or hazards
-- branching points of interest
+- gate-specific world-state changes
+- stronger local progression systems
+- special hazards or weather

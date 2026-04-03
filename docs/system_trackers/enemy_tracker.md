@@ -6,82 +6,80 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Prototype Implemented
+Direction Updated, Prototype Partially Implemented
 
 ---
 
 ## Current Design Summary
-Enemies are the main pressure source in the game. They must be readable in groups, role-based, and threatening to both objectives and defenses.
+Enemy design is now split into two categories:
+- gate exploration enemies tied to biomes
+- engineered construct enemies used for pylons and raids
 
 The system should support:
-- gates
+- exploration pressure
+- pylon defense events
 - main raids
-- large battles
 - co-op readability
 
-Current role direction:
-- melee runner
-- tank
-- ranged
-- flying
-- siege
-- elite
-- boss
+Construct role direction:
+- small swarm units
+- shield units
+- heavy breakers
+- siege units
+- elites
 
 ---
 
 ## Implemented
-- Server-spawned basic melee enemy prototype
-- Server-authoritative enemy movement replication
-- Enemy health, death, and late-join replication
-- Enemies now target the shared core objective by default
-- Readable overhead enemy health bars
-- Enemy hit flash and short death feedback before despawn
-- Enemies can attack nearby wall and turret structures before reaching the core
-- Enemy pressure now uses simple wave stages with brief breathers between pushes
+- Server-spawned basic enemy prototype exists
+- Server-authoritative enemy movement replication exists
+- Enemy health, death, and late-join replication exist
+- Enemies can target objectives and nearby structures in the current prototype
+- Readable overhead enemy health bars exist
+- Basic wave pressure foundation exists
 
 ---
 
 ## In Progress
-- Tuning wave spawn pressure, breather timing, and enemy count pacing
-- Deciding when enemies should switch from objective pressure to player pressure
-- Evaluating pathing and readability around the core objective
-- Evaluating whether early turrets reduce enemy pressure too efficiently
-- Improving enemy presentation beyond placeholder flash/death feedback
+- Splitting the runtime enemy design into exploration enemies versus constructs
+- Defining the first useful construct role beyond the current basic enemy
+- Defining the first biome exploration enemy family
 
 ---
 
 ## Blockers / Problems
-- No pathing/navigation solution tested beyond direct pursuit
-- No player-count scaling direction finalized
-- No performance strategy tested for larger swarms
-- No second enemy role validated yet
+- Current prototype enemy pool is not yet split by system role
+- No construct-specific unit set exists yet
+- No biome exploration family exists yet
+- No shield, heavy, siege, or elite construct role is implemented yet
+- No performance strategy tested for larger raid armies yet
 
 ---
 
 ## Must Have
-- One basic melee enemy
-- Move to an objective
-- Damage the objective
-- Enemy health and death
+- One exploration enemy family for the first biome
+- One basic construct unit for pylons and raids
+- Clear distinction between exploration pressure and defense-event pressure
 - Server-authoritative enemy state
+- Readable threat roles
 
 ---
 
 ## Should Have
-- One tank/bruiser enemy
-- Clear target-priority moments
+- Shield construct
+- Heavy construct
+- Siege construct
 - Better wave composition scaling
-- Distinct role readability
+- Stronger role readability in groups
 
 ---
 
 ## Could Have
-- flying enemy
-- ranged enemy
-- elite triggers
-- biome-specific enemy variants
-- siege enemy early tests
+- Elite construct early tests
+- More biome-specific enemy variants
+- Ranged exploration enemies
+- Flying exploration enemies
+- Boss constructs later
 
 ---
 
@@ -95,25 +93,25 @@ Current role direction:
 ---
 
 ## Open Questions
-- How often should enemies target players versus structures?
-- What is the first useful second enemy type after melee?
-- How quickly should composition variety increase?
-- How much enemy scaling should come from count vs role mix?
-- What is the visual strategy for keeping swarms readable in 3D?
+- What is the first biome exploration enemy family?
+- What is the first construct role after the current basic attacker?
+- When should shield and siege roles enter the raid loop?
+- How much enemy scaling should come from count versus role mix?
+- What is the visual strategy for keeping layered encounters readable in 3D?
 
 ---
 
 ## Recent Decisions
-- Enemies should reinforce the defense fantasy, not distract from it
-- Role clarity matters more than enemy count fantasy early on
-- Readability is more important than maximum complexity in the prototype stage
-- The first prototype enemy should pressure the core objective before any more advanced target switching is added
+- Enemy design is split between exploration enemies and constructs
+- Construct enemies are used for pylon defense events and raids
+- Exploration enemies should feel biome-driven rather than army-like
+- Readability matters more than maximum complexity early on
 
 ---
 
 ## Next Recommended Task
-Tune and validate the first enemy defense loop:
-- confirm core targeting works in multiplayer
-- test wave pacing around the objective
-- validate how enemies prioritize turret-heavy defenses
-- decide the first useful second enemy type
+Implement the first enemy split:
+- define one first-biome exploration enemy family
+- define one first construct unit for pylon and raid use
+- keep behavior readable and strongly role-driven
+- validate both types in multiplayer
