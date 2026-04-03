@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/construct_enemy.gd" id="1"]
+
+[sub_resource type="BoxShape3D" id="1"]
+size = Vector3(0.9, 1.45, 0.9)
+
+[sub_resource type="BoxMesh" id="2"]
+size = Vector3(0.85, 1.35, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="4"]
+shading_mode = 0
+albedo_color = Color(0.06, 0.06, 0.06, 1)
+
+[sub_resource type="BoxMesh" id="3"]
+size = Vector3(1, 0.08, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="5"]
+shading_mode = 0
+albedo_color = Color(0.88, 0.83, 0.42, 1)
+
+[node name="ConstructEnemy" type="CharacterBody3D"]
+script = ExtResource("1")
+move_speed = 4.2
+attack_range = 1.2
+damage_per_second = 20.0
+max_health = 80.0
+body_radius = 0.45
+structure_notice_range = 5.25
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("1")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("2")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
+billboard = 1
+text = "C1"
+font_size = 28
+
+[node name="HealthBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.95, 0)
+
+[node name="Background" type="MeshInstance3D" parent="HealthBar"]
+material_override = SubResource("4")
+mesh = SubResource("3")
+
+[node name="Fill" type="MeshInstance3D" parent="HealthBar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.01)
+material_override = SubResource("5")
+mesh = SubResource("3")

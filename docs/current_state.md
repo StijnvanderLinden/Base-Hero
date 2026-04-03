@@ -57,7 +57,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - restart flow exists for repeated testing, but full match recovery/results flow is not implemented
 - building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
 - gate flow now follows the confirmed prep/build/extract rule set, and rewards now feed a first core-health upgrade, but progression still only has one spend target and gate content variety is still minimal
-- raid flow now exists in first prototype form, but it still uses placeholder enemy visuals and does not yet use separate construct unit roles
+- raid flow now exists in first prototype form and now uses a first dedicated construct swarm unit, but broader construct role variety is not implemented yet
 
 ---
 
@@ -74,7 +74,7 @@ The current focus is:
 That means the next practical targets are:
 - validate that no enemies spawn at the base outside active raids
 - validate town hall upgrade channeling and raid success/failure in multiplayer sessions
-- split placeholder raid enemies into first dedicated construct roles
+- validate the first construct raid unit and add the next construct role after it
 - expand progression beyond a single spend target only after the raid loop feels correct
 
 ---

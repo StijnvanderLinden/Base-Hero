@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://scenes/turret_bullet.tscn" id="10"]
 [ext_resource type="Script" uid="uid://dnd2pms23kqlx" path="res://scripts/gate_manager.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/raid_manager.gd" id="12"]
+[ext_resource type="PackedScene" path="res://scenes/construct_enemy.tscn" id="13"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(40, 1, 40)
@@ -33,6 +34,7 @@ player_scene = ExtResource("3")
 [node name="EnemyManager" type="Node" parent="." unique_id=1576400001]
 script = ExtResource("4")
 enemy_scene = ExtResource("5")
+raid_enemy_scene = ExtResource("13")
 
 [node name="BuildingManager" type="Node" parent="." unique_id=889331204]
 script = ExtResource("7")

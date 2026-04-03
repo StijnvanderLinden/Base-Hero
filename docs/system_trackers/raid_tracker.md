@@ -29,17 +29,17 @@ Current confirmed direction:
 - Raid success now completes the town hall upgrade level
 - Raid failure now interrupts the upgrade without removing gathered materials
 - Base enemy pressure is now idle by default outside active raids
+- Raids now use a first dedicated construct swarm unit rather than the generic exploration enemy
 
 ---
 
 ## In Progress
 - Validating raid pacing and wave counts in multiplayer sessions
-- Defining the first dedicated construct placeholder replacement for raids
+- Defining the next construct role after the first swarm unit
 
 ---
 
 ## Blockers / Problems
-- Raid enemies still use the shared placeholder enemy rather than dedicated construct roles
 - Town hall upgrades currently use scrap only as the placeholder required material
 - Raid messaging and consequences are still minimal
 
@@ -90,6 +90,6 @@ Current confirmed direction:
 ## Next Recommended Task
 Validate and extend the first raid slice:
 - test the raid trigger and no-idle-spawn rule in multiplayer sessions
-- replace the placeholder raid enemy with the first construct unit
+- add the second construct role after the first swarm unit
 - improve raid messaging and base-damage consequences
 - add a more explicit town hall upgrade presentation when useful

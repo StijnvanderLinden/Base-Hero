@@ -109,6 +109,10 @@ func get_enemy_id() -> int:
 	return enemy_id
 
 
+func get_enemy_scene_kind() -> String:
+	return "exploration"
+
+
 func get_current_health() -> float:
 	return current_health
 

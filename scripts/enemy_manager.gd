@@ -4,6 +4,7 @@ signal wave_changed(wave_index: int, is_breather: bool)
 signal raid_finished(success: bool)
 
 @export var enemy_scene: PackedScene
+@export var raid_enemy_scene: PackedScene
 @export var max_enemies: int = 6
 @export var spawn_interval: float = 3.0
 @export var min_spawn_interval: float = 1.0
@@ -148,21 +149,26 @@ func _on_peer_registered(peer_id: int) -> void:
 			continue
 		if not enemy.has_method("get_enemy_id") or not enemy.has_method("get_current_health"):
 			continue
-		_spawn_enemy_remote.rpc_id(peer_id, enemy.get_enemy_id(), enemy.global_position, enemy.get_current_health())
+		var enemy_kind := "exploration"
+		if enemy.has_method("get_enemy_scene_kind"):
+			enemy_kind = enemy.get_enemy_scene_kind()
+		_spawn_enemy_remote.rpc_id(peer_id, enemy.get_enemy_id(), enemy.global_position, enemy.get_current_health(), enemy_kind)
 
 
 func _spawn_enemy_for_all(enemy_id: int, spawn_position: Vector3) -> void:
-	_spawn_enemy_local(enemy_id, spawn_position)
+	var enemy_kind := _enemy_kind_for_current_pressure()
+	_spawn_enemy_local(enemy_id, spawn_position, -1.0, enemy_kind)
 	if multiplayer.is_server():
 		var node_name := _enemy_name(enemy_id)
 		if enemies_root != null and enemies_root.has_node(node_name):
 			var enemy = enemies_root.get_node(node_name)
 			if enemy.has_method("get_current_health"):
-				_spawn_enemy_remote.rpc(enemy_id, spawn_position, enemy.get_current_health())
+				_spawn_enemy_remote.rpc(enemy_id, spawn_position, enemy.get_current_health(), enemy_kind)
 
 
-func _spawn_enemy_local(enemy_id: int, spawn_position: Vector3, start_health: float = -1.0) -> void:
-	if enemies_root == null or enemy_scene == null:
+func _spawn_enemy_local(enemy_id: int, spawn_position: Vector3, start_health: float = -1.0, enemy_kind: String = "exploration") -> void:
+	var spawn_scene := _scene_for_enemy_kind(enemy_kind)
+	if enemies_root == null or spawn_scene == null:
 		return
 
 	var node_name := _enemy_name(enemy_id)
@@ -170,7 +176,7 @@ func _spawn_enemy_local(enemy_id: int, spawn_position: Vector3, start_health: fl
 		return
 	_pending_despawns.erase(enemy_id)
 
-	var enemy = enemy_scene.instantiate()
+	var enemy = spawn_scene.instantiate()
 	enemy.name = node_name
 	if enemy.has_method("setup"):
 		enemy.setup(enemy_id, spawn_position, start_health)
@@ -216,6 +222,18 @@ func _clear_enemies_local() -> void:
 
 func _enemy_name(enemy_id: int) -> String:
 	return "Enemy_%d" % enemy_id
+
+
+func _enemy_kind_for_current_pressure() -> String:
+	if _pressure_mode == "raid":
+		return "construct"
+	return "exploration"
+
+
+func _scene_for_enemy_kind(enemy_kind: String) -> PackedScene:
+	if enemy_kind == "construct" and raid_enemy_scene != null:
+		return raid_enemy_scene
+	return enemy_scene
 
 
 func get_wave_index() -> int:
@@ -382,8 +400,8 @@ func _check_for_raid_completion() -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _spawn_enemy_remote(enemy_id: int, spawn_position: Vector3, start_health: float = -1.0) -> void:
-	_spawn_enemy_local(enemy_id, spawn_position, start_health)
+func _spawn_enemy_remote(enemy_id: int, spawn_position: Vector3, start_health: float = -1.0, enemy_kind: String = "exploration") -> void:
+	_spawn_enemy_local(enemy_id, spawn_position, start_health, enemy_kind)
 
 
 @rpc("authority", "call_remote", "reliable")
