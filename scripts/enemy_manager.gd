@@ -1,6 +1,7 @@
 extends Node
 
 signal wave_changed(wave_index: int, is_breather: bool)
+signal raid_finished(success: bool)
 
 @export var enemy_scene: PackedScene
 @export var max_enemies: int = 6
@@ -11,6 +12,12 @@ signal wave_changed(wave_index: int, is_breather: bool)
 @export var breather_duration: float = 6.0
 @export var wave_enemy_bonus: int = 1
 @export var spawn_interval_step: float = 0.3
+@export var raid_total_waves: int = 3
+@export var raid_max_enemies: int = 8
+@export var raid_spawn_interval: float = 2.2
+@export var raid_spawns_per_wave: int = 8
+@export var raid_breather_duration: float = 5.0
+@export var raid_wave_enemy_bonus: int = 2
 
 var enemies_root: Node3D
 var players_root: Node3D
@@ -25,6 +32,13 @@ var _wave_spawned_count: int = 0
 var _breather_time_remaining: float = 0.0
 var _spawn_center: Vector3 = Vector3.ZERO
 var _spawning_paused: bool = false
+var _pressure_mode: String = "idle"
+var _raid_total_waves_runtime: int = 3
+var _raid_max_enemies_runtime: int = 8
+var _raid_spawn_interval_runtime: float = 2.2
+var _raid_spawns_per_wave_runtime: int = 8
+var _raid_breather_duration_runtime: float = 5.0
+var _raid_wave_enemy_bonus_runtime: int = 2
 
 
 func set_roots(enemy_root: Node3D, player_root: Node3D) -> void:
@@ -64,6 +78,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if not multiplayer.is_server():
 		return
+	if _pressure_mode == "idle":
+		return
 	if enemies_root == null or players_root == null:
 		return
 	if _objective_destroyed:
@@ -75,7 +91,13 @@ func _physics_process(delta: float) -> void:
 	if _breather_time_remaining > 0.0:
 		_breather_time_remaining = max(_breather_time_remaining - delta, 0.0)
 		if _breather_time_remaining <= 0.0:
+			if _should_wait_for_raid_completion():
+				_check_for_raid_completion()
+				return
 			_start_next_wave()
+		return
+	if _should_wait_for_raid_completion():
+		_check_for_raid_completion()
 		return
 
 	_spawn_timer += delta
@@ -83,7 +105,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if enemies_root.get_child_count() >= _current_max_enemies():
 		return
-	if _wave_spawned_count >= spawns_per_wave:
+	if _wave_spawned_count >= _current_spawns_per_wave():
 		_begin_breather()
 		return
 
@@ -91,19 +113,18 @@ func _physics_process(delta: float) -> void:
 	_spawn_enemy_for_all(_next_enemy_id, _next_spawn_position(_next_enemy_id))
 	_next_enemy_id += 1
 	_wave_spawned_count += 1
-	if _wave_spawned_count >= spawns_per_wave:
+	if _wave_spawned_count >= _current_spawns_per_wave():
+		if _should_wait_for_raid_completion():
+			_check_for_raid_completion()
+			return
 		_begin_breather()
 
 
 func _on_session_changed(in_session: bool) -> void:
 	_session_active = in_session
-	_spawn_timer = 0.0
-	_objective_destroyed = false
-	_pending_despawns.clear()
-	_wave_index = 1
-	_wave_spawned_count = 0
-	_breather_time_remaining = 0.0
-	wave_changed.emit(_wave_index, false)
+	_reset_pressure_state()
+	_spawning_paused = true
+	_pressure_mode = "idle"
 	if not in_session:
 		_next_enemy_id = 1
 		_clear_enemies_local()
@@ -111,6 +132,9 @@ func _on_session_changed(in_session: bool) -> void:
 
 func _on_objective_destroyed() -> void:
 	_objective_destroyed = true
+	if multiplayer.is_server() and _pressure_mode == "raid":
+		stop_pressure(true)
+		raid_finished.emit(false)
 
 
 func _on_peer_registered(peer_id: int) -> void:
@@ -198,6 +222,14 @@ func get_wave_index() -> int:
 	return _wave_index
 
 
+func get_pressure_mode() -> String:
+	return _pressure_mode
+
+
+func is_raid_active() -> bool:
+	return _pressure_mode == "raid"
+
+
 func is_in_breather() -> bool:
 	return _breather_time_remaining > 0.0
 
@@ -208,6 +240,49 @@ func set_spawning_paused(paused: bool) -> void:
 		_spawn_timer = 0.0
 
 
+func start_gate_pressure(target_objective: Node3D, spawn_center: Vector3, paused_for_prep: bool = true) -> void:
+	if not multiplayer.is_server():
+		return
+	set_objective(target_objective)
+	set_spawn_center(spawn_center)
+	_pressure_mode = "gate"
+	_reset_pressure_state()
+	_spawning_paused = paused_for_prep
+	_clear_enemies_local()
+	_clear_all_enemies_remote.rpc()
+	wave_changed.emit(_wave_index, false)
+
+
+func start_raid_pressure(target_objective: Node3D, spawn_center: Vector3, total_waves: int, max_enemies_override: int, spawns_per_wave_override: int, spawn_interval_override: float, wave_enemy_bonus_override: int, breather_duration_override: float) -> void:
+	if not multiplayer.is_server():
+		return
+	set_objective(target_objective)
+	set_spawn_center(spawn_center)
+	_pressure_mode = "raid"
+	_raid_total_waves_runtime = max(total_waves, 1)
+	_raid_max_enemies_runtime = max(max_enemies_override, 1)
+	_raid_spawns_per_wave_runtime = max(spawns_per_wave_override, 1)
+	_raid_spawn_interval_runtime = max(spawn_interval_override, 0.2)
+	_raid_wave_enemy_bonus_runtime = max(wave_enemy_bonus_override, 0)
+	_raid_breather_duration_runtime = max(breather_duration_override, 0.0)
+	_reset_pressure_state()
+	_spawning_paused = false
+	_clear_enemies_local()
+	_clear_all_enemies_remote.rpc()
+	wave_changed.emit(_wave_index, false)
+
+
+func stop_pressure(clear_enemies: bool = true) -> void:
+	if not multiplayer.is_server():
+		return
+	_pressure_mode = "idle"
+	_reset_pressure_state()
+	_spawning_paused = true
+	if clear_enemies:
+		_clear_enemies_local()
+		_clear_all_enemies_remote.rpc()
+
+
 func get_breather_time_remaining() -> float:
 	return _breather_time_remaining
 
@@ -215,16 +290,12 @@ func get_breather_time_remaining() -> float:
 func force_restart() -> void:
 	if not multiplayer.is_server():
 		return
+	_pressure_mode = "idle"
 	_next_enemy_id = 1
-	_spawn_timer = 0.0
-	_objective_destroyed = false
-	_wave_index = 1
-	_wave_spawned_count = 0
-	_breather_time_remaining = 0.0
-	_pending_despawns.clear()
+	_reset_pressure_state()
+	_spawning_paused = true
 	_clear_enemies_local()
 	_clear_all_enemies_remote.rpc()
-	wave_changed.emit(_wave_index, false)
 
 
 func _next_spawn_position(enemy_id: int) -> Vector3:
@@ -233,17 +304,27 @@ func _next_spawn_position(enemy_id: int) -> Vector3:
 
 
 func _current_max_enemies() -> int:
+	if _pressure_mode == "raid":
+		return _raid_max_enemies_runtime + max(_wave_index - 1, 0) * _raid_wave_enemy_bonus_runtime
 	return max_enemies + max(_wave_index - 1, 0) * wave_enemy_bonus
 
 
 func _current_spawn_interval() -> float:
+	if _pressure_mode == "raid":
+		return max(_raid_spawn_interval_runtime - float(max(_wave_index - 1, 0)) * spawn_interval_step, min_spawn_interval)
 	return max(spawn_interval - float(max(_wave_index - 1, 0)) * spawn_interval_step, min_spawn_interval)
+
+
+func _current_spawns_per_wave() -> int:
+	if _pressure_mode == "raid":
+		return _raid_spawns_per_wave_runtime
+	return spawns_per_wave
 
 
 func _begin_breather() -> void:
 	if _breather_time_remaining > 0.0:
 		return
-	_breather_time_remaining = breather_duration
+	_breather_time_remaining = _raid_breather_duration_runtime if _pressure_mode == "raid" else breather_duration
 	_spawn_timer = 0.0
 	wave_changed.emit(_wave_index, true)
 
@@ -257,6 +338,7 @@ func _start_next_wave() -> void:
 
 func _update_pending_despawns(delta: float) -> void:
 	if _pending_despawns.is_empty():
+		_check_for_raid_completion()
 		return
 
 	var to_remove: Array[int] = []
@@ -269,6 +351,34 @@ func _update_pending_despawns(delta: float) -> void:
 
 	for enemy_id in to_remove:
 		despawn_enemy_for_all(enemy_id)
+
+	_check_for_raid_completion()
+
+
+func _reset_pressure_state() -> void:
+	_spawn_timer = 0.0
+	_objective_destroyed = false
+	_pending_despawns.clear()
+	_wave_index = 1
+	_wave_spawned_count = 0
+	_breather_time_remaining = 0.0
+
+
+func _should_wait_for_raid_completion() -> bool:
+	return _pressure_mode == "raid" and _wave_index >= _raid_total_waves_runtime and _wave_spawned_count >= _current_spawns_per_wave()
+
+
+func _check_for_raid_completion() -> void:
+	if not multiplayer.is_server():
+		return
+	if _pressure_mode != "raid":
+		return
+	if not _should_wait_for_raid_completion():
+		return
+	if enemies_root != null and enemies_root.get_child_count() > 0:
+		return
+	stop_pressure(false)
+	raid_finished.emit(true)
 
 
 @rpc("authority", "call_remote", "reliable")

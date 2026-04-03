@@ -109,8 +109,6 @@ func start_gate_run() -> void:
 	_spawn_gate_content_local()
 	_sync_gate_setup.rpc(true)
 	_teleport_players_to_gate()
-	if enemy_manager != null and enemy_manager.has_method("set_spawning_paused"):
-		enemy_manager.set_spawning_paused(true)
 	_set_enemy_pressure_to_gate()
 	gate_state_changed.emit(true)
 	status_changed.emit("Gate prep started. Build around the drill before the waves begin.")
@@ -122,7 +120,7 @@ func restart_match() -> void:
 	if not multiplayer.is_server():
 		return
 	_clear_gate_mode(false)
-	_set_enemy_pressure_to_base()
+	_stop_enemy_pressure()
 	_sync_gate_setup.rpc(false)
 	_emit_run_info()
 	_broadcast_gate_state()
@@ -150,6 +148,21 @@ func get_active_objective_position() -> Vector3:
 
 func get_stored_scrap() -> int:
 	return _stored_scrap
+
+
+func can_afford_scrap(amount: int) -> bool:
+	return _stored_scrap >= max(amount, 0)
+
+
+func consume_scrap(amount: int) -> bool:
+	if not multiplayer.is_server():
+		return false
+	var safe_amount = max(amount, 0)
+	if _stored_scrap < safe_amount:
+		return false
+	_stored_scrap -= safe_amount
+	_broadcast_gate_state()
+	return true
 
 
 func get_core_upgrade_level() -> int:
@@ -282,7 +295,7 @@ func _finish_gate(success: bool) -> void:
 	_sync_gate_setup.rpc(false)
 	if network_manager != null and network_manager.has_method("restart_match"):
 		network_manager.restart_match()
-	_set_enemy_pressure_to_base()
+	_stop_enemy_pressure()
 	if success:
 		status_changed.emit("Gate extracted successfully. Scrap secured: %d. Total scrap: %d." % [run_reward, _stored_scrap])
 	else:
@@ -321,6 +334,9 @@ func _teleport_peer_to_gate(peer_id: int) -> void:
 func _set_enemy_pressure_to_gate() -> void:
 	if enemy_manager == null:
 		return
+	if enemy_manager.has_method("start_gate_pressure") and _gate_objective != null:
+		enemy_manager.start_gate_pressure(_gate_objective, gate_center, _prep_active)
+		return
 	if enemy_manager.has_method("set_objective") and _gate_objective != null:
 		enemy_manager.set_objective(_gate_objective)
 	if enemy_manager.has_method("set_spawn_center"):
@@ -331,17 +347,20 @@ func _set_enemy_pressure_to_gate() -> void:
 		enemy_manager.set_spawning_paused(_prep_active)
 
 
-func _set_enemy_pressure_to_base() -> void:
+func _stop_enemy_pressure() -> void:
 	if enemy_manager == null:
 		return
 	if enemy_manager.has_method("set_objective") and base_objective != null:
 		enemy_manager.set_objective(base_objective)
 	if enemy_manager.has_method("set_spawn_center") and base_objective != null:
 		enemy_manager.set_spawn_center(base_objective.global_position)
+	if enemy_manager.has_method("stop_pressure"):
+		enemy_manager.stop_pressure(true)
+		return
 	if enemy_manager.has_method("force_restart"):
 		enemy_manager.force_restart()
 	if enemy_manager.has_method("set_spawning_paused"):
-		enemy_manager.set_spawning_paused(false)
+		enemy_manager.set_spawning_paused(true)
 
 
 func _spawn_gate_content_local() -> void:

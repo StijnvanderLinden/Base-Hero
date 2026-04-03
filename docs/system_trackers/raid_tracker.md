@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Design Confirmed, Not Implemented
+First Prototype Implemented
 
 ---
 
@@ -23,23 +23,25 @@ Current confirmed direction:
 ---
 
 ## Implemented
-- No dedicated raid system is implemented yet
-- The project has a basic defense loop that can serve as a foundation for raids
-- The main base, combat, enemy pressure, and structures already exist as prerequisites
+- First town hall upgrade trigger button and channeling flow
+- Player-triggered raid start tied to town hall upgrades
+- Finite raid wave package at the main base
+- Raid success now completes the town hall upgrade level
+- Raid failure now interrupts the upgrade without removing gathered materials
+- Base enemy pressure is now idle by default outside active raids
 
 ---
 
 ## In Progress
-- Defining the first town hall upgrade trigger flow
-- Defining the smallest successful first raid prototype
+- Validating raid pacing and wave counts in multiplayer sessions
+- Defining the first dedicated construct placeholder replacement for raids
 
 ---
 
 ## Blockers / Problems
-- No town hall upgrade system exists yet
-- No raid-specific state machine exists yet
-- No construct-only raid composition exists yet
-- Raid success and failure resolution are not implemented yet
+- Raid enemies still use the shared placeholder enemy rather than dedicated construct roles
+- Town hall upgrades currently use scrap only as the placeholder required material
+- Raid messaging and consequences are still minimal
 
 ---
 
@@ -86,8 +88,8 @@ Current confirmed direction:
 ---
 
 ## Next Recommended Task
-Implement the first raid slice:
-- add a town hall upgrade trigger
-- start one construct raid package from that trigger
-- resolve success by completing the upgrade
-- resolve failure by stopping the upgrade and leaving the base damaged
+Validate and extend the first raid slice:
+- test the raid trigger and no-idle-spawn rule in multiplayer sessions
+- replace the placeholder raid enemy with the first construct unit
+- improve raid messaging and base-damage consequences
+- add a more explicit town hall upgrade presentation when useful
