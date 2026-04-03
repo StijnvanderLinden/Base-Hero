@@ -100,6 +100,7 @@ A practical high-level scene structure is:
 ```text
 Main
 ├── NetworkManager
+├── CaveManager
 ├── World
 │   ├── Players
 │   ├── Enemies
@@ -108,3 +109,62 @@ Main
 │   ├── Objectives
 │   └── Environment
 └── UI
+```
+
+---
+
+## System Ownership
+
+### GateManager
+Owns:
+- pylon claim flow
+- cave barrier state at the entrance
+- outside pressure around the pylon
+- repair and recovery flow
+- expedition success or failure at the overworld layer
+
+GateManager should not own:
+- procedural cave layout generation
+- cave room graph building
+- interior encounter placement
+- cave reward layout
+- cave travel implementation details
+
+### CaveManager
+Owns the future cave-generation boundary.
+
+Its job is to:
+- accept a cave request from the overworld layer
+- prepare or generate cave content from that request
+- expose spawn points, exit points, and reward anchors
+- track whether a cave is prepared, active, collapsed, or cleared
+
+Its job is not to:
+- decide whether a pylon may be claimed
+- decide whether the barrier should open
+- own repair logic
+- own overworld enemy pressure
+
+---
+
+## Future Cave Boundary
+
+The current pylon and gate loop should only depend on a narrow cave interface.
+
+Expected input to future cave generation:
+- pylon identifier
+- entrance position
+- biome identifier
+- depth tier
+- seed
+- active player count
+
+Expected output from future cave generation:
+- cave identifier
+- cave root or descriptor
+- player spawn points
+- exit anchor
+- reward anchor
+- current cave state
+
+This keeps the current overworld prototype compatible with a later procedurally generated cave system without forcing GateManager to understand cave internals.

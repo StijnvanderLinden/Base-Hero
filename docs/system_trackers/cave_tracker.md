@@ -30,6 +30,7 @@ Current confirmed direction:
 - A visible cave entrance and barrier presentation now exists through the whole live gate run and changes state as the barrier opens or disables
 - Cave-open state now increases passive gate reward rate to mark the outside-versus-inside pressure phase
 - Cave activation is now gated behind a claimed-pylon event rather than the initial gate start alone
+- A first `cave_manager.gd` stub now defines the future request, prepare, enter, collapse, and clear API boundary for procedural caves
 
 ---
 
@@ -37,6 +38,7 @@ Current confirmed direction:
 - Defining the first outside-versus-inside pressure loop
 - Defining the first forced-exit failure behavior
 - Replacing the visible cave entrance placeholder with actual cave travel and interior content
+- Defining how the future procedural cave generator will fulfill the cave manager request data
 
 ---
 
@@ -101,7 +103,7 @@ Current confirmed direction:
 
 ## Next Recommended Task
 Implement the next cave milestone:
-- connect the already-visible cave entrance to one simple cave transition or travel behavior
+- connect the already-visible cave entrance to the cave manager with one simple cave transition or travel behavior
 - implement one deeper reward objective inside the cave
 - implement one forced-exit collapse behavior on failure
 - decide how players transition into and out of the first cave space
