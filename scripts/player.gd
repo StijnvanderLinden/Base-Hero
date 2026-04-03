@@ -29,6 +29,7 @@ var _preview_invalid_text_color: Color = Color(1.0, 0.76, 0.76, 1.0)
 var _current_build_type: String = "wall"
 var _wall_preview_mesh: BoxMesh
 var _turret_preview_mesh: CylinderMesh
+var _channel_locked: bool = false
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var camera_pivot: Node3D = $CameraPivot
@@ -95,24 +96,25 @@ func _physics_process(delta: float) -> void:
 
 	if multiplayer.is_server():
 		if _is_local_player():
-			_input_vector = _read_input_vector()
-			if attack_pressed:
+			_input_vector = Vector2.ZERO if _channel_locked else _read_input_vector()
+			if attack_pressed and not _channel_locked:
 				_perform_server_attack()
-			if build_pressed:
+			if build_pressed and not _channel_locked:
 				_perform_server_build()
-			if interact_pressed:
+			if interact_pressed and not _channel_locked:
 				_perform_server_interact()
 		_simulate_movement(delta)
 		_sync_state.rpc(global_position, velocity, rotation.y)
 		return
 
 	if _is_local_player():
-		_submit_input.rpc_id(1, _read_input_vector())
-		if attack_pressed:
+		var submitted_input := Vector2.ZERO if _channel_locked else _read_input_vector()
+		_submit_input.rpc_id(1, submitted_input)
+		if attack_pressed and not _channel_locked:
 			_request_attack.rpc_id(1)
-		if build_pressed:
+		if build_pressed and not _channel_locked:
 			_request_build.rpc_id(1, _current_build_type)
-		if interact_pressed:
+		if interact_pressed and not _channel_locked:
 			_request_interact.rpc_id(1)
 
 
@@ -123,6 +125,8 @@ func _simulate_movement(delta: float) -> void:
 		velocity.y = 0.0
 
 	var direction := Vector3(_input_vector.x, 0.0, _input_vector.y)
+	if _channel_locked:
+		direction = Vector3.ZERO
 	if direction.length_squared() > 1.0:
 		direction = direction.normalized()
 
@@ -252,6 +256,21 @@ func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refil
 		_update_label()
 		_update_health_bar()
 	_sync_state.rpc(global_position, velocity, rotation.y)
+
+
+func set_channel_locked(active: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	_apply_channel_lock(active)
+	_sync_channel_lock.rpc(active)
+
+
+func _apply_channel_lock(active: bool) -> void:
+	_channel_locked = active
+	if active:
+		_input_vector = Vector2.ZERO
+		velocity.x = 0.0
+		velocity.z = 0.0
 
 
 func _update_label() -> void:
@@ -495,6 +514,13 @@ func _sync_health(server_health: float) -> void:
 	current_health = server_health
 	_update_label()
 	_update_health_bar()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_channel_lock(active: bool) -> void:
+	if multiplayer.is_server():
+		return
+	_apply_channel_lock(active)
 
 
 @rpc("authority", "call_remote", "reliable")

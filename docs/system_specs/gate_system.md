@@ -41,14 +41,14 @@ The key emotional loop is:
 
 ## Core Loop
 1. Enter a persistent gate biome
-2. Explore the current reachable layer
-3. Fight biome enemies while locating pylons and resources
-4. Channel and defend a pylon capture event
-5. Secure the area and unlock a foothold
+2. Build a small defense footprint around an uncaptured pylon
+3. Start the pylon claim channel when ready
+4. Survive the claim waves and secure the foothold
+5. Unlock the cave from the claimed pylon
 6. Spend resources at the captured pylon to activate a cave expedition
 7. Defend the pylon outside while exploring deeper inside the cave
-8. Extract or return to base with progress and rewards
-9. Repair damaged pylons and reclaim control if an expedition fails
+8. Repair disabled pylons after failed cave attempts
+9. Extract or return to base with progress and rewards
 
 ---
 
@@ -119,6 +119,7 @@ Captured pylons are the bridge between overworld gate traversal and cave progres
 ### Overworld Gate Space
 The overworld around a captured pylon is where:
 - existing defenses are placed and reused
+- claim and repair defense events happen
 - enemies pressure the pylon during cave expeditions
 - players may fight manually to stabilize the area
 - repair and recovery gameplay happens after failure
@@ -145,6 +146,8 @@ Activation flow:
 
 The player does not build a new defense setup inside the cave.
 The player relies on the existing defenses already placed around the pylon.
+
+Before cave activation, the pylon must first be claimed through its own finite wave event.
 
 ---
 
@@ -207,6 +210,8 @@ When a pylon is damaged:
 - the area becomes hostile again
 
 The pylon is not permanently lost, but the team loses control of that foothold until it is repaired.
+
+Repair starts with a locked repair channel and then a lighter defense event.
 
 ---
 

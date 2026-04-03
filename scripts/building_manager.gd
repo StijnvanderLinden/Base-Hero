@@ -206,6 +206,7 @@ func _spawn_structure_local(structure_type: String, structure_id: int, structure
 	if structure.has_method("configure_projectiles"):
 		structure.configure_projectiles(projectiles_root, turret_bullet_scene)
 	structures_root.add_child(structure)
+	_refresh_gate_linked_defenses()
 
 
 func _remove_structure_local(structure_type: String, structure_id: int) -> void:
@@ -216,6 +217,7 @@ func _remove_structure_local(structure_type: String, structure_id: int) -> void:
 	if not structures_root.has_node(node_name):
 		return
 	structures_root.get_node(node_name).queue_free()
+	_refresh_gate_linked_defenses()
 
 
 func _clear_structures_local() -> void:
@@ -223,6 +225,7 @@ func _clear_structures_local() -> void:
 		return
 	for child in structures_root.get_children():
 		child.queue_free()
+	_refresh_gate_linked_defenses()
 
 
 func _clear_projectiles_local() -> void:
@@ -390,6 +393,13 @@ func get_projectiles_root() -> Node3D:
 
 func get_turret_bullet_scene() -> PackedScene:
 	return turret_bullet_scene
+
+
+func _refresh_gate_linked_defenses() -> void:
+	if gate_manager == null:
+		return
+	if gate_manager.has_method("refresh_gate_pylon_defenses"):
+		gate_manager.refresh_gate_pylon_defenses()
 
 
 func _normalized_structure_type(structure_type: String) -> String:

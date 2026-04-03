@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Design Confirmed, Not Implemented
+First Activation And Entrance Slice Implemented
 
 ---
 
@@ -25,22 +25,26 @@ Current confirmed direction:
 
 ## Implemented
 - Cave expeditions are defined as part of the current gate direction
-- No dedicated cave runtime system exists yet
+- First cave activation flow now exists on the live pylon objective
+- Cave activation now spends stored scrap and channels at the pylon before the cave opens
+- A visible cave barrier and entrance presentation now appears at claimed pylons and changes state as the cave opens or disables
+- Cave-open state now increases passive gate reward rate to mark the outside-versus-inside pressure phase
+- Cave activation is now gated behind a claimed-pylon event rather than the initial gate start alone
 
 ---
 
 ## In Progress
-- Defining the first cave activation flow
 - Defining the first outside-versus-inside pressure loop
 - Defining the first forced-exit failure behavior
+- Replacing the visible cave entrance placeholder with actual cave travel and interior content
 
 ---
 
 ## Blockers / Problems
-- No cave entrance or barrier system exists yet
-- No cave active-state flow exists yet
 - No forced exit on cave failure exists yet
 - No cave-specific reward structure is implemented yet
+- Cave entrance presentation now exists, but cave-open state is still not a separate interior space
+- Cave failure now disables the pylon and starts repair, but it still does not move players out of a separate cave space because that space does not exist yet
 
 ---
 
@@ -96,8 +100,8 @@ Current confirmed direction:
 ---
 
 ## Next Recommended Task
-Implement the first cave slice:
-- create one activatable cave entrance at a captured pylon
-- implement one simple outside-pressure state while the cave is active
+Implement the next cave milestone:
+- connect the visible cave entrance to one simple cave transition or travel behavior
 - implement one deeper reward objective inside the cave
 - implement one forced-exit collapse behavior on failure
+- decide how players transition into and out of the first cave space

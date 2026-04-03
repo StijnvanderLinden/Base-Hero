@@ -19,10 +19,13 @@ var projectile_scene: PackedScene
 var _attack_cooldown_remaining: float = 0.0
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color(0.89, 0.78, 0.31)
+var _inactive_color: Color = Color(0.38, 0.37, 0.25)
 var _health_bar_local_offset: Vector3 = Vector3.ZERO
 var _health_bar_width: float = 1.0
 var _next_bullet_id: int = 1
+var _defense_active: bool = true
 
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
 @onready var health_bar_root: Node3D = $HealthBar
@@ -71,7 +74,7 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
 		return
-	if current_health <= 0.0:
+	if current_health <= 0.0 or not _defense_active:
 		return
 
 	_attack_cooldown_remaining = max(_attack_cooldown_remaining - delta, 0.0)
@@ -113,7 +116,19 @@ func get_hit_radius() -> float:
 
 
 func can_be_targeted() -> bool:
-	return current_health > 0.0
+	return current_health > 0.0 and _defense_active
+
+
+func set_defense_active(active: bool) -> void:
+	_defense_active = active
+	if collision_shape != null:
+		collision_shape.disabled = not active or current_health <= 0.0
+	_update_label()
+	_update_body_visuals()
+
+
+func is_defense_active() -> bool:
+	return _defense_active
 
 
 func apply_server_damage(amount: float) -> void:
@@ -214,6 +229,12 @@ func _apply_turret_color() -> void:
 
 
 func _update_label() -> void:
+	if current_health <= 0.0:
+		label.text = "Turret Destroyed"
+		return
+	if not _defense_active:
+		label.text = "Turret Offline"
+		return
 	label.text = "Turret HP:%d" % int(round(current_health))
 
 
@@ -246,7 +267,7 @@ func _update_body_visuals() -> void:
 	if _hit_flash_time_remaining > 0.0:
 		material.albedo_color = Color(1.0, 1.0, 1.0)
 		return
-	material.albedo_color = _base_color
+	material.albedo_color = _base_color if _defense_active else _inactive_color
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")

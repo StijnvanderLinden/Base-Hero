@@ -31,9 +31,9 @@ A functional pylon provides:
 
 ### Uncaptured
 - hostile or neutral
-- not safe
+- not yet claimed
 - cave expedition cannot be activated
-- local defenses are not part of the player foothold yet
+- players may build defenses around it before starting the claim event
 
 ### Functional
 - captured and under player control
@@ -54,11 +54,11 @@ A functional pylon provides:
 Players capture a pylon by channeling at it.
 
 Capture flow:
-1. start channeling
-2. trigger a defense event
-3. survive construct enemy pressure
-4. complete the capture
-5. unlock local foothold benefits
+1. build defenses around the pylon before committing
+2. start the claim channel at the pylon
+3. trigger a finite construct-wave defense event
+4. clear all claim waves
+5. complete the capture and unlock the local foothold
 
 Failure during capture does not permanently remove the pylon.
 Players can regroup and try again later.
@@ -106,14 +106,15 @@ This is intended to feel like a meaningful setback without erasing the player’
 Damaged pylons can be restored through repair.
 
 Repair rules:
-- requires a modest resource cost
 - requires time spent repairing at the pylon
+- locks the channeling player into the repair action until the repair event begins
 - draws enemy attention during the repair event
-- must not be overly slow or overly expensive
+- uses lighter enemy pressure than the initial claim event
 
 During repair:
-- enemies attack the player
-- the player must defend manually
+- the channeling player cannot do anything else until the repair channel completes
+- enemies arrive in lighter waves than the original claim event
+- the team must defend manually
 - inactive defenses do not automatically carry the event
 
 On success:

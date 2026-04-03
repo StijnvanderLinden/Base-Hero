@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Design Confirmed, Not Implemented
+First Runtime Slice Implemented
 
 ---
 
@@ -25,20 +25,26 @@ Current confirmed direction:
 ## Implemented
 - Pylons exist as a documented gate objective direction
 - Limited building around pylons is part of the current gate direction
+- First runtime pylon foothold now exists in the gate prototype
+- Pylons now begin uncaptured and are manually claimed by starting a claim channel at the pylon
+- Claim completion now depends on clearing finite construct waves rather than waiting out a timer alone
+- Pylons now switch between functional and damaged states in runtime
+- Claimed pylons now show a visible cave barrier that shifts through sealed, channeling, open, and disabled presentation states
+- Nearby walls and turrets now go offline when the active pylon is damaged
+- Damaged pylons now support a first repair channel plus lighter repair defense event
+- Repair channeling now breaks if the channeling player dies or leaves the repair spot, and can be restarted
 
 ---
 
 ## In Progress
-- Defining the first functional versus damaged pylon state machine
 - Defining activation and repair behavior for the first milestone
 
 ---
 
 ## Blockers / Problems
-- No pylon runtime system exists yet
-- No functional versus damaged pylon state is implemented yet
-- No defense activation or deactivation behavior tied to pylon state exists yet
-- No repair event is implemented yet
+- Damaged pylons do not yet have a repair interaction or persistent reclaim flow
+- Cave presentation exists, but there is still no separate cave travel or interior space yet
+- Repair event failure does not yet have extra consequences beyond remaining damaged
 
 ---
 
@@ -92,8 +98,8 @@ Current confirmed direction:
 ---
 
 ## Next Recommended Task
-Implement the first pylon slice:
-- create one pylon state machine
-- implement cave activation channeling at a captured pylon
-- disable nearby defenses when damaged
-- implement one repair-under-pressure recovery event
+Implement the next pylon milestone:
+- connect the visible cave entrance to actual cave travel or transition logic
+- add stronger repair-event failure consequences if needed
+- keep damaged-pylon readability clear during multiplayer play
+- decide what persists between failed expeditions and later returns

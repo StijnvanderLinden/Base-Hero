@@ -10,9 +10,12 @@ var current_health: float = 180.0
 var wall_manager: Node
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color(0.74, 0.75, 0.8)
+var _inactive_color: Color = Color(0.35, 0.37, 0.42)
 var _health_bar_local_offset: Vector3 = Vector3.ZERO
 var _health_bar_width: float = 1.0
+var _defense_active: bool = true
 
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
 @onready var health_bar_root: Node3D = $HealthBar
@@ -34,6 +37,7 @@ func set_manager(manager: Node) -> void:
 func _ready() -> void:
 	add_to_group("structures")
 	add_to_group("blocking_structures")
+	add_to_group("defense_structures")
 	global_position = spawn_position
 	rotation.y = spawn_rotation_y
 	_health_bar_local_offset = health_bar_root.position
@@ -77,7 +81,19 @@ func get_hit_radius() -> float:
 
 
 func can_be_targeted() -> bool:
-	return current_health > 0.0
+	return current_health > 0.0 and _defense_active
+
+
+func set_defense_active(active: bool) -> void:
+	_defense_active = active
+	if collision_shape != null:
+		collision_shape.disabled = not active or current_health <= 0.0
+	_update_label()
+	_update_body_visuals()
+
+
+func is_defense_active() -> bool:
+	return _defense_active
 
 
 func apply_server_damage(amount: float) -> void:
@@ -104,6 +120,12 @@ func _apply_wall_color() -> void:
 
 
 func _update_label() -> void:
+	if current_health <= 0.0:
+		label.text = "Wall Destroyed"
+		return
+	if not _defense_active:
+		label.text = "Wall Offline"
+		return
 	label.text = "Wall HP:%d" % int(round(current_health))
 
 
@@ -136,7 +158,7 @@ func _update_body_visuals() -> void:
 	if _hit_flash_time_remaining > 0.0:
 		material.albedo_color = Color(1.0, 1.0, 1.0)
 		return
-	material.albedo_color = _base_color
+	material.albedo_color = _base_color if _defense_active else _inactive_color
 
 
 @rpc("authority", "call_remote", "reliable")

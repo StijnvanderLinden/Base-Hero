@@ -181,6 +181,8 @@ func _current_attack_target(objective: Node3D) -> Node3D:
 	var structure_target = _nearest_structure_target(attack_range + 1.0)
 	if structure_target != null and _is_target_in_attack_range(structure_target):
 		return structure_target
+	if objective.has_method("can_be_targeted") and not objective.can_be_targeted():
+		return null
 	if _is_target_in_attack_range(objective):
 		return objective
 	return null

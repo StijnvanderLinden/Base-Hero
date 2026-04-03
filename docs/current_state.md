@@ -39,9 +39,14 @@ The project now has a working multiplayer gameplay prototype with shared players
 - basic player attack, enemy health, enemy death, and player/enemy health bars
 - first server-authoritative wall and turret placement prototype with replicated defense structures, structure health, and turret bullet projectiles
 - simple wave pacing with breather windows and in-session host restart flow for gate and raid pressure testing
-- first confirmed gate prototype with prep-phase building, a temporary drill objective, passive scrap gain, and drill-triggered five-second extraction
+- first confirmed gate prototype with build-first pylon setup, manual claim channeling, finite claim waves, cave activation, and extraction
 - shared session scrap storage plus a first base-side spend target that upgrades core max health
 - first town hall raid prototype with player-triggered upgrade channeling, finite raid waves, and no main-base enemy spawning outside active raids
+- first runtime pylon slice with functional versus damaged state and nearby defense deactivation
+- first cave activation slice with scrap spend and pylon channeling before the cave opens
+- first visible cave barrier and entrance presentation on the live pylon objective
+- first damaged-pylon repair slice with a locked repair channel and lighter repair waves
+- repair channel interruption on player death or movement, with restartable repair attempts
 
 ### Design Direction
 - core game identity is defined
@@ -56,7 +61,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - enemy behavior currently uses direct pursuit and objective pressure only, even though pacing now ramps by wave
 - restart flow exists for repeated testing, but full match recovery/results flow is not implemented
 - building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
-- gate flow now follows the confirmed prep/build/extract rule set, and rewards now feed a first core-health upgrade, but progression still only has one spend target and gate content variety is still minimal
+- gate flow now uses a first pylon foothold instead of the old drill objective, now supports manual claim waves, visible cave barrier states, cave activation, and a first repair loop, but cave travel, forced cave exit, and revisit persistence are not implemented yet
 - raid flow now exists in first prototype form and now uses a first dedicated construct swarm unit, but broader construct role variety is not implemented yet
 
 ---
@@ -69,13 +74,13 @@ The project now has a working multiplayer gameplay prototype with shared players
 
 ## Current Project Focus
 The current focus is:
-**Phase 7: Main Raid Prototype, now focused on validating the first player-triggered raid loop**
+**Phase 7: Main Raid Prototype plus first pylon foothold integration**
 
 That means the next practical targets are:
 - validate that no enemies spawn at the base outside active raids
 - validate town hall upgrade channeling and raid success/failure in multiplayer sessions
 - validate the first construct raid unit and add the next construct role after it
-- expand progression beyond a single spend target only after the raid loop feels correct
+- add a visible cave entrance and forced cave-exit behavior to the new pylon foothold loop
 
 ---
 

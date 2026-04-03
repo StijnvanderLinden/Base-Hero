@@ -30,19 +30,26 @@ Current confirmed direction:
 - First gate prototype exists in the shared multiplayer scene
 - Gate reward flow already feeds back into base progression in a basic way
 - High-level persistent gate concept is documented
+- The live gate foothold now uses a first pylon runtime objective instead of the old drill objective
+- The live gate now starts in a build phase and only begins claim pressure when players manually channel the pylon
+- The live claim event now finishes only after all finite claim waves are cleared
+- Nearby gate defenses now deactivate when that pylon is damaged
+- The live pylon now supports the first cave activation flow through scrap spend and channeling
+- The live pylon now shows a first visible cave barrier and entrance state during claimed, channeling, open, and disabled phases
+- The live gate now supports a first damaged-pylon repair loop with a locked repair channel and lighter repair waves
 
 ---
 
 ## In Progress
-- Reframing the current prototype from temporary drill survival to pylon-activated cave expeditions
-- Defining the first real outside-versus-inside gameplay loop
+- Reframing the current prototype from temporary pylon-defense survival to pylon-activated cave expeditions
+- Defining the first real outside-versus-inside gameplay loop beyond the new cave-open state
 - Defining the minimum persistent state for pylons, caves, and recovery
 
 ---
 
 ## Blockers / Problems
-- Current prototype is still closer to a temporary drill survival loop than a cave expedition loop
-- Pylon capture, cave activation, damaged state, and repair are not implemented yet
+- Current prototype is still closer to a temporary pylon-defense survival loop than a cave expedition loop
+- Cave travel and forced exit are still not implemented yet
 - Persistent map reveal and gate revisit state are not implemented yet
 - Building rules near captured pylons are not implemented yet
 - Exploration enemy families are not yet separated from all construct event pressure in runtime
@@ -107,7 +114,6 @@ Current confirmed direction:
 
 ## Next Recommended Task
 Define and implement the first true cave gate slice:
-- implement one pylon state machine with functional and damaged states
-- implement one cave activation channel from a captured pylon
+- connect the visible cave entrance to actual cave travel
 - implement one simple forced-exit failure flow
-- implement one repair-under-pressure recovery loop
+- implement one first interior reward objective

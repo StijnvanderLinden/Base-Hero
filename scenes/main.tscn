@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://dnd2pms23kqlx" path="res://scripts/gate_manager.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/raid_manager.gd" id="12"]
 [ext_resource type="PackedScene" path="res://scenes/construct_enemy.tscn" id="13"]
+[ext_resource type="PackedScene" path="res://scenes/pylon.tscn" id="14"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(40, 1, 40)
@@ -44,7 +45,7 @@ turret_bullet_scene = ExtResource("10")
 
 [node name="GateManager" type="Node" parent="." unique_id=889331205]
 script = ExtResource("11")
-gate_objective_scene = ExtResource("6")
+gate_objective_scene = ExtResource("14")
 gate_center = null
 gate_objective_max_health = null
 prep_duration = null
