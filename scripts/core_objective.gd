@@ -43,8 +43,12 @@ func bind_network_manager(manager: Node) -> void:
 		manager.peer_registered.connect(_on_peer_registered)
 
 
+func _is_server_context() -> bool:
+	return multiplayer != null and multiplayer.is_server()
+
+
 func apply_server_damage(amount: float) -> void:
-	if not multiplayer.is_server():
+	if not _is_server_context():
 		return
 	if amount <= 0.0 or is_destroyed:
 		return
@@ -53,7 +57,7 @@ func apply_server_damage(amount: float) -> void:
 	_update_visuals()
 	_start_hit_flash()
 	_play_hit_feedback.rpc()
-	_sync_state.rpc(current_health, is_destroyed)
+	_sync_state.rpc(current_health, is_destroyed, max_health)
 	if current_health <= 0.0:
 		_handle_server_destroyed()
 
@@ -79,40 +83,56 @@ func configure_objective(new_display_name: String, custom_max_health: float = -1
 	if custom_max_health > 0.0:
 		max_health = custom_max_health
 	_reset_local_state()
+	if _is_server_context():
+		_sync_state.rpc(current_health, is_destroyed, max_health)
+
+
+func set_max_health_runtime(new_max_health: float, add_delta_to_current: bool = false) -> void:
+	var previous_max := max_health
+	max_health = max(new_max_health, 1.0)
+	if add_delta_to_current and not is_destroyed:
+		current_health = min(current_health + max(max_health - previous_max, 0.0), max_health)
+	else:
+		current_health = clamp(current_health, 0.0, max_health)
+	_update_visuals()
+	if _is_server_context():
+		_sync_state.rpc(current_health, is_destroyed, max_health)
 
 
 func _on_session_changed(in_session: bool) -> void:
-	if multiplayer.is_server() and in_session:
+	if _is_server_context() and in_session:
 		_reset_local_state()
-		_sync_state.rpc(current_health, is_destroyed)
+		_sync_state.rpc(current_health, is_destroyed, max_health)
 	if not in_session:
 		_reset_local_state()
 
 
 func restart_match() -> void:
-	if not multiplayer.is_server():
+	if not _is_server_context():
 		return
 	_hit_flash_time_remaining = 0.0
 	_reset_local_state()
-	_sync_state.rpc(current_health, is_destroyed)
+	_sync_state.rpc(current_health, is_destroyed, max_health)
 
 
-func apply_synced_state(server_health: float, server_destroyed: bool) -> void:
+func apply_synced_state(server_health: float, server_destroyed: bool, server_max_health: float = -1.0) -> void:
+	if server_max_health > 0.0:
+		max_health = server_max_health
 	current_health = server_health
 	is_destroyed = server_destroyed
 	_update_visuals()
 
 
 func _on_peer_registered(peer_id: int) -> void:
-	if not multiplayer.is_server():
+	if not _is_server_context():
 		return
-	_sync_state.rpc_id(peer_id, current_health, is_destroyed)
+	_sync_state.rpc_id(peer_id, current_health, is_destroyed, max_health)
 
 
 func _handle_server_destroyed() -> void:
 	is_destroyed = true
 	_update_visuals()
-	_sync_state.rpc(current_health, is_destroyed)
+	_sync_state.rpc(current_health, is_destroyed, max_health)
 	destroyed.emit()
 
 
@@ -184,15 +204,15 @@ func _update_body_visuals() -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_state(server_health: float, server_destroyed: bool) -> void:
+func _sync_state(server_health: float, server_destroyed: bool, server_max_health: float) -> void:
 	var was_destroyed := is_destroyed
-	apply_synced_state(server_health, server_destroyed)
+	apply_synced_state(server_health, server_destroyed, server_max_health)
 	if not was_destroyed and is_destroyed:
 		destroyed.emit()
 
 
 @rpc("authority", "call_remote", "reliable")
 func _play_hit_feedback() -> void:
-	if multiplayer.is_server():
+	if _is_server_context():
 		return
 	_start_hit_flash()

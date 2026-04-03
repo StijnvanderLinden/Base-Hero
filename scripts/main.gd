@@ -13,6 +13,7 @@ extends Node3D
 @onready var leave_button: Button = $UI/Panel/VBoxContainer/LeaveButton
 @onready var gate_button: Button = $UI/Panel/VBoxContainer/GateButton
 @onready var restart_button: Button = $UI/Panel/VBoxContainer/RestartButton
+@onready var core_upgrade_button: Button = $UI/Panel/VBoxContainer/CoreUpgradeButton
 @onready var status_label: Label = $UI/Panel/VBoxContainer/StatusLabel
 @onready var run_info_label: Label = $UI/Panel/VBoxContainer/RunInfoLabel
 
@@ -35,6 +36,7 @@ func _ready() -> void:
 	gate_manager.status_changed.connect(_on_status_changed)
 	gate_manager.run_info_changed.connect(_on_run_info_changed)
 	gate_manager.gate_state_changed.connect(_on_gate_state_changed)
+	gate_manager.progression_changed.connect(_refresh_progression_ui)
 	network_manager.session_changed.connect(_on_session_changed)
 	core_objective.destroyed.connect(_on_core_destroyed)
 	enemy_manager.wave_changed.connect(_on_wave_changed)
@@ -43,7 +45,8 @@ func _ready() -> void:
 	port_input.text = str(network_manager.default_port)
 	_on_session_changed(false)
 	_on_status_changed("Core defense prototype ready.")
-	_on_run_info_changed("Base | Stored Scrap 0")
+	_on_run_info_changed("Base | Stored Scrap 0 | Core Lv 0 | Max HP 300")
+	_refresh_progression_ui()
 
 
 func _on_host_pressed() -> void:
@@ -75,6 +78,14 @@ func _on_restart_pressed() -> void:
 	network_manager.restart_match()
 	restart_button.disabled = false
 	status_label.text = "Wave 1 live. Space attacks, 1/2 select build, Q places."
+	_refresh_progression_ui()
+
+
+func _on_core_upgrade_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	gate_manager.purchase_core_upgrade()
+	_refresh_progression_ui()
 
 
 func _on_status_changed(message: String) -> void:
@@ -83,6 +94,7 @@ func _on_status_changed(message: String) -> void:
 
 func _on_run_info_changed(message: String) -> void:
 	run_info_label.text = message
+	_refresh_progression_ui()
 
 
 func _on_session_changed(in_session: bool) -> void:
@@ -95,9 +107,10 @@ func _on_session_changed(in_session: bool) -> void:
 	port_input.editable = not in_session
 	if not in_session:
 		startup_camera.current = true
-		run_info_label.text = "Base | Stored Scrap 0"
+		run_info_label.text = "Base | Stored Scrap 0 | Core Lv 0 | Max HP 300"
 	else:
 		status_label.text = "Wave 1 live. Space attacks, 1/2 select build, Q places."
+	_refresh_progression_ui()
 
 
 func _on_core_destroyed() -> void:
@@ -119,8 +132,18 @@ func _on_gate_state_changed(is_active: bool) -> void:
 	gate_button.disabled = not network_manager.multiplayer.multiplayer_peer or not multiplayer.is_server() or is_active
 	if is_active:
 		gate_button.text = "Gate Active"
+		_refresh_progression_ui()
 		return
 	gate_button.text = "Start Gate Run"
+	_refresh_progression_ui()
+
+
+func _refresh_progression_ui() -> void:
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	var next_cost = gate_manager.get_next_core_upgrade_cost()
+	var next_level = gate_manager.get_core_upgrade_level() + 1
+	core_upgrade_button.text = "Upgrade Core to Lv %d (%d Scrap)" % [next_level, next_cost]
+	core_upgrade_button.disabled = not has_session or not gate_manager.can_purchase_core_upgrade()
 
 
 func _get_port() -> int:

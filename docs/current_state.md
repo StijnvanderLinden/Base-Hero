@@ -40,6 +40,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - first server-authoritative wall and turret placement prototype with replicated defense structures, structure health, and turret bullet projectiles
 - simple wave pacing with breather windows and in-session host restart flow for repeated defense testing
 - first confirmed gate prototype with prep-phase building, a temporary drill objective, passive scrap gain, and drill-triggered five-second extraction
+- shared session scrap storage plus a first base-side spend target that upgrades core max health
 
 ### Design Direction
 - core game identity is defined
@@ -54,25 +55,26 @@ The project now has a working multiplayer gameplay prototype with shared players
 - enemy behavior currently uses direct pursuit and objective pressure only, even though pacing now ramps by wave
 - restart flow exists for repeated testing, but full match recovery/results flow is not implemented
 - building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
-- gate flow now follows the confirmed prep/build/extract rule set, but rewards are not connected to progression and gate content variety is still minimal
+- gate flow now follows the confirmed prep/build/extract rule set, and rewards now feed a first core-health upgrade, but progression still only has one spend target and gate content variety is still minimal
 
 ---
 
 ## Not Yet Implemented
 - raid prototype
 - progression systems
+- broader progression systems beyond the first core upgrade
 
 ---
 
 ## Current Project Focus
 The current focus is:
-**Phase 5: First Gate Prototype, built on the multiplayer-safe defense foundation**
+**Phase 7: Main Raid Prototype, after proving the first gate-to-upgrade reward loop**
 
 That means the next practical targets are:
-- validate gate prep building and extraction interaction in multiplayer
-- decide whether the first gate loop needs an external side reward at all
-- connect gate rewards into a first upgrade or persistence path
-- keep the base-defense foundation stable while gate flow grows
+- validate shared scrap and core upgrade flow in multiplayer sessions
+- build the first main raid prototype that tests preparation and payoff at the base
+- expand progression beyond a single spend target only after the raid loop exists
+- keep the base-defense foundation stable while gate and raid flow grow
 
 ---
 

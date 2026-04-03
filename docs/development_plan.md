@@ -216,6 +216,6 @@ When deciding what to work on next:
 
 ## Current Priority
 The current immediate priority is:
-**Phase 5: First Gate Prototype**
+**Phase 7: Main Raid Prototype**
 
 That means no major detours unless they directly stabilize the shared core-defense loop and its server-authoritative foundation.

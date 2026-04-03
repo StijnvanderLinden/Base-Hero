@@ -32,6 +32,8 @@ Current likely direction:
 - Extraction is triggered by interacting with the drill itself
 - Five-second extraction countdown with success/failure return flow back to base
 - Gate runs now reuse the shared enemy pressure loop against a temporary objective
+- Successful extractions now add to a shared session scrap pool at base
+- Gate scrap can now be spent on a first persistent-in-session core health upgrade
 - High-level gate concept documented
 - Resource direction discussed at a design level
 
@@ -40,7 +42,7 @@ Current likely direction:
 ## In Progress
 - Deciding final gate structure direction
 - Deciding exact relationship between survival, exploration, and milestone rewards
-- Deciding whether external side rewards are needed before the first persistence layer
+- Deciding whether external side rewards are needed beyond the first persistence layer
 
 ---
 
@@ -109,12 +111,13 @@ Current likely direction:
 - Reward structure should include a main progression currency plus rarer special materials/components
 - The first gate slice should stay in the existing scene and prove the loop before any separate map pipeline is built
 - The confirmed first gate loop is prep-build, survive, interact with the drill, then survive a 5-second extraction
+- The first reward hookup should stay simple: shared scrap first, then one clear base upgrade before wider progression is added
 
 ---
 
 ## Next Recommended Task
 Expand the first gate slice:
 - validate gate prep building in multiplayer sessions
-- decide whether to add one stronger external reward or keep the first loop centered on survival time only
+- decide whether to add one stronger external reward or keep the first loop centered on survival time plus scrap payout only
 - add a clearer post-run results state
-- decide how gate rewards connect into upgrades
+- validate that the shared scrap payout and base upgrade feel worth the run

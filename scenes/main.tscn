@@ -95,7 +95,7 @@ current = true
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 336.0
-offset_bottom = 250.0
+offset_bottom = 286.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/Panel" unique_id=2144960709]
 layout_mode = 2
@@ -139,6 +139,11 @@ layout_mode = 2
 disabled = true
 text = "Restart Session"
 
+[node name="CoreUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649419]
+layout_mode = 2
+disabled = true
+text = "Upgrade Core to Lv 1 (25 Scrap)"
+
 [node name="StatusLabel" type="Label" parent="UI/Panel/VBoxContainer" unique_id=636461634]
 layout_mode = 2
 text = "Offline. Host or join to begin."
@@ -154,3 +159,4 @@ autowrap_mode = 3
 [connection signal="pressed" from="UI/Panel/VBoxContainer/LeaveButton" to="." method="_on_leave_pressed"]
 [connection signal="pressed" from="UI/Panel/VBoxContainer/GateButton" to="." method="_on_gate_pressed"]
 [connection signal="pressed" from="UI/Panel/VBoxContainer/RestartButton" to="." method="_on_restart_pressed"]
+[connection signal="pressed" from="UI/Panel/VBoxContainer/CoreUpgradeButton" to="." method="_on_core_upgrade_pressed"]

@@ -3,6 +3,7 @@ extends Node
 signal status_changed(message: String)
 signal run_info_changed(message: String)
 signal gate_state_changed(is_active: bool)
+signal progression_changed()
 
 @export var gate_objective_scene: PackedScene
 @export var gate_center: Vector3 = Vector3(64.0, 0.6, 0.0)
@@ -12,6 +13,9 @@ signal gate_state_changed(is_active: bool)
 @export var extraction_countdown: float = 5.0
 @export var objective_interaction_radius: float = 3.0
 @export var player_spawn_spacing: float = 3.0
+@export var core_upgrade_base_cost: int = 25
+@export var core_upgrade_cost_step: int = 15
+@export var core_upgrade_health_bonus: float = 100.0
 
 var gate_root: Node3D
 var players_root: Node3D
@@ -29,6 +33,8 @@ var _prep_remaining: float = 0.0
 var _extraction_remaining: float = 0.0
 var _sync_timer: float = 0.0
 var _gate_objective: Node3D
+var _base_core_max_health: float = 300.0
+var _core_upgrade_level: int = 0
 
 
 func _ready() -> void:
@@ -39,6 +45,8 @@ func set_roots(new_gate_root: Node3D, new_players_root: Node3D, new_base_objecti
 	gate_root = new_gate_root
 	players_root = new_players_root
 	base_objective = new_base_objective
+	if base_objective != null and "max_health" in base_objective:
+		_base_core_max_health = base_objective.max_health
 
 
 func set_enemy_manager(manager: Node) -> void:
@@ -144,13 +152,57 @@ func get_stored_scrap() -> int:
 	return _stored_scrap
 
 
+func get_core_upgrade_level() -> int:
+	return _core_upgrade_level
+
+
+func get_next_core_upgrade_cost() -> int:
+	return core_upgrade_base_cost + (_core_upgrade_level * core_upgrade_cost_step)
+
+
+func get_current_base_core_max_health() -> float:
+	return _base_core_max_health + (float(_core_upgrade_level) * core_upgrade_health_bonus)
+
+
+func can_purchase_core_upgrade() -> bool:
+	if not multiplayer.is_server():
+		return false
+	if not _session_active or _gate_active:
+		return false
+	return _stored_scrap >= get_next_core_upgrade_cost()
+
+
+func purchase_core_upgrade() -> void:
+	if not multiplayer.is_server():
+		return
+	if not _session_active:
+		status_changed.emit("Start a session before buying upgrades.")
+		return
+	if _gate_active:
+		status_changed.emit("Core upgrades can only be bought while back at base.")
+		return
+	var upgrade_cost := get_next_core_upgrade_cost()
+	if _stored_scrap < upgrade_cost:
+		status_changed.emit("Need %d scrap for the next core upgrade. Stored: %d." % [upgrade_cost, _stored_scrap])
+		return
+	_stored_scrap -= upgrade_cost
+	_core_upgrade_level += 1
+	_apply_progression_to_base_objective(true)
+	status_changed.emit("Core upgraded to level %d. Max health is now %d." % [_core_upgrade_level, int(round(get_current_base_core_max_health()))])
+	_broadcast_gate_state()
+
+
 func _on_session_changed(in_session: bool) -> void:
 	_session_active = in_session
 	if in_session:
+		_apply_progression_to_base_objective(false)
 		_emit_run_info()
+		progression_changed.emit()
 		return
-	_clear_gate_mode(true)
+	_clear_gate_mode(false)
+	_reset_progression_state()
 	_emit_run_info()
+	progression_changed.emit()
 
 
 func _on_peer_registered(peer_id: int) -> void:
@@ -166,6 +218,7 @@ func _on_peer_registered(peer_id: int) -> void:
 		_extraction_active,
 		_extraction_remaining,
 		_stored_scrap,
+		_core_upgrade_level,
 		_gate_objective.get_current_health() if _gate_objective != null and _gate_objective.has_method("get_current_health") else gate_objective_max_health,
 		_gate_objective.is_currently_destroyed() if _gate_objective != null and _gate_objective.has_method("is_currently_destroyed") else false
 	)
@@ -323,6 +376,7 @@ func _clear_gate_mode(reset_scrap: bool) -> void:
 		_stored_scrap = 0
 	_clear_gate_content_local()
 	gate_state_changed.emit(false)
+	progression_changed.emit()
 
 
 func _reset_gate_runtime_state() -> void:
@@ -341,9 +395,9 @@ func _emit_run_info() -> void:
 		if _extraction_active:
 			phase_text = "Extract %0.1fs" % _extraction_remaining
 		var reward_text := int(floor(_current_reward))
-		run_info_changed.emit("Gate | Phase %s | Scrap %d | Stored %d" % [phase_text, reward_text, _stored_scrap])
+		run_info_changed.emit("Gate | Phase %s | Scrap %d | Stored %d | Core Lv %d" % [phase_text, reward_text, _stored_scrap, _core_upgrade_level])
 		return
-	run_info_changed.emit("Base | Stored Scrap %d" % _stored_scrap)
+	run_info_changed.emit("Base | Stored Scrap %d | Core Lv %d | Max HP %d" % [_stored_scrap, _core_upgrade_level, int(round(get_current_base_core_max_health()))])
 
 
 func _broadcast_gate_state() -> void:
@@ -354,7 +408,8 @@ func _broadcast_gate_state() -> void:
 		objective_health = _gate_objective.get_current_health()
 	if _gate_objective != null and _gate_objective.has_method("is_currently_destroyed"):
 		objective_destroyed = _gate_objective.is_currently_destroyed()
-	_sync_gate_state.rpc(_gate_active, _prep_active, _prep_remaining, _current_reward, _extraction_active, _extraction_remaining, _stored_scrap, objective_health, objective_destroyed)
+	progression_changed.emit()
+	_sync_gate_state.rpc(_gate_active, _prep_active, _prep_remaining, _current_reward, _extraction_active, _extraction_remaining, _stored_scrap, _core_upgrade_level, objective_health, objective_destroyed)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -369,7 +424,7 @@ func _sync_gate_setup(active: bool) -> void:
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: float, current_reward: float, extraction_active: bool, extraction_remaining: float, stored_scrap: int, objective_health: float, objective_destroyed: bool) -> void:
+func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: float, current_reward: float, extraction_active: bool, extraction_remaining: float, stored_scrap: int, core_upgrade_level: int, objective_health: float, objective_destroyed: bool) -> void:
 	if multiplayer.is_server():
 		return
 	_gate_active = gate_active
@@ -379,6 +434,7 @@ func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: floa
 	_extraction_active = extraction_active
 	_extraction_remaining = extraction_remaining
 	_stored_scrap = stored_scrap
+	_core_upgrade_level = core_upgrade_level
 	if gate_active and _gate_objective == null:
 		_spawn_gate_content_local()
 	if not gate_active:
@@ -386,4 +442,18 @@ func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: floa
 	if _gate_objective != null and _gate_objective.has_method("apply_synced_state"):
 		_gate_objective.apply_synced_state(objective_health, objective_destroyed)
 	gate_state_changed.emit(_gate_active)
+	progression_changed.emit()
 	_emit_run_info()
+
+
+func _apply_progression_to_base_objective(add_upgrade_bonus: bool) -> void:
+	if base_objective == null:
+		return
+	if base_objective.has_method("set_max_health_runtime"):
+		base_objective.set_max_health_runtime(get_current_base_core_max_health(), add_upgrade_bonus)
+
+
+func _reset_progression_state() -> void:
+	_stored_scrap = 0
+	_core_upgrade_level = 0
+	_apply_progression_to_base_objective(false)
