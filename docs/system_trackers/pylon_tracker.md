@@ -29,7 +29,7 @@ Current confirmed direction:
 - Pylons now begin uncaptured and are manually claimed by starting a claim channel at the pylon
 - Claim completion now depends on clearing finite construct waves rather than waiting out a timer alone
 - Pylons now switch between functional and damaged states in runtime
-- Claimed pylons now show a visible cave barrier that shifts through sealed, channeling, open, and disabled presentation states
+- The live pylon now controls a visible cave barrier that shifts through sealed, channeling, open, and disabled presentation states
 - Nearby walls and turrets now go offline when the active pylon is damaged
 - Damaged pylons now support a first repair channel plus lighter repair defense event
 - Repair channeling now breaks if the channeling player dies or leaves the repair spot, and can be restarted

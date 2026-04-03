@@ -11,11 +11,11 @@ First Activation And Entrance Slice Implemented
 ---
 
 ## Current Design Summary
-Caves are activated from captured pylons and create a split between outside defense and inside exploration.
+Cave entrances already exist in the gate world, and pylons control whether their barrier is sealed or opened for expedition play.
 
 Current confirmed direction:
-- cave activation starts from a captured pylon through resource spend and channeling
-- a magical barrier disappears to reveal the entrance
+- the cave itself is already present in the world before activation
+- a magical barrier blocks the entrance until players channel at the pylon
 - enemies pressure the pylon outside while players explore inside
 - passive gain exists but is secondary to exploration rewards
 - failure collapses the cave and forces the player out
@@ -27,7 +27,7 @@ Current confirmed direction:
 - Cave expeditions are defined as part of the current gate direction
 - First cave activation flow now exists on the live pylon objective
 - Cave activation now spends stored scrap and channels at the pylon before the cave opens
-- A visible cave barrier and entrance presentation now appears at claimed pylons and changes state as the cave opens or disables
+- A visible cave entrance and barrier presentation now exists through the whole live gate run and changes state as the barrier opens or disables
 - Cave-open state now increases passive gate reward rate to mark the outside-versus-inside pressure phase
 - Cave activation is now gated behind a claimed-pylon event rather than the initial gate start alone
 
@@ -101,7 +101,7 @@ Current confirmed direction:
 
 ## Next Recommended Task
 Implement the next cave milestone:
-- connect the visible cave entrance to one simple cave transition or travel behavior
+- connect the already-visible cave entrance to one simple cave transition or travel behavior
 - implement one deeper reward objective inside the cave
 - implement one forced-exit collapse behavior on failure
 - decide how players transition into and out of the first cave space

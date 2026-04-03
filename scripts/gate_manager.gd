@@ -774,15 +774,15 @@ func _apply_gate_objective_runtime_visuals() -> void:
 
 
 func _current_cave_visual_state() -> String:
+	if not _gate_active:
+		return "hidden"
 	if _gate_objective != null and _gate_objective.has_method("get_pylon_state") and _gate_objective.get_pylon_state() == "damaged":
 		return "disabled"
 	if _cave_active:
 		return "open"
 	if _cave_activation_channeling:
 		return "channeling"
-	if _cave_spawned:
-		return "sealed"
-	return "hidden"
+	return "sealed"
 
 
 func _set_player_channel_lock(peer_id: int, active: bool) -> void:
