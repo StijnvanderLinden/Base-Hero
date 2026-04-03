@@ -6,8 +6,8 @@ The Gate System provides persistent biome expedition zones that players revisit 
 Gates should feel different from main base raids:
 - more exploratory
 - more layered
-- more opportunistic
-- more about long-term depth progress
+- more about holding partially secured territory
+- more about balancing external defense with internal cave progress
 - less about one-time all-in defense
 
 Gates are one of the main engines of progression for the main base.
@@ -16,25 +16,26 @@ Gates are one of the main engines of progression for the main base.
 
 ## Design Goals
 - Create replayable expedition spaces with persistence
-- Reward risk-taking and deeper pushes
-- Support co-op exploration and defense moments
-- Feed resources and materials back into the main base
-- Feel structurally different from raid gameplay
+- Reward deeper pushes rather than passive waiting
+- Support co-op pressure split between overworld defense and cave exploration
+- Feed resources and rare materials back into the main base
+- Make failure meaningful through loss of control rather than inventory punishment
 - Stay readable in 3D multiplayer
 
 ---
 
 ## Core Fantasy
-Players enter a dangerous biome through a gate, push into deeper layers, capture pylons under pressure, establish footholds, and return later to go farther than before.
+Players enter a dangerous biome through a gate, capture pylons to create footholds, activate caves from those pylons, and then choose how much attention to give to defending the outside versus pushing deeper inside.
 
 The key emotional loop is:
 - enter
 - scout
-- secure ground
-- survive a defense event
-- extract with progress
-- return stronger
-- push deeper next time
+- secure a pylon
+- activate a cave
+- defend the outside pressure
+- push deeper inside
+- recover from setbacks and reclaim control
+- return stronger next time
 
 ---
 
@@ -44,9 +45,10 @@ The key emotional loop is:
 3. Fight biome enemies while locating pylons and resources
 4. Channel and defend a pylon capture event
 5. Secure the area and unlock a foothold
-6. Optionally deploy drills at captured pylons for escalating defense rewards
-7. Extract or return to base
-8. Re-enter later and progress deeper into the same gate
+6. Spend resources at the captured pylon to activate a cave expedition
+7. Defend the pylon outside while exploring deeper inside the cave
+8. Extract or return to base with progress and rewards
+9. Repair damaged pylons and reclaim control if an expedition fails
 
 ---
 
@@ -62,10 +64,11 @@ Core rules:
 
 A gate contains:
 - multiple depth layers
-- pylon objectives
+- pylon foothold objectives
 - biome exploration enemies
+- cave entrances tied to pylons
 - local resources and rare materials
-- footholds earned through capture success
+- recovery loops after failure
 
 Gates are not intended to be fully cleared in one tier.
 
@@ -87,55 +90,61 @@ Each gate contains multiple layers of escalating danger.
 ### Inner Layer
 - high difficulty
 - rarer materials
-- more demanding pylon events
+- more demanding pylon and cave pressure
 
 ### Deep Or Core Layer
 - extreme difficulty
 - elite encounters
-- strongest resource and progression opportunities
+- strongest cave rewards and progression opportunities
 
 Players can attempt to go deeper early, but they are not expected to fully overcome those layers before their current tier supports it.
 
 ---
 
-## Pylon System
-Pylons are the main objectives inside gates.
+## Pylon Role Inside Gates
+Pylons are the main foothold objectives inside gates.
 
-### Activation
-Players begin a capture by channeling at a pylon.
-This starts a defense event.
+Pylons define:
+- safe local control
+- defensive coverage area
+- cave expedition access points
+- recovery anchors after failure
 
-### Defense Event Rule
-Pylon defense events spawn engineered construct enemies.
-
-This is important because pylon events are organized defense moments, not just ambient biome pressure.
-
-### Success
-Capturing a pylon should:
-- secure the local area
-- reveal the surrounding map region
-- unlock fast travel to that pylon
-- unlock teleport or return access back to base
-- allow limited building near that pylon
-
-### Failure
-Failure should end the event without permanently removing the pylon from the gate.
-Players can regroup and try again later.
+Captured pylons are the bridge between overworld gate traversal and cave progression.
 
 ---
 
-## Drill System
-Drills are placed at captured pylons.
+## Overworld Versus Cave Roles
 
-Drills:
-- trigger escalating waves
-- generate increasing rewards
-- create a localized push-your-luck defense loop
-- let players choose when to stop
+### Overworld Gate Space
+The overworld around a captured pylon is where:
+- existing defenses are placed and reused
+- enemies pressure the pylon during cave expeditions
+- players may fight manually to stabilize the area
+- repair and recovery gameplay happens after failure
 
-Drills are not the same as pylon capture.
-Pylon capture creates the foothold.
-Drills exploit the foothold for rewards.
+### Cave Space
+The cave is where:
+- players push deeper for the main rewards
+- enemies, encounters, and loot escalate by depth
+- rare materials and final rewards are found
+
+The design intent is that the cave produces the primary rewards, while the outside pylon area remains the defensive pressure point.
+
+---
+
+## Cave Activation Flow
+At a captured pylon, players may spend resources to activate a cave expedition.
+
+Activation flow:
+1. spend the required resource at the pylon
+2. begin a channeling process
+3. remove the magical barrier at the cave entrance
+4. start the expedition state
+5. begin external enemy pressure on the pylon while the cave is active
+
+The player does not build a new defense setup inside the cave.
+The player relies on the existing defenses already placed around the pylon.
 
 ---
 
@@ -146,11 +155,13 @@ Core rules:
 - only near captured pylons
 - small tactical setups only
 - not full fortress-scale construction
+- cave expeditions reuse those existing defenses rather than allowing a second build phase inside the cave
 
 Design reason:
 - keeps the main base as the center of large-scale building
 - preserves gate readability
 - makes pylon capture meaningfully change the local space
+- makes cave activation feel like committing an already-built foothold to pressure
 
 ---
 
@@ -163,10 +174,39 @@ Gate regions provide:
 - biome-specific materials
 - components or special rewards later
 
-Reward quality should generally improve with:
-- gate depth
-- pylon difficulty
-- drill risk
+During cave expeditions:
+- the pylon generates a small passive resource gain over time
+- deeper cave exploration provides the primary rewards
+- final rewards should come from deeper encounters, chests, bosses, or equivalent payoff points
+
+Design rule:
+- passive gain must never outperform exploration rewards
+- players should be incentivized to go deeper rather than wait outside
+
+---
+
+## Failure And Recovery In Gates
+Failure occurs when the pylon or linked expedition core is destroyed during an active cave expedition.
+
+On failure:
+- the cave collapses
+- players are forcibly removed or teleported out of the cave
+- the run ends immediately
+- the pylon becomes damaged
+
+This failure does not remove player loot or inventory.
+The consequence is loss of local control and safety.
+
+---
+
+## Damaged Pylon Consequences
+When a pylon is damaged:
+- all linked defenses become inactive
+- turrets do not function
+- safe-zone effects are disabled
+- the area becomes hostile again
+
+The pylon is not permanently lost, but the team loses control of that foothold until it is repaired.
 
 ---
 
@@ -174,6 +214,7 @@ Reward quality should generally improve with:
 Persistent gate progression may include:
 - revealed map areas
 - captured pylons
+- damaged versus functional pylon state
 - unlocked travel points
 - known routes and resource locations
 - gate-specific world state later
@@ -190,6 +231,7 @@ Biome affects:
 - exploration enemy families
 - local hazards
 - material types
+- cave feel and encounter identity
 - later mechanic identity
 
 Biome mechanics are biome-specific, not global.
@@ -204,8 +246,8 @@ Gate expeditions must work cleanly in co-op.
 
 Requirements:
 - shared pylon state
-- synchronized map progress
-- clear capture and drill event readability
+- synchronized cave activation state
+- clear outside-versus-inside pressure readability
 - fair reward presentation
 - good navigation clarity under pressure
 
@@ -214,10 +256,11 @@ Authority rule:
 
 Server handles:
 - pylon capture state
-- drill state
+- cave activation state
+- damaged versus repaired pylon state
 - enemy spawns
 - map progression
-- reward generation
+- passive resource generation
 - success and failure outcomes
 
 ---
@@ -226,16 +269,18 @@ Server handles:
 The early playable gate direction should prove:
 - one persistent gate biome
 - one basic pylon capture flow
-- one limited drill reward loop
-- one simple depth structure
+- one cave activation flow from a captured pylon
+- one simple outside-defense versus inside-exploration tension loop
+- one damaged-pylon recovery loop
 - one basic exploration enemy family
-- construct enemies for defense events
+- construct enemies for pylon pressure
 
 ---
 
 ## Future Extensions
 Possible future additions:
-- more layered gate events
+- multiple cave branches from a single foothold
+- more layered cave events
 - elite deep-layer encounters
 - biome mutators
 - gate-specific world-state changes

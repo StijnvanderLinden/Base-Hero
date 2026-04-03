@@ -153,6 +153,60 @@ This creates a better mix of:
 
 ---
 
+### Caves are activated from pylons, not found randomly
+Decision:
+Cave expeditions begin from captured pylons through intentional activation rather than random cave discovery.
+
+Reason:
+This keeps pylons central to gate progression, makes footholds matter mechanically, and ties cave access directly to player-controlled progression rather than scattered randomness.
+
+---
+
+### Pylon defenses are reused for cave events
+Decision:
+Players use the existing defenses around a captured pylon during cave expeditions instead of building a new defense setup inside the cave.
+
+Reason:
+This keeps the system readable, avoids duplicating the build loop, and makes preparing a foothold around the pylon a meaningful commitment before entering the cave.
+
+---
+
+### Failure damages pylons instead of removing player resources
+Decision:
+If a cave expedition fails, the pylon becomes damaged and local control is lost rather than removing player inventory or loot.
+
+Reason:
+This creates a meaningful setback through loss of safety and control without making failure feel overly punishing or discouraging experimentation.
+
+---
+
+### Players retain collected loot on cave failure
+Decision:
+Players keep the resources and loot they already collected if a cave expedition fails.
+
+Reason:
+This preserves player momentum, prevents frustration from hard wipe punishment, and makes the recovery loop focus on reclaiming the foothold rather than replacing lost inventory.
+
+---
+
+### Repairing pylons is a gameplay event with enemy pressure
+Decision:
+Repairing a damaged pylon requires time, modest resources, and defending against enemy pressure while local defenses remain inactive.
+
+Reason:
+This turns recovery into active gameplay, preserves tension after failure, and avoids a flat or purely administrative repair action.
+
+---
+
+### Passive resource gain is secondary to cave exploration
+Decision:
+Active caves may generate a small passive resource gain at the pylon, but the primary rewards must come from going deeper into the cave.
+
+Reason:
+This keeps players incentivized to explore, prevents idle outside play from becoming optimal, and maintains the intended risk-versus-reward tension of cave expeditions.
+
+---
+
 ## Rules
 Update this file when:
 - a major design or technical choice is made
