@@ -50,6 +50,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - first damaged-pylon repair slice with a locked repair channel and lighter repair waves
 - repair channel interruption on player death or movement, with restartable repair attempts
 - dedicated gate HUD feedback for cave state, pressure wave, reward gain, and cave-open timing
+- first authored cave-side reward cache objective that can be collected while the cave is open
 
 ### Design Direction
 - core game identity is defined

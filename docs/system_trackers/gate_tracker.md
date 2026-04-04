@@ -39,6 +39,7 @@ Current confirmed direction:
 - The live gate now supports a first damaged-pylon repair loop with a locked repair channel and lighter repair waves
 - The live gate HUD now shows cave state, pressure wave, reward gain, and cave timing while the pylon loop is active
 - Passive scrap gain now begins only while the cave is open and ramps upward with ongoing gate pressure
+- The live gate now includes one authored cave-side reward cache objective that can be collected during an open cave window
 
 ---
 
@@ -118,4 +119,4 @@ Current confirmed direction:
 Tune and validate the current cave-open loop:
 - check that the new cave HUD stays readable in multiplayer gate runs
 - tune cave-open pressure and reward pacing against the new HUD feedback
-- only then connect the visible cave entrance to a first real interior slice
+- then connect the visible cave entrance to a broader interior slice after the current cache objective proves out the reward loop
