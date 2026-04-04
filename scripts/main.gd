@@ -17,8 +17,16 @@ extends Node3D
 @onready var restart_button: Button = $UI/Panel/VBoxContainer/RestartButton
 @onready var town_hall_upgrade_button: Button = $UI/Panel/VBoxContainer/TownHallUpgradeButton
 @onready var core_upgrade_button: Button = $UI/Panel/VBoxContainer/CoreUpgradeButton
-@onready var status_label: Label = $UI/Panel/VBoxContainer/StatusLabel
-@onready var run_info_label: Label = $UI/Panel/VBoxContainer/RunInfoLabel
+@onready var status_label: Label = $UI/StatusPanel/VBoxContainer/StatusLabel
+@onready var run_info_label: Label = $UI/RunPanel/VBoxContainer/RunInfoLabel
+@onready var cave_panel: PanelContainer = $UI/CavePanel
+@onready var cave_state_value_label: Label = $UI/CavePanel/VBoxContainer/CaveStateValueLabel
+@onready var cave_pressure_value_label: Label = $UI/CavePanel/VBoxContainer/CavePressureValueLabel
+@onready var cave_reward_value_label: Label = $UI/CavePanel/VBoxContainer/CaveRewardValueLabel
+@onready var cave_detail_label: Label = $UI/CavePanel/VBoxContainer/CaveDetailValueLabel
+@onready var claim_panel: PanelContainer = $UI/ClaimPanel
+@onready var claim_progress_label: Label = $UI/ClaimPanel/VBoxContainer/ClaimProgressLabel
+@onready var claim_progress_bar: ProgressBar = $UI/ClaimPanel/VBoxContainer/ClaimProgressBar
 
 var _latest_run_info_base: String = "Base | Stored Scrap 0 | Core Lv 0 | Max HP 300"
 
@@ -58,6 +66,8 @@ func _ready() -> void:
 	_on_status_changed("Core defense prototype ready.")
 	_on_run_info_changed("Base | Stored Scrap 0 | Core Lv 0 | Max HP 300")
 	_refresh_progression_ui()
+	_refresh_claim_progress_ui()
+	_refresh_cave_status_ui()
 
 
 func _on_host_pressed() -> void:
@@ -115,6 +125,8 @@ func _on_status_changed(message: String) -> void:
 func _on_run_info_changed(message: String) -> void:
 	_latest_run_info_base = message
 	run_info_label.text = _compose_run_info(message)
+	_refresh_claim_progress_ui()
+	_refresh_cave_status_ui()
 	_refresh_progression_ui()
 
 
@@ -132,6 +144,8 @@ func _on_session_changed(in_session: bool) -> void:
 		run_info_label.text = _compose_run_info(_latest_run_info_base)
 	else:
 		status_label.text = "Base idle. Start a gate run or begin a town hall upgrade."
+	_refresh_claim_progress_ui()
+	_refresh_cave_status_ui()
 	_refresh_progression_ui()
 
 
@@ -142,6 +156,15 @@ func _on_core_destroyed() -> void:
 
 
 func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
+	if gate_manager.is_gate_active():
+		_refresh_claim_progress_ui()
+		_refresh_cave_status_ui()
+		if enemy_manager.get_pressure_mode() == "gate":
+			if is_breather:
+				status_label.text = "Gate pressure wave %d cleared. Short breather while the cave state holds." % wave_index
+				return
+			status_label.text = "Gate pressure wave %d live. Keep the pylon up or close the cave." % wave_index
+			return
 	if gate_manager.is_gate_active():
 		return
 	if not network_manager.multiplayer.multiplayer_peer:
@@ -165,9 +188,13 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 func _on_gate_state_changed(is_active: bool) -> void:
 	if is_active:
 		gate_button.text = "Gate Active"
+		_refresh_claim_progress_ui()
+		_refresh_cave_status_ui()
 		_refresh_progression_ui()
 		return
 	gate_button.text = "Start Gate Run"
+	_refresh_claim_progress_ui()
+	_refresh_cave_status_ui()
 	_refresh_progression_ui()
 
 
@@ -177,6 +204,8 @@ func _on_raid_state_changed(is_active: bool) -> void:
 	else:
 		town_hall_upgrade_button.text = "Start Town Hall Upgrade"
 	run_info_label.text = _compose_run_info(_latest_run_info_base)
+	_refresh_claim_progress_ui()
+	_refresh_cave_status_ui()
 	_refresh_progression_ui()
 
 
@@ -198,6 +227,97 @@ func _refresh_progression_ui() -> void:
 
 func _compose_run_info(base_message: String) -> String:
 	return "%s%s" % [base_message, raid_manager.get_run_info_suffix()]
+
+
+func _refresh_claim_progress_ui() -> void:
+	if claim_panel == null:
+		return
+	var snapshot = gate_manager.get_cave_status_snapshot()
+	var claim_channel_remaining := float(snapshot.get("claim_channel_remaining", 0.0))
+	var claim_event_active := bool(snapshot.get("claim_event_active", false))
+	var visible = gate_manager.is_gate_active() and (claim_channel_remaining > 0.0 or claim_event_active)
+	claim_panel.visible = visible
+	if not visible:
+		claim_progress_label.text = ""
+		claim_progress_bar.value = 0.0
+		return
+	if claim_channel_remaining > 0.0:
+		var channel_ratio = clamp(float(snapshot.get("claim_progress_ratio", 0.0)), 0.0, 1.0)
+		claim_progress_label.text = "Pylon Claim Channel %0.1fs" % claim_channel_remaining
+		claim_progress_bar.value = channel_ratio * 100.0
+		return
+
+	var total_waves = max(int(snapshot.get("claim_total_waves", 1)), 1)
+	var wave_index = enemy_manager.get_wave_index()
+	var completed_waves = max(wave_index - 1, 0)
+	var wave_progress := 0.0
+	var spawns_per_wave = max(enemy_manager.get_current_spawns_per_wave_count(), 1)
+	var spawned_count = clamp(enemy_manager.get_wave_spawned_count(), 0, spawns_per_wave)
+	var active_enemy_count = max(enemy_manager.get_active_enemy_count(), 0)
+	var defeated_count = clamp(spawned_count - active_enemy_count, 0, spawns_per_wave)
+	if enemy_manager.is_in_breather():
+		completed_waves = min(wave_index, total_waves)
+		wave_progress = 0.0
+	else:
+		var spawn_ratio := float(spawned_count) / float(spawns_per_wave)
+		var defeat_ratio := float(defeated_count) / float(spawns_per_wave)
+		wave_progress = clamp((spawn_ratio * 0.35) + (defeat_ratio * 0.65), 0.0, 1.0)
+	completed_waves = clamp(completed_waves, 0, total_waves)
+	var overall_ratio = clamp((float(completed_waves) + wave_progress) / float(total_waves), 0.0, 1.0)
+	claim_progress_label.text = "Claim Waves %d/%d Cleared" % [completed_waves, total_waves]
+	claim_progress_bar.value = overall_ratio * 100.0
+
+
+func _refresh_cave_status_ui() -> void:
+	if cave_panel == null:
+		return
+	var snapshot = gate_manager.get_cave_status_snapshot()
+	var visible := bool(snapshot.get("visible", false))
+	cave_panel.visible = visible
+	if not visible:
+		cave_state_value_label.text = ""
+		cave_pressure_value_label.text = ""
+		cave_reward_value_label.text = ""
+		cave_detail_label.text = ""
+		return
+
+	var state_label := String(snapshot.get("state_label", "Locked"))
+	var detail_label := String(snapshot.get("detail_label", ""))
+	var reward_rate := float(snapshot.get("reward_rate", 0.0))
+	var current_reward := int(floor(float(snapshot.get("current_reward", 0.0))))
+	var cave_id := int(snapshot.get("cave_id", 0))
+	var pressure_mode = enemy_manager.get_pressure_mode()
+	var wave_index = enemy_manager.get_wave_index()
+	var pressure_label := "Pressure Idle"
+	if pressure_mode == "gate":
+		pressure_label = "Pressure Wave %d" % wave_index
+		if enemy_manager.is_in_breather():
+			pressure_label += " | Breather %0.1fs" % enemy_manager.get_breather_time_remaining()
+	elif pressure_mode == "raid":
+		pressure_label = "Repair Wave %d" % wave_index
+		if enemy_manager.is_in_breather():
+			pressure_label += " | Breather %0.1fs" % enemy_manager.get_breather_time_remaining()
+
+	var timer_label := ""
+	if bool(snapshot.get("cave_active", false)):
+		timer_label = " | Toggle with E"
+	elif float(snapshot.get("cave_activation_remaining", 0.0)) > 0.0:
+		timer_label = " | Opens in %0.1fs" % float(snapshot.get("cave_activation_remaining", 0.0))
+	elif float(snapshot.get("claim_channel_remaining", 0.0)) > 0.0:
+		timer_label = " | Claim in %0.1fs" % float(snapshot.get("claim_channel_remaining", 0.0))
+	elif float(snapshot.get("repair_channel_remaining", 0.0)) > 0.0:
+		timer_label = " | Repair in %0.1fs" % float(snapshot.get("repair_channel_remaining", 0.0))
+	elif bool(snapshot.get("extraction_active", false)):
+		timer_label = " | Extract %0.1fs" % float(snapshot.get("extraction_remaining", 0.0))
+
+	var cave_suffix := ""
+	if cave_id > 0:
+		cave_suffix = " | Cave %d" % cave_id
+
+	cave_state_value_label.text = "%s%s%s" % [state_label, cave_suffix, timer_label]
+	cave_pressure_value_label.text = pressure_label
+	cave_reward_value_label.text = "Gain +%0.1f/s | Bank %d" % [reward_rate, current_reward]
+	cave_detail_label.text = detail_label
 
 
 func _get_port() -> int:

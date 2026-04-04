@@ -202,6 +202,75 @@ func is_repair_channeling() -> bool:
 	return _gate_active and _repair_channeling
 
 
+func get_current_run_reward() -> float:
+	return _current_reward
+
+
+func get_current_reward_rate() -> float:
+	return _current_passive_reward_rate()
+
+
+func get_gate_pylon_state() -> String:
+	if _gate_objective != null and _gate_objective.has_method("get_pylon_state"):
+		return _gate_objective.get_pylon_state()
+	if _cave_spawned:
+		return "functional"
+	return "uncaptured"
+
+
+func get_cave_status_snapshot() -> Dictionary:
+	var pylon_state := get_gate_pylon_state()
+	var state_label := "Locked"
+	var detail_label := "Claim the pylon to unlock cave control."
+	var cave_panel_visible := _gate_active and (_cave_spawned or pylon_state == "damaged")
+	if _claim_channeling:
+		state_label = "Claiming"
+		detail_label = "Secure the pylon before the claim channel breaks."
+	elif _claim_event_active:
+		state_label = "Claim Waves"
+		detail_label = "Hold off the construct waves to secure the pylon."
+	elif pylon_state == "damaged":
+		state_label = "Disabled"
+		detail_label = "Repair the pylon to restore cave control."
+	elif _repair_channeling:
+		state_label = "Repairing"
+		detail_label = "Hold position until the repair event starts."
+	elif _repair_event_active:
+		state_label = "Repair Defense"
+		detail_label = "Survive the lighter repair waves to restore the pylon."
+	elif _cave_activation_channeling:
+		state_label = "Opening"
+		detail_label = "Channel the pylon to open the cave entrance."
+	elif _cave_active:
+		state_label = "Open"
+		detail_label = "Keep the cave open to raise pressure and reward gain."
+	elif _cave_spawned:
+		state_label = "Ready"
+		detail_label = "Interact with the pylon to open or close the cave."
+
+	return {
+		"visible": cave_panel_visible,
+		"state_label": state_label,
+		"detail_label": detail_label,
+		"pylon_state": pylon_state,
+		"cave_id": _prepared_cave_id,
+		"reward_rate": _current_passive_reward_rate(),
+		"current_reward": _current_reward,
+		"claim_channel_remaining": _claim_channel_remaining,
+		"claim_event_active": _claim_event_active,
+		"claim_total_waves": pylon_claim_wave_count,
+		"cave_activation_remaining": _cave_activation_remaining,
+		"cave_active": _cave_active,
+		"repair_channel_remaining": _repair_channel_remaining,
+		"repair_channeling": _repair_channeling,
+		"repair_event_active": _repair_event_active,
+		"claim_progress_ratio": 1.0 - (_claim_channel_remaining / max(pylon_claim_channel_time, 0.001)) if _claim_channeling else 0.0,
+		"claim_channel_duration": pylon_claim_channel_time,
+		"extraction_active": _extraction_active,
+		"extraction_remaining": _extraction_remaining
+	}
+
+
 func get_gate_center() -> Vector3:
 	return gate_center
 

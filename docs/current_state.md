@@ -49,6 +49,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - first sustained cave-open pressure slice where enemy pressure keeps ramping while the cave remains open
 - first damaged-pylon repair slice with a locked repair channel and lighter repair waves
 - repair channel interruption on player death or movement, with restartable repair attempts
+- dedicated gate HUD feedback for cave state, pressure wave, reward gain, and cave-open timing
 
 ### Design Direction
 - core game identity is defined
@@ -82,7 +83,7 @@ That means the next practical targets are:
 - validate that no enemies spawn at the base outside active raids
 - validate town hall upgrade channeling and raid success/failure in multiplayer sessions
 - validate the first construct raid unit and add the next construct role after it
-- add a visible cave entrance and forced cave-exit behavior to the new pylon foothold loop
+- tune the current cave-open HUD and pressure readability during multiplayer gate runs
 
 ---
 

@@ -253,6 +253,20 @@ func get_wave_index() -> int:
 	return _wave_index
 
 
+func get_wave_spawned_count() -> int:
+	return _wave_spawned_count
+
+
+func get_current_spawns_per_wave_count() -> int:
+	return _current_spawns_per_wave()
+
+
+func get_active_enemy_count() -> int:
+	if enemies_root == null:
+		return 0
+	return enemies_root.get_child_count()
+
+
 func get_pressure_mode() -> String:
 	return _pressure_mode
 

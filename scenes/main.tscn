@@ -123,7 +123,7 @@ script = ExtResource("16")
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 336.0
-offset_bottom = 322.0
+offset_bottom = 332.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/Panel" unique_id=2144960709]
 layout_mode = 2
@@ -177,14 +177,142 @@ layout_mode = 2
 disabled = true
 text = "Upgrade Core to Lv 1 (25 Scrap)"
 
-[node name="StatusLabel" type="Label" parent="UI/Panel/VBoxContainer" unique_id=636461634]
-layout_mode = 2
-text = "Offline. Host or join to begin."
-autowrap_mode = 3
+[node name="RunPanel" type="PanelContainer" parent="UI" unique_id=636919108]
+layout_mode = 1
+anchors_preset = 9
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -264.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 98.0
+grow_horizontal = 0
 
-[node name="RunInfoLabel" type="Label" parent="UI/Panel/VBoxContainer" unique_id=636461635]
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/RunPanel" unique_id=2144960710]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="UI/RunPanel/VBoxContainer" unique_id=675620092]
+layout_mode = 2
+text = "Run Summary"
+horizontal_alignment = 1
+
+[node name="RunInfoLabel" type="Label" parent="UI/RunPanel/VBoxContainer" unique_id=636461635]
 layout_mode = 2
 text = "Base | Stored Scrap 0"
+autowrap_mode = 3
+
+[node name="CavePanel" type="PanelContainer" parent="UI" unique_id=636919109]
+visible = false
+layout_mode = 1
+anchors_preset = 9
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 114.0
+offset_right = -16.0
+offset_bottom = 278.0
+grow_horizontal = 0
+
+[node name="ClaimPanel" type="PanelContainer" parent="UI" unique_id=636919111]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -160.0
+offset_top = 16.0
+offset_right = 160.0
+offset_bottom = 96.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/ClaimPanel" unique_id=2144960713]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=675620099]
+layout_mode = 2
+text = "Pylon Claim"
+horizontal_alignment = 1
+
+[node name="ClaimProgressLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=636461640]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="ClaimProgressBar" type="ProgressBar" parent="UI/ClaimPanel/VBoxContainer" unique_id=2083758484]
+layout_mode = 2
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/CavePanel" unique_id=2144960711]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620093]
+layout_mode = 2
+text = "Cave Status"
+horizontal_alignment = 1
+
+[node name="StateCaptionLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620094]
+layout_mode = 2
+text = "State"
+
+[node name="CaveStateValueLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=636461636]
+layout_mode = 2
+text = "Ready"
+autowrap_mode = 3
+
+[node name="PressureCaptionLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620095]
+layout_mode = 2
+text = "Pressure"
+
+[node name="CavePressureValueLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=636461637]
+layout_mode = 2
+text = "Pressure Idle"
+autowrap_mode = 3
+
+[node name="RewardCaptionLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620096]
+layout_mode = 2
+text = "Reward"
+
+[node name="CaveRewardValueLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=636461638]
+layout_mode = 2
+text = "Gain +0.0/s | Bank 0"
+autowrap_mode = 3
+
+[node name="DetailCaptionLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620097]
+layout_mode = 2
+text = "Detail"
+
+[node name="CaveDetailValueLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=636461639]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="StatusPanel" type="PanelContainer" parent="UI" unique_id=636919110]
+layout_mode = 1
+anchors_preset = 6
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -112.0
+offset_right = 336.0
+offset_bottom = -16.0
+grow_vertical = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/StatusPanel" unique_id=2144960712]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="UI/StatusPanel/VBoxContainer" unique_id=675620098]
+layout_mode = 2
+text = "Status"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="UI/StatusPanel/VBoxContainer" unique_id=636461634]
+layout_mode = 2
+text = "Offline. Host or join to begin."
 autowrap_mode = 3
 
 [connection signal="pressed" from="UI/Panel/VBoxContainer/HostButton" to="." method="_on_host_pressed"]

@@ -37,6 +37,7 @@ Current confirmed direction:
 - The live pylon now supports the first cave activation flow through scrap spend and channeling
 - The live pylon now shows a first visible cave barrier and entrance state during claimed, channeling, open, and disabled phases
 - The live gate now supports a first damaged-pylon repair loop with a locked repair channel and lighter repair waves
+- The live gate HUD now shows cave state, pressure wave, reward gain, and cave timing while the pylon loop is active
 
 ---
 
@@ -113,7 +114,7 @@ Current confirmed direction:
 ---
 
 ## Next Recommended Task
-Define and implement the first true cave gate slice:
-- connect the visible cave entrance to actual cave travel
-- implement one simple forced-exit failure flow
-- implement one first interior reward objective
+Tune and validate the current cave-open loop:
+- check that the new cave HUD stays readable in multiplayer gate runs
+- tune cave-open pressure and reward pacing against the new HUD feedback
+- only then connect the visible cave entrance to a first real interior slice
