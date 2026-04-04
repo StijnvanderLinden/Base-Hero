@@ -31,10 +31,11 @@ The cave is where players:
 A cave is activated from a captured pylon.
 
 Activation flow:
-1. spend the required resource at the pylon
-2. start channeling
-3. remove the magical barrier at the cave entrance
-4. begin the cave expedition state
+1. claim the pylon first
+2. interact again at the pylon to begin the cave channel
+3. open the magical barrier at the cave entrance while the channel remains active
+4. keep the cave open for as long as the team can hold the outside pressure
+5. interact again to stop the channel and close the barrier
 
 The cave is not randomly discovered as a separate event.
 It is opened deliberately through the pylon.
@@ -48,6 +49,7 @@ While the cave is active:
 - enemies continuously attack the pylon or linked expedition core
 - existing defenses around the pylon fight automatically if the pylon is functional
 - the player may stay outside and defend manually
+- enemy pressure should keep ramping while the cave stays open
 
 ### Inside The Cave
 While the cave is active:
@@ -84,8 +86,7 @@ Failure occurs when the pylon or linked expedition core is destroyed during an a
 
 On failure:
 - the cave collapses
-- the player is forcibly removed from the cave through teleport or forced exit
-- the expedition ends immediately
+- the barrier closes immediately
 - the linked pylon becomes damaged
 
 Players retain all collected loot and resources.
@@ -143,10 +144,10 @@ Authority rule:
 ## Early Prototype Direction
 The first cave milestone should prove:
 - one cave entrance activated from a pylon
-- one clear outside-versus-inside pressure split
+- one clear sustained cave-open pressure loop outside the pylon
 - one passive resource gain rule
-- one deeper reward path that is clearly better than staying outside
-- one forced-exit failure behavior
+- readable cave-open versus cave-closed world presentation
+- one failure behavior where the cave closes when the pylon falls
 
 ---
 

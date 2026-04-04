@@ -25,14 +25,17 @@ func prepare_cave(request: Dictionary) -> Dictionary:
 	var cave_id := _next_cave_id
 	_next_cave_id += 1
 	var entrance_position: Vector3 = request.get("entrance_position", Vector3.ZERO)
+	var pocket_origin := entrance_position + Vector3(14.0, -1.1, -10.0)
+	var exit_anchor := pocket_origin + Vector3(0.0, 0.0, 3.0)
 	var descriptor := {
 		"cave_id": cave_id,
 		"state": "prepared",
 		"request": request.duplicate(true),
 		"entrance_position": entrance_position,
-		"player_spawn_points": [entrance_position],
-		"exit_anchor": entrance_position,
-		"reward_anchor": entrance_position + Vector3(0.0, 0.0, -12.0)
+		"pocket_origin": pocket_origin,
+		"player_spawn_points": [pocket_origin],
+		"exit_anchor": exit_anchor,
+		"reward_anchor": pocket_origin + Vector3(0.0, 0.0, -6.0)
 	}
 	_prepared_caves[cave_id] = descriptor
 	cave_prepared.emit(cave_id, descriptor.duplicate(true))

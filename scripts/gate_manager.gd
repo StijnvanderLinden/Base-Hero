@@ -1,5 +1,7 @@
 extends Node
 
+const CAVE_REWARD_SCENE := preload("res://scenes/gate_reward_node.tscn")
+
 signal status_changed(message: String)
 signal run_info_changed(message: String)
 signal gate_state_changed(is_active: bool)
@@ -22,6 +24,7 @@ signal progression_changed()
 @export var objective_interaction_radius: float = 3.0
 @export var cave_activation_cost: int = 12
 @export var cave_activation_channel_time: float = 4.0
+@export var cave_reward_amount: int = 18
 @export var pylon_repair_channel_time: float = 4.0
 @export var pylon_repair_wave_count: int = 2
 @export var pylon_repair_max_enemies: int = 4
@@ -40,6 +43,7 @@ var players_root: Node3D
 var base_objective: Node3D
 var enemy_manager: Node
 var building_manager: Node
+var cave_manager: Node
 var network_manager: Node
 var _session_active: bool = false
 var _gate_active: bool = false
@@ -65,6 +69,11 @@ var _repair_channeling: bool = false
 var _repair_event_active: bool = false
 var _repair_channel_peer_id: int = 0
 var _repair_channel_origin: Vector3 = Vector3.ZERO
+var _prepared_cave_id: int = 0
+var _prepared_cave_descriptor: Dictionary = {}
+var _players_in_cave: Array[int] = []
+var _cave_reward_collected: bool = false
+var _cave_reward_node: Node3D
 
 
 func _ready() -> void:
@@ -87,6 +96,10 @@ func set_enemy_manager(manager: Node) -> void:
 
 func set_building_manager(manager: Node) -> void:
 	building_manager = manager
+
+
+func set_cave_manager(manager: Node) -> void:
+	cave_manager = manager
 
 
 func bind_network_manager(manager: Node) -> void:
@@ -296,6 +309,8 @@ func _on_peer_registered(peer_id: int) -> void:
 		_repair_channeling,
 		_repair_channel_remaining,
 		_repair_event_active,
+		_prepared_cave_id,
+		_cave_reward_collected,
 		_stored_scrap,
 		_core_upgrade_level,
 		_gate_objective.get_current_health() if _gate_objective != null and _gate_objective.has_method("get_current_health") else gate_objective_max_health,
@@ -319,10 +334,22 @@ func request_objective_interaction(peer_id: int) -> void:
 	var player = players_root.get_node(node_name)
 	if not player is Node3D:
 		return
+	var pylon_state := "functional"
+	if _gate_objective.has_method("get_pylon_state"):
+		pylon_state = _gate_objective.get_pylon_state()
 	if player.global_position.distance_to(_gate_objective.global_position) > objective_interaction_radius:
 		return
 	if _repair_channeling or _repair_event_active:
 		status_changed.emit("Pylon repair is already in progress.")
+		return
+	if pylon_state == "damaged":
+		_start_repair_channel(peer_id)
+		return
+	if pylon_state == "functional":
+		if _cave_active:
+			_stop_cave_channel(true)
+			return
+		_start_cave_channel()
 		return
 	if _prep_active:
 		if _claim_channeling:
@@ -336,29 +363,9 @@ func request_objective_interaction(peer_id: int) -> void:
 	if _claim_event_active:
 		status_changed.emit("Claim waves are already active around the pylon.")
 		return
-	if _gate_objective.has_method("get_pylon_state") and _gate_objective.get_pylon_state() == "damaged":
-		_start_repair_channel(peer_id)
-		return
-	if _cave_activation_channeling:
-		status_changed.emit("Cave activation is already channeling at the pylon.")
-		return
 	if not _cave_spawned:
 		status_changed.emit("Claim the pylon before trying to open the cave.")
 		return
-	if not _cave_active:
-		if _stored_scrap < cave_activation_cost:
-			status_changed.emit("Need %d stored scrap to activate the cave. Stored: %d." % [cave_activation_cost, _stored_scrap])
-			return
-		_stored_scrap -= cave_activation_cost
-		_cave_activation_channeling = true
-		_cave_activation_remaining = cave_activation_channel_time
-		status_changed.emit("Cave activation started at the pylon. Hold the foothold until the barrier breaks.")
-		_broadcast_gate_state()
-		return
-	_extraction_active = true
-	_extraction_remaining = extraction_countdown
-	status_changed.emit("Extraction started at the pylon. The cave will collapse when the team leaves.")
-	_broadcast_gate_state()
 
 
 func _begin_claim_event() -> void:
@@ -376,10 +383,12 @@ func _begin_claim_event() -> void:
 
 func _complete_claim_event() -> void:
 	_claim_event_active = false
+	_prep_active = false
 	_set_pylon_runtime_state("functional")
 	_cave_spawned = true
+	_prepare_gate_cave()
 	_stop_enemy_pressure()
-	status_changed.emit("Pylon claimed. The cave has spawned nearby. Interact at the pylon to activate it.")
+	status_changed.emit("Pylon claimed. Interact again to open the cave and keep the channel going as long as the team can hold it.")
 	_broadcast_gate_state()
 
 
@@ -395,16 +404,7 @@ func _handle_claim_failure() -> void:
 
 
 func _finish_cave_activation() -> void:
-	if not multiplayer.is_server():
-		return
-	if not _gate_active:
-		return
-	_cave_activation_channeling = false
-	_cave_activation_remaining = 0.0
-	_cave_active = true
-	_set_enemy_pressure_to_gate()
-	status_changed.emit("The cave barrier has fallen. Defend the pylon outside while the team explores inside.")
-	_broadcast_gate_state()
+	_start_cave_channel()
 
 
 func _start_repair_channel(peer_id: int) -> void:
@@ -441,6 +441,7 @@ func _begin_repair_event() -> void:
 func _complete_repair_event() -> void:
 	_repair_event_active = false
 	_restore_pylon_runtime_state("functional")
+	_prepare_gate_cave()
 	_stop_enemy_pressure()
 	status_changed.emit("Pylon repaired. Defenses are back online and local enemy pressure has stopped.")
 	_broadcast_gate_state()
@@ -469,6 +470,12 @@ func _finish_gate(success: bool) -> void:
 	if success:
 		_stored_scrap += run_reward
 	var cave_was_active := _cave_active or _cave_activation_channeling
+	if success:
+		_clear_prepared_cave_state(true)
+	elif cave_was_active:
+		_collapse_prepared_cave("gate_failed")
+	else:
+		_clear_prepared_cave_state(true)
 	_set_player_channel_lock(_repair_channel_peer_id, false)
 	_clear_gate_mode(false)
 	_sync_gate_setup.rpc(false)
@@ -502,13 +509,14 @@ func _on_gate_objective_destroyed() -> void:
 
 
 func _handle_cave_failure() -> void:
+	_collapse_prepared_cave("pylon_failed")
 	_cave_active = false
 	_cave_activation_channeling = false
 	_cave_activation_remaining = 0.0
 	_extraction_active = false
 	_extraction_remaining = 0.0
 	_stop_enemy_pressure()
-	status_changed.emit("The cave failed. The pylon is now disabled and all nearby defenses are offline until repaired.")
+	status_changed.emit("The cave closed when the pylon fell. The pylon is now disabled and all nearby defenses are offline until repaired.")
 	_broadcast_gate_state()
 
 
@@ -611,6 +619,8 @@ func _clear_gate_mode(reset_scrap: bool) -> void:
 	_repair_event_active = false
 	_repair_channel_peer_id = 0
 	_repair_channel_origin = Vector3.ZERO
+	_prepared_cave_id = 0
+	_prepared_cave_descriptor = {}
 	if reset_scrap:
 		_stored_scrap = 0
 	_clear_gate_content_local()
@@ -638,6 +648,8 @@ func _reset_gate_runtime_state() -> void:
 	_repair_event_active = false
 	_repair_channel_peer_id = 0
 	_repair_channel_origin = Vector3.ZERO
+	_prepared_cave_id = 0
+	_prepared_cave_descriptor = {}
 
 
 func _emit_run_info() -> void:
@@ -660,7 +672,8 @@ func _emit_run_info() -> void:
 		if _extraction_active:
 			phase_text = "Extract %0.1fs" % _extraction_remaining
 		var reward_text := int(floor(_current_reward))
-		run_info_changed.emit("Gate | Phase %s | Scrap %d | Stored %d | Core Lv %d" % [phase_text, reward_text, _stored_scrap, _core_upgrade_level])
+		var cave_text := " | Cave %d" % _prepared_cave_id if _prepared_cave_id > 0 else ""
+		run_info_changed.emit("Gate | Phase %s | Scrap %d | Stored %d | Core Lv %d%s" % [phase_text, reward_text, _stored_scrap, _core_upgrade_level, cave_text])
 		return
 	run_info_changed.emit("Base | Stored Scrap %d | Core Lv %d | Max HP %d" % [_stored_scrap, _core_upgrade_level, int(round(get_current_base_core_max_health()))])
 
@@ -686,7 +699,7 @@ func _broadcast_gate_state() -> void:
 	if _gate_objective != null and _gate_objective.has_method("get_pylon_state"):
 		pylon_state = _gate_objective.get_pylon_state()
 	progression_changed.emit()
-	_sync_gate_state.rpc(_gate_active, _prep_active, _prep_remaining, _current_reward, _extraction_active, _extraction_remaining, _claim_channeling, _claim_channel_remaining, _claim_event_active, _cave_active, _cave_spawned, _cave_activation_channeling, _cave_activation_remaining, _repair_channeling, _repair_channel_remaining, _repair_event_active, _stored_scrap, _core_upgrade_level, objective_health, objective_destroyed, pylon_state)
+	_sync_gate_state.rpc(_gate_active, _prep_active, _prep_remaining, _current_reward, _extraction_active, _extraction_remaining, _claim_channeling, _claim_channel_remaining, _claim_event_active, _cave_active, _cave_spawned, _cave_activation_channeling, _cave_activation_remaining, _repair_channeling, _repair_channel_remaining, _repair_event_active, _prepared_cave_id, false, _stored_scrap, _core_upgrade_level, objective_health, objective_destroyed, pylon_state)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -701,7 +714,7 @@ func _sync_gate_setup(active: bool) -> void:
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: float, current_reward: float, extraction_active: bool, extraction_remaining: float, claim_channeling: bool, claim_channel_remaining: float, claim_event_active: bool, cave_active: bool, cave_spawned: bool, cave_activation_channeling: bool, cave_activation_remaining: float, repair_channeling: bool, repair_channel_remaining: float, repair_event_active: bool, stored_scrap: int, core_upgrade_level: int, objective_health: float, objective_destroyed: bool, pylon_state: String) -> void:
+func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: float, current_reward: float, extraction_active: bool, extraction_remaining: float, claim_channeling: bool, claim_channel_remaining: float, claim_event_active: bool, cave_active: bool, cave_spawned: bool, cave_activation_channeling: bool, cave_activation_remaining: float, repair_channeling: bool, repair_channel_remaining: float, repair_event_active: bool, prepared_cave_id: int, cave_reward_collected: bool, stored_scrap: int, core_upgrade_level: int, objective_health: float, objective_destroyed: bool, pylon_state: String) -> void:
 	if multiplayer.is_server():
 		return
 	_gate_active = gate_active
@@ -720,6 +733,7 @@ func _sync_gate_state(gate_active: bool, prep_active: bool, prep_remaining: floa
 	_repair_channeling = repair_channeling
 	_repair_channel_remaining = repair_channel_remaining
 	_repair_event_active = repair_event_active
+	_prepared_cave_id = prepared_cave_id
 	_stored_scrap = stored_scrap
 	_core_upgrade_level = core_upgrade_level
 	if gate_active and _gate_objective == null:
@@ -783,6 +797,107 @@ func _current_cave_visual_state() -> String:
 	if _cave_activation_channeling:
 		return "channeling"
 	return "sealed"
+
+
+func _prepare_gate_cave() -> void:
+	if not multiplayer.is_server():
+		return
+	if _prepared_cave_id > 0:
+		return
+	if cave_manager == null or not cave_manager.has_method("build_request") or not cave_manager.has_method("prepare_cave"):
+		return
+	var request = cave_manager.build_request(_current_pylon_id(), _current_cave_entrance_position(), 1, _current_cave_seed(), "gate_cavern", _active_player_count())
+	var descriptor: Dictionary = cave_manager.prepare_cave(request)
+	_prepared_cave_id = int(descriptor.get("cave_id", 0))
+	_prepared_cave_descriptor = descriptor.duplicate(true)
+
+
+func _enter_prepared_cave() -> void:
+	if not multiplayer.is_server():
+		return
+	if _prepared_cave_id <= 0:
+		return
+	if cave_manager == null or not cave_manager.has_method("enter_prepared_cave"):
+		return
+	_prepared_cave_descriptor = cave_manager.enter_prepared_cave(_prepared_cave_id, _active_gate_peer_ids())
+
+
+func _collapse_prepared_cave(reason: String) -> void:
+	if not multiplayer.is_server():
+		return
+	if _prepared_cave_id <= 0:
+		return
+	if cave_manager != null and cave_manager.has_method("collapse_cave"):
+		cave_manager.collapse_cave(_prepared_cave_id, reason)
+	_prepared_cave_descriptor["state"] = "collapsed"
+
+
+func _clear_prepared_cave_state(clear_runtime: bool) -> void:
+	if clear_runtime and cave_manager != null and _prepared_cave_id > 0 and cave_manager.has_method("clear_cave"):
+		cave_manager.clear_cave(_prepared_cave_id)
+	_prepared_cave_id = 0
+	_prepared_cave_descriptor = {}
+
+
+func _current_pylon_id() -> String:
+	return "gate_pylon_%d_%d_%d" % [int(round(gate_center.x)), int(round(gate_center.y)), int(round(gate_center.z))]
+
+
+func _current_cave_seed() -> int:
+	return hash(_current_pylon_id())
+
+
+func _current_cave_entrance_position() -> Vector3:
+	if _gate_objective == null:
+		return gate_center + Vector3(0.0, 1.1, -3.3)
+	return _gate_objective.global_position + Vector3(0.0, 1.1, -3.3)
+
+
+func _active_player_count() -> int:
+	return _active_gate_peer_ids().size()
+
+
+func _active_gate_peer_ids() -> Array[int]:
+	var peer_ids: Array[int] = []
+	if players_root == null:
+		return peer_ids
+	for player in players_root.get_children():
+		if not player is Node3D:
+			continue
+		if not "peer_id" in player:
+			continue
+		peer_ids.append(int(player.peer_id))
+	return peer_ids
+
+
+func _start_cave_channel() -> void:
+	if not multiplayer.is_server():
+		return
+	if not _cave_spawned:
+		status_changed.emit("Claim the pylon before trying to open the cave.")
+		return
+	if _prepared_cave_id <= 0:
+		_prepare_gate_cave()
+	_cave_activation_channeling = false
+	_cave_activation_remaining = 0.0
+	_cave_active = true
+	_set_enemy_pressure_to_gate()
+	status_changed.emit("Cave opened. Enemy pressure will keep ramping while the pylon channel stays active. Interact again to close it.")
+	_broadcast_gate_state()
+
+
+func _stop_cave_channel(manual_stop: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	if not _cave_active and not _cave_activation_channeling:
+		return
+	_cave_active = false
+	_cave_activation_channeling = false
+	_cave_activation_remaining = 0.0
+	_stop_enemy_pressure()
+	if manual_stop:
+		status_changed.emit("Cave closed. Enemy pressure has stopped and the barrier sealed again.")
+	_broadcast_gate_state()
 
 
 func _set_player_channel_lock(peer_id: int, active: bool) -> void:

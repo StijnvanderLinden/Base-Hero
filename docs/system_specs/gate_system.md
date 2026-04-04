@@ -135,14 +135,14 @@ The design intent is that the cave produces the primary rewards, while the outsi
 ---
 
 ## Cave Activation Flow
-At a captured pylon, players may spend resources to activate a cave expedition.
+At a captured pylon, players may begin a sustained channel that opens the cave entrance.
 
 Activation flow:
-1. spend the required resource at the pylon
-2. begin a channeling process
-3. remove the magical barrier at the cave entrance
-4. start the expedition state
-5. begin external enemy pressure on the pylon while the cave is active
+1. claim the pylon first
+2. interact again at the pylon to start the cave channel
+3. open the magical barrier at the cave entrance
+4. keep outside enemy pressure active and escalating while the cave stays open
+5. interact again to stop the channel and close the cave entrance
 
 The player does not build a new defense setup inside the cave.
 The player relies on the existing defenses already placed around the pylon.
@@ -182,6 +182,11 @@ During cave expeditions:
 - deeper cave exploration provides the primary rewards
 - final rewards should come from deeper encounters, chests, bosses, or equivalent payoff points
 
+In the current prototype slice:
+- the cave primarily acts as a sustained open-door pressure state
+- enemy pressure keeps ramping while the cave remains open
+- no real interior cave content exists yet
+
 Design rule:
 - passive gain must never outperform exploration rewards
 - players should be incentivized to go deeper rather than wait outside
@@ -193,8 +198,7 @@ Failure occurs when the pylon or linked expedition core is destroyed during an a
 
 On failure:
 - the cave collapses
-- players are forcibly removed or teleported out of the cave
-- the run ends immediately
+- the barrier closes immediately
 - the pylon becomes damaged
 
 This failure does not remove player loot or inventory.

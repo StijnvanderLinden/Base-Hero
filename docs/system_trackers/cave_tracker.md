@@ -15,7 +15,7 @@ Cave entrances already exist in the gate world, and pylons control whether their
 
 Current confirmed direction:
 - the cave itself is already present in the world before activation
-- a magical barrier blocks the entrance until players channel at the pylon
+- a magical barrier blocks the entrance until players start the cave channel at the pylon
 - enemies pressure the pylon outside while players explore inside
 - passive gain exists but is secondary to exploration rewards
 - failure collapses the cave and forces the player out
@@ -26,18 +26,20 @@ Current confirmed direction:
 ## Implemented
 - Cave expeditions are defined as part of the current gate direction
 - First cave activation flow now exists on the live pylon objective
-- Cave activation now spends stored scrap and channels at the pylon before the cave opens
+- Cave activation now starts from a claimed pylon and toggles the cave barrier open or closed through interaction at the pylon
 - A visible cave entrance and barrier presentation now exists through the whole live gate run and changes state as the barrier opens or disables
 - Cave-open state now increases passive gate reward rate to mark the outside-versus-inside pressure phase
 - Cave activation is now gated behind a claimed-pylon event rather than the initial gate start alone
 - A first `cave_manager.gd` stub now defines the future request, prepare, enter, collapse, and clear API boundary for procedural caves
+- The live gate flow now prepares a cave descriptor on pylon claim and marks it active when the barrier opens
+- Keeping the cave open now keeps outside enemy pressure active and ramps spawn count and health over time
 
 ---
 
 ## In Progress
 - Defining the first outside-versus-inside pressure loop
 - Defining the first forced-exit failure behavior
-- Replacing the visible cave entrance placeholder with actual cave travel and interior content
+- Replacing the sustained open-door prototype with actual cave travel and interior content
 - Defining how the future procedural cave generator will fulfill the cave manager request data
 
 ---
@@ -45,8 +47,8 @@ Current confirmed direction:
 ## Blockers / Problems
 - No forced exit on cave failure exists yet
 - No cave-specific reward structure is implemented yet
-- Cave entrance presentation now exists, but cave-open state is still not a separate interior space
-- Cave failure now disables the pylon and starts repair, but it still does not move players out of a separate cave space because that space does not exist yet
+- Cave entrance presentation and sustained outside pressure now exist, but cave-open state is still not a real generated cave scene
+- The live prototype currently has no interior cave travel or deeper reward target behind the opened barrier yet
 
 ---
 
@@ -103,7 +105,7 @@ Current confirmed direction:
 
 ## Next Recommended Task
 Implement the next cave milestone:
-- connect the already-visible cave entrance to the cave manager with one simple cave transition or travel behavior
-- implement one deeper reward objective inside the cave
+- connect the opened barrier to one first real cave interior or travel slice
 - implement one forced-exit collapse behavior on failure
+- replace the sustained open-door placeholder with a real generated cave space behind the same cave manager boundary
 - decide how players transition into and out of the first cave space

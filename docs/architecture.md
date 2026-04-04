@@ -168,3 +168,11 @@ Expected output from future cave generation:
 - current cave state
 
 This keeps the current overworld prototype compatible with a later procedurally generated cave system without forcing GateManager to understand cave internals.
+
+---
+
+## Presentation Rules
+
+- Health bars for world entities should be drawn through the main screen-space UI overlay, not as 3D meshes in the scene.
+- Each world entity that needs a health bar should expose or retain a stable world anchor above the entity so the overlay can project the bar to screen space.
+- When adding a new health bar, follow the shared overlay pattern so health-bar readability stays consistent across camera angles and co-op play.

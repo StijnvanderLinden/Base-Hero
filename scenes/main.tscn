@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://csvwa2gkpvrcx" path="res://scenes/enemy.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/core_objective.tscn" id="6"]
 [ext_resource type="Script" uid="uid://58ctddcth0tr" path="res://scripts/building_manager.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/cave_manager.gd" id="15"]
 [ext_resource type="PackedScene" path="res://scenes/wall.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/turret.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/turret_bullet.tscn" id="10"]
@@ -14,6 +15,7 @@
 [ext_resource type="Script" path="res://scripts/raid_manager.gd" id="12"]
 [ext_resource type="PackedScene" path="res://scenes/construct_enemy.tscn" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/pylon.tscn" id="14"]
+[ext_resource type="Script" path="res://scripts/health_bar_overlay.gd" id="16"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(40, 1, 40)
@@ -42,6 +44,9 @@ script = ExtResource("7")
 wall_scene = ExtResource("8")
 turret_scene = ExtResource("9")
 turret_bullet_scene = ExtResource("10")
+
+[node name="CaveManager" type="Node" parent="." unique_id=889331207]
+script = ExtResource("15")
 
 [node name="GateManager" type="Node" parent="." unique_id=889331205]
 script = ExtResource("11")
@@ -103,6 +108,16 @@ current = true
 [node name="GateContent" type="Node3D" parent="World" unique_id=1302244501]
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1506509462]
+
+[node name="HealthBarOverlay" type="Control" parent="UI" unique_id=1506509463]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("16")
 
 [node name="Panel" type="PanelContainer" parent="UI" unique_id=636919107]
 offset_left = 16.0

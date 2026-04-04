@@ -3,6 +3,7 @@ extends Node3D
 @onready var network_manager = $NetworkManager
 @onready var enemy_manager = $EnemyManager
 @onready var building_manager = $BuildingManager
+@onready var cave_manager = $CaveManager
 @onready var gate_manager = $GateManager
 @onready var raid_manager = $RaidManager
 @onready var core_objective = $World/CoreObjective
@@ -31,6 +32,7 @@ func _ready() -> void:
 	building_manager.bind_network_manager(network_manager)
 	building_manager.set_gate_manager(gate_manager)
 	gate_manager.set_roots($World/GateContent, $World/Players, core_objective)
+	gate_manager.set_cave_manager(cave_manager)
 	gate_manager.set_enemy_manager(enemy_manager)
 	gate_manager.set_building_manager(building_manager)
 	gate_manager.bind_network_manager(network_manager)
@@ -89,6 +91,7 @@ func _on_restart_pressed() -> void:
 		return
 	raid_manager.restart_match()
 	gate_manager.restart_match()
+	cave_manager.clear_all_runtime_state()
 	building_manager.restart_match()
 	enemy_manager.force_restart()
 	core_objective.restart_match()
@@ -123,6 +126,7 @@ func _on_session_changed(in_session: bool) -> void:
 	address_input.editable = not in_session
 	port_input.editable = not in_session
 	if not in_session:
+		cave_manager.clear_all_runtime_state()
 		startup_camera.current = true
 		_latest_run_info_base = "Base | Stored Scrap 0 | Core Lv 0 | Max HP 300"
 		run_info_label.text = _compose_run_info(_latest_run_info_base)

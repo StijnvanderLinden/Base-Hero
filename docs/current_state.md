@@ -43,8 +43,10 @@ The project now has a working multiplayer gameplay prototype with shared players
 - shared session scrap storage plus a first base-side spend target that upgrades core max health
 - first town hall raid prototype with player-triggered upgrade channeling, finite raid waves, and no main-base enemy spawning outside active raids
 - first runtime pylon slice with functional versus damaged state and nearby defense deactivation
-- first cave activation slice with scrap spend and pylon channeling before the cave opens
+- first cave activation slice with a sustained pylon channel that opens and closes the cave entrance
 - first visible cave barrier and entrance presentation on the live pylon objective
+- first cave-manager integration slice where claimed pylons prepare a cave descriptor and opened barriers mark that cave active
+- first sustained cave-open pressure slice where enemy pressure keeps ramping while the cave remains open
 - first damaged-pylon repair slice with a locked repair channel and lighter repair waves
 - repair channel interruption on player death or movement, with restartable repair attempts
 
@@ -61,7 +63,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - enemy behavior currently uses direct pursuit and objective pressure only, even though pacing now ramps by wave
 - restart flow exists for repeated testing, but full match recovery/results flow is not implemented
 - building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
-- gate flow now uses a first pylon foothold instead of the old drill objective, now supports manual claim waves, visible cave barrier states, cave activation, and a first repair loop, but cave travel, forced cave exit, and revisit persistence are not implemented yet
+- gate flow now uses a first pylon foothold instead of the old drill objective, now supports manual claim waves, visible cave barrier states, sustained cave-open pressure, and a first repair loop, but real cave generation, deeper objectives, and revisit persistence are not implemented yet
 - raid flow now exists in first prototype form and now uses a first dedicated construct swarm unit, but broader construct role variety is not implemented yet
 
 ---

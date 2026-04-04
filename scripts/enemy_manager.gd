@@ -19,6 +19,10 @@ signal raid_finished(success: bool)
 @export var raid_spawns_per_wave: int = 8
 @export var raid_breather_duration: float = 5.0
 @export var raid_wave_enemy_bonus: int = 2
+@export var exploration_enemy_base_health: float = 60.0
+@export var construct_enemy_base_health: float = 80.0
+@export var gate_enemy_health_bonus_per_wave: float = 12.0
+@export var raid_enemy_health_bonus_per_wave: float = 0.0
 
 var enemies_root: Node3D
 var players_root: Node3D
@@ -157,7 +161,8 @@ func _on_peer_registered(peer_id: int) -> void:
 
 func _spawn_enemy_for_all(enemy_id: int, spawn_position: Vector3) -> void:
 	var enemy_kind := _enemy_kind_for_current_pressure()
-	_spawn_enemy_local(enemy_id, spawn_position, -1.0, enemy_kind)
+	var start_health := _current_enemy_start_health(enemy_kind)
+	_spawn_enemy_local(enemy_id, spawn_position, start_health, enemy_kind)
 	if multiplayer.is_server():
 		var node_name := _enemy_name(enemy_id)
 		if enemies_root != null and enemies_root.has_node(node_name):
@@ -234,6 +239,14 @@ func _scene_for_enemy_kind(enemy_kind: String) -> PackedScene:
 	if enemy_kind == "construct" and raid_enemy_scene != null:
 		return raid_enemy_scene
 	return enemy_scene
+
+
+func _current_enemy_start_health(enemy_kind: String) -> float:
+	var base_health := exploration_enemy_base_health
+	if enemy_kind == "construct":
+		base_health = construct_enemy_base_health
+	var wave_bonus := gate_enemy_health_bonus_per_wave if _pressure_mode == "gate" else raid_enemy_health_bonus_per_wave
+	return max(base_health + float(max(_wave_index - 1, 0)) * wave_bonus, 1.0)
 
 
 func get_wave_index() -> int:

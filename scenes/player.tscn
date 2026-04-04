@@ -9,17 +9,6 @@ height = 1.2
 [sub_resource type="CapsuleMesh" id="2"]
 radius = 0.35
 
-[sub_resource type="StandardMaterial3D" id="4"]
-shading_mode = 0
-albedo_color = Color(0.06, 0.06, 0.06, 1)
-
-[sub_resource type="BoxMesh" id="3"]
-size = Vector3(1, 0.08, 0.08)
-
-[sub_resource type="StandardMaterial3D" id="5"]
-shading_mode = 0
-albedo_color = Color(0.2, 0.86, 0.28, 1)
-
 [sub_resource type="BoxMesh" id="6"]
 size = Vector3(2, 1.6, 0.7)
 
@@ -38,18 +27,6 @@ mesh = SubResource("2")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1573792, 0)
 billboard = 1
 text = "P1"
-
-[node name="HealthBar" type="Node3D" parent="." unique_id=940174927]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.001287, 0)
-
-[node name="Background" type="MeshInstance3D" parent="HealthBar" unique_id=1566798722]
-material_override = SubResource("4")
-mesh = SubResource("3")
-
-[node name="Fill" type="MeshInstance3D" parent="HealthBar" unique_id=829092400]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.01)
-material_override = SubResource("5")
-mesh = SubResource("3")
 
 [node name="BuildPreview" type="Node3D" parent="." unique_id=1793412054]
 visible = false

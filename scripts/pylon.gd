@@ -128,21 +128,16 @@ func restore_runtime_state(new_state: String = "functional") -> void:
 
 
 func _update_visuals() -> void:
-	if label == null or health_bar_fill == null:
+	if label == null:
 		return
-	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
 	if pylon_state == "uncaptured":
-		health_ratio = 0.0
 		label.text = "%s Claiming" % display_name
 		_update_body_visuals()
 	elif pylon_state == "damaged":
-		health_ratio = 0.0
 		label.text = "%s Damaged" % display_name
 	else:
 		label.text = "%s HP:%d" % [display_name, int(round(current_health))]
 		_update_body_visuals()
-	health_bar_fill.scale.x = max(health_ratio, 0.001)
-	health_bar_fill.position.x = (_health_bar_width * (health_ratio - 1.0)) * 0.5
 	if pylon_state == "damaged":
 		var material := StandardMaterial3D.new()
 		material.albedo_color = _damaged_color

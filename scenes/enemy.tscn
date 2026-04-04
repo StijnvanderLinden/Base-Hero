@@ -9,17 +9,6 @@ height = 1.0
 [sub_resource type="CapsuleMesh" id="2"]
 radius = 0.4
 
-[sub_resource type="StandardMaterial3D" id="4"]
-shading_mode = 0
-albedo_color = Color(0.06, 0.06, 0.06, 1)
-
-[sub_resource type="BoxMesh" id="3"]
-size = Vector3(1, 0.08, 0.08)
-
-[sub_resource type="StandardMaterial3D" id="5"]
-shading_mode = 0
-albedo_color = Color(0.92, 0.18, 0.16, 1)
-
 [node name="Enemy" type="CharacterBody3D" unique_id=825250521]
 script = ExtResource("1")
 
@@ -36,15 +25,3 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0929592, 0)
 billboard = 1
 text = "E1"
 font_size = 28
-
-[node name="HealthBar" type="Node3D" parent="." unique_id=2017553430]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9405737, 0)
-
-[node name="Background" type="MeshInstance3D" parent="HealthBar" unique_id=374184653]
-material_override = SubResource("4")
-mesh = SubResource("3")
-
-[node name="Fill" type="MeshInstance3D" parent="HealthBar" unique_id=709830183]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.01)
-material_override = SubResource("5")
-mesh = SubResource("3")

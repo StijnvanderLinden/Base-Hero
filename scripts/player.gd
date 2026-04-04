@@ -20,8 +20,6 @@ var _select_wall_was_pressed: bool = false
 var _select_turret_was_pressed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color.WHITE
-var _health_bar_local_offset: Vector3 = Vector3.ZERO
-var _health_bar_width: float = 1.0
 var _preview_valid_color: Color = Color(0.28, 0.95, 0.45, 0.45)
 var _preview_invalid_color: Color = Color(0.95, 0.3, 0.25, 0.45)
 var _preview_valid_text_color: Color = Color(0.72, 1.0, 0.78, 1.0)
@@ -35,8 +33,6 @@ var _channel_locked: bool = false
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var camera: Camera3D = $CameraPivot/Camera3D
 @onready var label: Label3D = $Label3D
-@onready var health_bar_root: Node3D = $HealthBar
-@onready var health_bar_fill: MeshInstance3D = $HealthBar/Fill
 @onready var build_preview_root: Node3D = $BuildPreview
 @onready var build_preview_mesh: MeshInstance3D = $BuildPreview/PreviewMesh
 @onready var build_preview_label: Label3D = $BuildPreview/PreviewLabel
@@ -53,10 +49,6 @@ func _ready() -> void:
 	global_position = spawn_position
 	current_health = max_health
 	_update_label()
-	_health_bar_local_offset = health_bar_root.position
-	health_bar_root.top_level = true
-	_update_health_bar_anchor()
-	_update_health_bar()
 	if _is_local_player():
 		build_preview_root.top_level = true
 		build_preview_root.visible = true
@@ -73,8 +65,6 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_update_health_bar_anchor()
-
 	if _is_local_player():
 		_update_camera_anchor()
 		_update_build_preview()
@@ -217,7 +207,6 @@ func apply_server_damage(amount: float) -> void:
 	current_health = max(current_health - amount, 0.0)
 	_sync_health.rpc(current_health)
 	_update_label()
-	_update_health_bar()
 	_start_hit_flash()
 	_play_hit_feedback.rpc()
 	if current_health <= 0.0:
@@ -229,10 +218,12 @@ func _server_respawn() -> void:
 	velocity = Vector3.ZERO
 	current_health = max_health
 	_hit_flash_time_remaining = 0.0
+	var gate_manager = _gate_manager()
+	if gate_manager != null and gate_manager.has_method("notify_player_respawn"):
+		gate_manager.notify_player_respawn(peer_id)
 	_sync_state.rpc(global_position, velocity, rotation.y)
 	_sync_health.rpc(current_health)
 	_update_label()
-	_update_health_bar()
 	_update_body_visuals()
 
 
@@ -254,7 +245,6 @@ func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refil
 		current_health = max_health
 		_sync_health.rpc(current_health)
 		_update_label()
-		_update_health_bar()
 	_sync_state.rpc(global_position, velocity, rotation.y)
 
 
@@ -275,21 +265,6 @@ func _apply_channel_lock(active: bool) -> void:
 
 func _update_label() -> void:
 	label.text = "P%d HP:%d" % [peer_id, int(round(current_health))]
-
-
-func _update_health_bar() -> void:
-	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
-	health_bar_fill.scale.x = max(health_ratio, 0.001)
-	health_bar_fill.position.x = (_health_bar_width * (health_ratio - 1.0)) * 0.5
-
-
-func _update_health_bar_anchor() -> void:
-	var current_transform := health_bar_root.global_transform
-	current_transform.origin = global_position + _health_bar_local_offset
-	var active_camera := get_viewport().get_camera_3d()
-	if active_camera != null:
-		current_transform.basis = active_camera.global_transform.basis
-	health_bar_root.global_transform = current_transform
 
 
 func _update_build_preview() -> void:
@@ -513,7 +488,6 @@ func _sync_health(server_health: float) -> void:
 		return
 	current_health = server_health
 	_update_label()
-	_update_health_bar()
 
 
 @rpc("authority", "call_remote", "reliable")

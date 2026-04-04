@@ -18,13 +18,9 @@ var _hit_flash_time_remaining: float = 0.0
 var _death_time_remaining: float = 0.0
 var _is_dying: bool = false
 var _base_color: Color = Color(0.93, 0.34, 0.27)
-var _health_bar_local_offset: Vector3 = Vector3.ZERO
-var _health_bar_width: float = 1.0
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
-@onready var health_bar_root: Node3D = $HealthBar
-@onready var health_bar_fill: MeshInstance3D = $HealthBar/Fill
 
 
 func setup(new_enemy_id: int, start_position: Vector3, start_health: float = -1.0) -> void:
@@ -42,17 +38,11 @@ func _ready() -> void:
 	add_to_group("enemies")
 	global_position = spawn_position
 	_update_label()
-	_health_bar_local_offset = health_bar_root.position
-	health_bar_root.top_level = true
-	_update_health_bar_anchor()
-	_update_health_bar()
 	_apply_enemy_color()
 	scale = Vector3.ONE
 
 
 func _process(delta: float) -> void:
-	_update_health_bar_anchor()
-
 	if _hit_flash_time_remaining > 0.0:
 		_hit_flash_time_remaining = max(_hit_flash_time_remaining - delta, 0.0)
 		_update_body_visuals()
@@ -138,7 +128,6 @@ func apply_server_damage(amount: float) -> void:
 	current_health = max(current_health - amount, 0.0)
 	_sync_health.rpc(current_health)
 	_update_label()
-	_update_health_bar()
 	if current_health <= 0.0:
 		_begin_death_feedback()
 		_play_death_feedback.rpc()
@@ -246,21 +235,6 @@ func _update_label() -> void:
 	label.text = "E%d HP:%d" % [enemy_id, int(round(current_health))]
 
 
-func _update_health_bar() -> void:
-	var health_ratio = clamp(current_health / max_health, 0.0, 1.0)
-	health_bar_fill.scale.x = max(health_ratio, 0.001)
-	health_bar_fill.position.x = (_health_bar_width * (health_ratio - 1.0)) * 0.5
-
-
-func _update_health_bar_anchor() -> void:
-	var current_transform := health_bar_root.global_transform
-	current_transform.origin = global_position + _health_bar_local_offset
-	var active_camera := get_viewport().get_camera_3d()
-	if active_camera != null:
-		current_transform.basis = active_camera.global_transform.basis
-	health_bar_root.global_transform = current_transform
-
-
 func _start_hit_flash() -> void:
 	_hit_flash_time_remaining = hit_flash_duration
 	_update_body_visuals()
@@ -304,7 +278,6 @@ func _sync_health(server_health: float) -> void:
 		return
 	current_health = server_health
 	_update_label()
-	_update_health_bar()
 
 
 @rpc("authority", "call_remote", "reliable")

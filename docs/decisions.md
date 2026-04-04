@@ -207,6 +207,15 @@ This keeps players incentivized to explore, prevents idle outside play from beco
 
 ---
 
+### All health bars use a screen-space overlay
+Decision:
+Any health bar added to a world entity should be drawn by the shared screen-space UI overlay rather than as a 3D mesh in the world.
+
+Reason:
+This keeps combat readability consistent in 3D and co-op, avoids camera-facing and parent-rotation issues, and gives every entity one stable presentation path for future health bars.
+
+---
+
 ## Rules
 Update this file when:
 - a major design or technical choice is made
