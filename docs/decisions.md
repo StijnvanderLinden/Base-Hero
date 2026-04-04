@@ -216,6 +216,60 @@ This keeps combat readability consistent in 3D and co-op, avoids camera-facing a
 
 ---
 
+### Player uses a single evolving weapon instead of multiple weapons
+Decision:
+The player uses one evolving weapon platform rather than collecting and swapping between many active weapons.
+
+Reason:
+This supports stronger weapon identity, keeps progression tied to player build expression instead of loot churn, and fits the game’s return-to-base loop where players improve themselves between runs.
+
+---
+
+### Weapon materials are applied directly through slots
+Decision:
+Weapon materials are inserted directly into the active weapon’s material slot rather than manually forging weapon shapes.
+
+Reason:
+This keeps the system readable, prevents weapon crafting complexity from overwhelming the prototype, and lets progression unlock stronger material tiers without replacing the whole weapon.
+
+---
+
+### Augments define weapon behavior, not just raw stats
+Decision:
+Augments are primarily behavior-changing modifiers rather than simple numerical bonuses.
+
+Reason:
+This creates stronger build identity, produces more interesting synergies, and helps players feel that their weapon evolves in meaningful ways instead of only becoming numerically larger.
+
+---
+
+### Augments are removable at a cost
+Decision:
+Players may remove augments by paying a resource cost.
+
+Reason:
+This allows experimentation without locking players into early mistakes forever while still preserving enough friction that loadout choices matter.
+
+---
+
+### Augments can be fused into higher tiers
+Decision:
+Augments can be fused from Level 1 to Level 2 and from Level 2 to Level 3 using three lower-tier copies.
+
+Reason:
+This gives long-term value to lower-tier augments, creates a steady progression ladder, and prevents early augment drops from becoming dead loot too quickly.
+
+---
+
+### Fusion must add new behavior, not only stronger numbers
+Decision:
+Higher-tier fused augments must introduce new behavior patterns instead of acting as pure stat upgrades.
+
+Reason:
+This keeps fusion exciting, preserves the system’s behavior-first design, and ensures long-term progression changes how a weapon plays rather than only how hard it hits.
+
+---
+
 ## Rules
 Update this file when:
 - a major design or technical choice is made
