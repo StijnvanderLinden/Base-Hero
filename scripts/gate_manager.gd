@@ -20,6 +20,7 @@ signal progression_changed()
 @export var pylon_claim_breather_duration: float = 4.0
 @export var passive_reward_per_second: float = 1.2
 @export var cave_passive_reward_per_second: float = 2.0
+@export var cave_reward_bonus_per_wave: float = 0.75
 @export var extraction_countdown: float = 5.0
 @export var objective_interaction_radius: float = 3.0
 @export var cave_activation_cost: int = 12
@@ -200,6 +201,37 @@ func is_cave_activation_channeling() -> bool:
 
 func is_repair_channeling() -> bool:
 	return _gate_active and _repair_channeling
+
+
+func is_extraction_active() -> bool:
+	return _gate_active and _extraction_active
+
+
+func can_return_to_base() -> bool:
+	if not _gate_active:
+		return false
+	if _claim_channeling or _claim_event_active:
+		return false
+	if _repair_channeling or _repair_event_active:
+		return false
+	return not _extraction_active
+
+
+func request_return_to_base() -> void:
+	if not multiplayer.is_server():
+		return
+	if not _gate_active:
+		return
+	if _extraction_active:
+		status_changed.emit("Return to base is already in progress.")
+		return
+	if _claim_channeling or _claim_event_active:
+		status_changed.emit("Secure the pylon first before returning to base.")
+		return
+	if _repair_channeling or _repair_event_active:
+		status_changed.emit("Finish the repair flow before returning to base.")
+		return
+	_finish_gate(true)
 
 
 func get_current_run_reward() -> float:
@@ -749,10 +781,15 @@ func _emit_run_info() -> void:
 
 func _current_passive_reward_rate() -> float:
 	if _cave_active:
-		return cave_passive_reward_per_second
-	if _cave_spawned:
-		return passive_reward_per_second
+		return _current_cave_reward_rate()
 	return 0.0
+
+
+func _current_cave_reward_rate() -> float:
+	var wave_index := 1
+	if enemy_manager != null and enemy_manager.has_method("get_wave_index"):
+		wave_index = max(int(enemy_manager.get_wave_index()), 1)
+	return cave_passive_reward_per_second + float(max(wave_index - 1, 0)) * cave_reward_bonus_per_wave
 
 
 func _broadcast_gate_state() -> void:

@@ -6,13 +6,13 @@ signal raid_finished(success: bool)
 @export var enemy_scene: PackedScene
 @export var raid_enemy_scene: PackedScene
 @export var max_enemies: int = 6
-@export var spawn_interval: float = 3.0
+@export var spawn_interval: float = 2.8
 @export var min_spawn_interval: float = 1.0
 @export var spawn_radius: float = 14.0
 @export var spawns_per_wave: int = 6
-@export var breather_duration: float = 6.0
-@export var wave_enemy_bonus: int = 1
-@export var spawn_interval_step: float = 0.3
+@export var breather_duration: float = 5.0
+@export var wave_enemy_bonus: int = 2
+@export var spawn_interval_step: float = 0.35
 @export var raid_total_waves: int = 3
 @export var raid_max_enemies: int = 8
 @export var raid_spawn_interval: float = 2.2
@@ -21,7 +21,7 @@ signal raid_finished(success: bool)
 @export var raid_wave_enemy_bonus: int = 2
 @export var exploration_enemy_base_health: float = 60.0
 @export var construct_enemy_base_health: float = 80.0
-@export var gate_enemy_health_bonus_per_wave: float = 12.0
+@export var gate_enemy_health_bonus_per_wave: float = 18.0
 @export var raid_enemy_health_bonus_per_wave: float = 0.0
 
 var enemies_root: Node3D

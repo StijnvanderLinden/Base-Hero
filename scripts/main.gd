@@ -86,6 +86,10 @@ func _on_leave_pressed() -> void:
 func _on_gate_pressed() -> void:
 	if not multiplayer.is_server():
 		return
+	if gate_manager.is_gate_active():
+		gate_manager.request_return_to_base()
+		_refresh_progression_ui()
+		return
 	gate_manager.start_gate_run()
 
 
@@ -187,7 +191,7 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 
 func _on_gate_state_changed(is_active: bool) -> void:
 	if is_active:
-		gate_button.text = "Gate Active"
+		gate_button.text = "Return to Base"
 		_refresh_claim_progress_ui()
 		_refresh_cave_status_ui()
 		_refresh_progression_ui()
@@ -217,7 +221,12 @@ func _refresh_progression_ui() -> void:
 	var next_level = gate_manager.get_core_upgrade_level() + 1
 	var next_town_hall_cost = raid_manager.get_next_town_hall_upgrade_cost()
 	var next_town_hall_level = raid_manager.get_town_hall_level() + 1
-	gate_button.disabled = not is_host or gate_manager.is_gate_active() or progression_locked
+	if gate_manager.is_gate_active():
+		gate_button.text = "Returning..." if gate_manager.is_extraction_active() else "Return to Base"
+		gate_button.disabled = not is_host or not gate_manager.can_return_to_base()
+	else:
+		gate_button.text = "Start Gate Run"
+		gate_button.disabled = not is_host or progression_locked
 	town_hall_upgrade_button.text = "Upgrade Town Hall to Lv %d (%d Scrap)" % [next_town_hall_level, next_town_hall_cost]
 	town_hall_upgrade_button.disabled = not is_host or not raid_manager.can_start_town_hall_upgrade()
 	core_upgrade_button.text = "Upgrade Core to Lv %d (%d Scrap)" % [next_level, next_cost]

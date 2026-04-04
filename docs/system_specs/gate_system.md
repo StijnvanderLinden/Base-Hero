@@ -178,7 +178,8 @@ Gate regions provide:
 - components or special rewards later
 
 During cave expeditions:
-- the pylon generates a small passive resource gain over time
+- the pylon generates passive resource gain only while the cave is actively open
+- that passive gain ramps upward with the same outside pressure waves that escalate enemy danger
 - deeper cave exploration provides the primary rewards
 - final rewards should come from deeper encounters, chests, bosses, or equivalent payoff points
 
@@ -190,6 +191,7 @@ In the current prototype slice:
 Design rule:
 - passive gain must never outperform exploration rewards
 - players should be incentivized to go deeper rather than wait outside
+- leaving the cave open longer should feel greedier because both rewards and danger keep climbing together
 
 ---
 

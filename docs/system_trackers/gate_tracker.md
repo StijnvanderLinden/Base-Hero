@@ -38,6 +38,7 @@ Current confirmed direction:
 - The live pylon now shows a first visible cave barrier and entrance state during claimed, channeling, open, and disabled phases
 - The live gate now supports a first damaged-pylon repair loop with a locked repair channel and lighter repair waves
 - The live gate HUD now shows cave state, pressure wave, reward gain, and cave timing while the pylon loop is active
+- Passive scrap gain now begins only while the cave is open and ramps upward with ongoing gate pressure
 
 ---
 
