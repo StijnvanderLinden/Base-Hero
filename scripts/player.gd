@@ -524,6 +524,10 @@ func _perform_server_build() -> void:
 func _perform_server_interact() -> void:
 	if not multiplayer.is_server():
 		return
+	var building_manager = _building_manager()
+	if building_manager != null and building_manager.has_method("request_structure_repair"):
+		if building_manager.request_structure_repair(peer_id):
+			return
 	var manager = _gate_manager()
 	if manager == null:
 		return

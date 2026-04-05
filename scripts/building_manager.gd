@@ -11,6 +11,11 @@ signal status_changed(message: String)
 @export var max_turrets: int = 6
 @export var wall_cost: int = 4
 @export var turret_cost: int = 12
+@export var repair_interaction_radius: float = 3.0
+@export var wall_repair_amount: float = 80.0
+@export var turret_repair_amount: float = 60.0
+@export var wall_repair_cost: int = 2
+@export var turret_repair_cost: int = 4
 @export var wall_spacing: float = 1.8
 @export var turret_spacing: float = 2.4
 @export var core_clear_radius: float = 3.5
@@ -122,6 +127,34 @@ func request_structure_placement(peer_id: int, structure_type: String) -> bool:
 	_spawn_structure_for_all(structure_type, structure_id, structure_position, structure_rotation_y)
 	status_changed.emit(_placement_success_message(structure_type))
 	_increment_structure_id(structure_type)
+	return true
+
+
+func request_structure_repair(peer_id: int) -> bool:
+	if not multiplayer.is_server():
+		return false
+	if not _session_active:
+		return false
+	var player_node = _player_node(peer_id)
+	if player_node == null:
+		return false
+	var structure = _nearest_repairable_structure(player_node.global_position)
+	if structure == null:
+		return false
+	var structure_type := "wall"
+	if structure.has_method("get_structure_kind"):
+		structure_type = _normalized_structure_type(structure.get_structure_kind())
+	if not _can_afford_repair(structure_type):
+		status_changed.emit(_insufficient_repair_scrap_message(structure_type))
+		return true
+	if not structure.has_method("apply_server_repair"):
+		return false
+	var repaired_amount := float(structure.apply_server_repair(_repair_amount_for_type(structure_type)))
+	if repaired_amount <= 0.0:
+		return true
+	if not _spend_repair_cost(structure_type):
+		return true
+	status_changed.emit(_repair_success_message(structure_type, repaired_amount))
 	return true
 
 
@@ -255,6 +288,23 @@ func _player_node(peer_id: int) -> Node3D:
 	if not players_root.has_node(node_name):
 		return null
 	return players_root.get_node(node_name)
+
+
+func _nearest_repairable_structure(origin: Vector3) -> Node3D:
+	if structures_root == null:
+		return null
+	var best_structure: Node3D = null
+	var best_distance := repair_interaction_radius * repair_interaction_radius
+	for structure in structures_root.get_children():
+		if not structure is Node3D:
+			continue
+		if not structure.has_method("can_be_repaired") or not structure.can_be_repaired():
+			continue
+		var distance := origin.distance_squared_to(structure.global_position)
+		if distance <= best_distance:
+			best_distance = distance
+			best_structure = structure
+	return best_structure
 
 
 func _build_position_for_player(player_node: Node3D, structure_type: String) -> Vector3:
@@ -462,6 +512,54 @@ func _preview_status_text(structure_type: String, can_build_now: bool, can_affor
 	if cost <= 0:
 		return "FREE"
 	return "%d SCRAP" % cost
+
+
+func _repair_amount_for_type(structure_type: String) -> float:
+	structure_type = _normalized_structure_type(structure_type)
+	match structure_type:
+		"turret":
+			return max(turret_repair_amount, 0.0)
+		_:
+			return max(wall_repair_amount, 0.0)
+
+
+func _repair_cost_for_type(structure_type: String) -> int:
+	structure_type = _normalized_structure_type(structure_type)
+	match structure_type:
+		"turret":
+			return max(turret_repair_cost, 0)
+		_:
+			return max(wall_repair_cost, 0)
+
+
+func _can_afford_repair(structure_type: String) -> bool:
+	var cost := _repair_cost_for_type(structure_type)
+	if cost <= 0:
+		return true
+	if gate_manager == null or not gate_manager.has_method("can_afford_scrap"):
+		return true
+	return gate_manager.can_afford_scrap(cost)
+
+
+func _spend_repair_cost(structure_type: String) -> bool:
+	var cost := _repair_cost_for_type(structure_type)
+	if cost <= 0:
+		return true
+	if gate_manager == null or not gate_manager.has_method("consume_scrap"):
+		return true
+	return gate_manager.consume_scrap(cost)
+
+
+func _insufficient_repair_scrap_message(structure_type: String) -> String:
+	var cost := _repair_cost_for_type(structure_type)
+	return "Need %d scrap to repair %s. Stored: %d." % [cost, _structure_display_name(structure_type).to_lower(), _current_stored_scrap()]
+
+
+func _repair_success_message(structure_type: String, repaired_amount: float) -> String:
+	var cost := _repair_cost_for_type(structure_type)
+	if cost <= 0:
+		return "%s repaired for %d HP." % [_structure_display_name(structure_type), int(round(repaired_amount))]
+	return "%s repaired for %d HP at %d scrap. Stored: %d." % [_structure_display_name(structure_type), int(round(repaired_amount)), cost, _current_stored_scrap()]
 
 
 func get_projectiles_root() -> Node3D:

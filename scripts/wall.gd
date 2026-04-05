@@ -63,6 +63,10 @@ func get_current_health() -> float:
 	return current_health
 
 
+func can_be_repaired() -> bool:
+	return current_health > 0.0 and current_health < max_health
+
+
 func get_spawn_rotation_y() -> float:
 	return spawn_rotation_y
 
@@ -100,6 +104,20 @@ func apply_server_damage(amount: float) -> void:
 	_play_hit_feedback.rpc()
 	if current_health <= 0.0 and wall_manager != null and wall_manager.has_method("despawn_wall_for_all"):
 		wall_manager.despawn_wall_for_all(wall_id)
+
+
+func apply_server_repair(amount: float) -> float:
+	if not multiplayer.is_server():
+		return 0.0
+	if amount <= 0.0 or current_health <= 0.0 or current_health >= max_health:
+		return 0.0
+	var previous_health := current_health
+	current_health = min(current_health + amount, max_health)
+	_sync_health.rpc(current_health)
+	_update_label()
+	_start_hit_flash()
+	_play_hit_feedback.rpc()
+	return current_health - previous_health
 
 
 func _apply_wall_color() -> void:
