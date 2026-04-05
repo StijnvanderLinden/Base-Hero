@@ -4,13 +4,14 @@ extends CharacterBody3D
 @export var speed: float = 6.0
 # The downward acceleration when in the air, in meters per second squared.
 @export var fall_acceleration: float = 24.0
-@export var mouse_sensitivity: float = 0.003
+@export var mouse_sensitivity: float = 0.0035
 @export var min_camera_pitch_degrees: float = -55.0
-@export var max_camera_pitch_degrees: float = -12.0
+@export var max_camera_pitch_degrees: float = 35.0
 @export var min_camera_distance: float = 2.5
 @export var max_camera_distance: float = 8.0
 @export var camera_zoom_step: float = 0.5
 @export var camera_follow_smoothing: float = 16.0
+@export var camera_rotation_smoothing: float = 30.0
 @export var max_health: float = 100.0
 @export var attack_range: float = 2.4
 @export var attack_damage: float = 34.0
@@ -210,11 +211,11 @@ func _update_camera_anchor(delta: float) -> void:
 		camera_pivot.global_position = target_position
 		camera_pivot.global_rotation = target_rotation
 		return
-	var weight = clamp(camera_follow_smoothing * delta, 0.0, 1.0)
-	camera_pivot.global_position = camera_pivot.global_position.lerp(target_position, weight)
+	var rotation_weight = clamp(camera_rotation_smoothing * delta, 0.0, 1.0)
+	camera_pivot.global_position = target_position
 	camera_pivot.global_rotation = Vector3(
-		lerp_angle(camera_pivot.global_rotation.x, target_rotation.x, weight),
-		lerp_angle(camera_pivot.global_rotation.y, target_rotation.y, weight),
+		lerp_angle(camera_pivot.global_rotation.x, target_rotation.x, rotation_weight),
+		lerp_angle(camera_pivot.global_rotation.y, target_rotation.y, rotation_weight),
 		0.0
 	)
 
