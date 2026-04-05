@@ -31,6 +31,8 @@ var _build_was_pressed: bool = false
 var _interact_was_pressed: bool = false
 var _select_wall_was_pressed: bool = false
 var _select_turret_was_pressed: bool = false
+var _rotate_build_was_pressed: bool = false
+var _toggle_build_mode_was_pressed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color.WHITE
 var _preview_valid_color: Color = Color(0.28, 0.95, 0.45, 0.45)
@@ -38,6 +40,8 @@ var _preview_invalid_color: Color = Color(0.95, 0.3, 0.25, 0.45)
 var _preview_valid_text_color: Color = Color(0.72, 1.0, 0.78, 1.0)
 var _preview_invalid_text_color: Color = Color(1.0, 0.76, 0.76, 1.0)
 var _current_build_type: String = "wall"
+var _build_mode_active: bool = true
+var _build_rotation_steps: int = 0
 var _wall_preview_mesh: BoxMesh
 var _turret_preview_mesh: CylinderMesh
 var _channel_locked: bool = false
@@ -123,7 +127,7 @@ func _physics_process(delta: float) -> void:
 			_input_vector = Vector2.ZERO if _channel_locked else _read_input_vector()
 			if attack_pressed and not _channel_locked:
 				_perform_server_attack()
-			if build_pressed and not _channel_locked:
+			if build_pressed and not _channel_locked and _build_mode_active:
 				_perform_server_build()
 			if interact_pressed and not _channel_locked:
 				_perform_server_interact()
@@ -136,7 +140,7 @@ func _physics_process(delta: float) -> void:
 		_submit_input.rpc_id(1, submitted_input, look_pivot.rotation.y)
 		if attack_pressed and not _channel_locked:
 			_request_attack.rpc_id(1)
-		if build_pressed and not _channel_locked:
+		if build_pressed and not _channel_locked and _build_mode_active:
 			_request_build.rpc_id(1, _current_build_type)
 		if interact_pressed and not _channel_locked:
 			_request_interact.rpc_id(1)
@@ -263,7 +267,9 @@ func _consume_attack_pressed() -> bool:
 
 
 func _consume_build_pressed() -> bool:
-	var is_pressed := Input.is_key_pressed(KEY_Q)
+	if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		return false
+	var is_pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	var just_pressed := is_pressed and not _build_was_pressed
 	_build_was_pressed = is_pressed
 	return just_pressed
@@ -290,8 +296,35 @@ func _consume_select_turret_pressed() -> bool:
 	return just_pressed
 
 
+func _consume_rotate_build_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_R)
+	var just_pressed := is_pressed and not _rotate_build_was_pressed
+	_rotate_build_was_pressed = is_pressed
+	return just_pressed
+
+
+func _consume_toggle_build_mode_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_Q)
+	var just_pressed := is_pressed and not _toggle_build_mode_was_pressed
+	_toggle_build_mode_was_pressed = is_pressed
+	return just_pressed
+
+
 func _is_local_player() -> bool:
 	return multiplayer.get_unique_id() == peer_id
+
+
+func get_build_forward_vector() -> Vector3:
+	var forward := -look_pivot.global_basis.z
+	forward.y = 0.0
+	if forward.length_squared() <= 0.001:
+		return Vector3.FORWARD
+	return forward.normalized()
+
+
+func get_build_rotation_y() -> float:
+	var quarter_turn := PI * 0.5
+	return snappedf(look_pivot.rotation.y + float(_build_rotation_steps) * quarter_turn, quarter_turn)
 
 
 func can_be_targeted() -> bool:
@@ -332,6 +365,7 @@ func _server_respawn() -> void:
 	target_velocity = Vector3.ZERO
 	look_pivot.rotation = Vector3.ZERO
 	visual_pivot.rotation = Vector3.ZERO
+	_build_rotation_steps = 0
 	_camera_pitch = deg_to_rad(clamp(-25.0, min_camera_pitch_degrees, max_camera_pitch_degrees))
 	_update_camera_pitch()
 	current_health = max_health
@@ -390,6 +424,9 @@ func _update_label() -> void:
 
 
 func _update_build_preview() -> void:
+	if not _build_mode_active:
+		build_preview_root.visible = false
+		return
 	var manager = _building_manager()
 	if manager == null or not manager.has_method("get_build_preview_for_peer"):
 		build_preview_root.visible = false
@@ -403,18 +440,23 @@ func _update_build_preview() -> void:
 	build_preview_root.visible = true
 	build_preview_root.global_position = preview.get("position", global_position)
 	build_preview_root.global_rotation = Vector3(0.0, preview.get("rotation_y", 0.0), 0.0)
-	_configure_build_preview_feedback(preview.get("valid", false), preview.get("type", _current_build_type))
+	_configure_build_preview_feedback(
+		preview.get("valid", false),
+		preview.get("type", _current_build_type),
+		int(preview.get("cost", 0)),
+		String(preview.get("status_text", "VALID"))
+	)
 
 
-func _configure_build_preview_feedback(is_valid: bool = true, structure_type: String = "wall") -> void:
+func _configure_build_preview_feedback(is_valid: bool = true, structure_type: String = "wall", cost: int = 0, status_text: String = "VALID") -> void:
 	_apply_preview_shape(structure_type)
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.albedo_color = _preview_valid_color if is_valid else _preview_invalid_color
 	build_preview_mesh.material_override = material
-	var state_text := "VALID" if is_valid else "BLOCKED"
-	build_preview_label.text = "%s %s" % [_build_type_label(structure_type), state_text]
+	var cost_text := "FREE" if cost <= 0 else "%d" % cost
+	build_preview_label.text = "%s %s | %s" % [_build_type_label(structure_type), cost_text, status_text]
 	build_preview_label.modulate = _preview_valid_text_color if is_valid else _preview_invalid_text_color
 
 func _start_hit_flash() -> void:
@@ -466,6 +508,8 @@ func _nearest_enemy_in_range() -> CharacterBody3D:
 func _perform_server_wall_build() -> void:
 	if not multiplayer.is_server():
 		return
+	if not _build_mode_active:
+		return
 	var manager = _building_manager()
 	if manager == null:
 		return
@@ -492,15 +536,41 @@ func _update_build_selection() -> void:
 		_set_build_type("wall")
 	if _consume_select_turret_pressed():
 		_set_build_type("turret")
+	if _consume_rotate_build_pressed():
+		_rotate_build_clockwise()
+	if _consume_toggle_build_mode_pressed():
+		_toggle_build_mode_active()
 
 
 func _set_build_type(new_build_type: String) -> void:
 	new_build_type = _normalized_build_type(new_build_type)
-	if _current_build_type == new_build_type:
+	if _current_build_type == new_build_type and _build_mode_active:
 		return
 	_current_build_type = new_build_type
+	_build_mode_active = true
 	if _is_local_player():
 		_update_build_preview()
+	if multiplayer.is_server():
+		return
+	_sync_build_mode_state.rpc_id(1, _current_build_type, _build_mode_active)
+
+
+func _toggle_build_mode_active() -> void:
+	_build_mode_active = not _build_mode_active
+	if _is_local_player():
+		_update_build_preview()
+	if multiplayer.is_server():
+		return
+	_sync_build_mode_state.rpc_id(1, _current_build_type, _build_mode_active)
+
+
+func _rotate_build_clockwise() -> void:
+	_build_rotation_steps = posmod(_build_rotation_steps + 1, 4)
+	if _is_local_player() and _build_mode_active:
+		_update_build_preview()
+	if multiplayer.is_server():
+		return
+	_request_build_rotation.rpc_id(1, _build_rotation_steps)
 
 
 func _initialize_preview_meshes() -> void:
@@ -579,7 +649,27 @@ func _request_build(structure_type: String) -> void:
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
 	_current_build_type = _normalized_build_type(structure_type)
+	_build_mode_active = true
 	_perform_server_build()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_build_rotation(rotation_steps: int) -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_build_rotation_steps = posmod(rotation_steps, 4)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _sync_build_mode_state(structure_type: String, is_active: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_current_build_type = _normalized_build_type(structure_type)
+	_build_mode_active = is_active
 
 
 @rpc("any_peer", "call_remote", "reliable")

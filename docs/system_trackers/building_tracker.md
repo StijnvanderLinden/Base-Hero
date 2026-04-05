@@ -32,8 +32,10 @@ Main structure categories:
 - Grid-snapped wall placement validation on the server
 - Local valid/invalid structure placement preview for the active player
 - Preview wall orientation now matches the final placed wall
+- Players can rotate build preview orientation and final wall/turret placement during a live session
 - Preview now shows explicit valid/blocked readability text
 - Players can switch between wall and turret building during a live session
+- Shared scrap costs now gate wall and turret placement with server-side refusal feedback
 - Wall health and destruction
 - Turret health, target scanning, and server-spawned bullet projectiles that hit enemies
 - Wall replication to connected clients and late joiners
@@ -44,7 +46,7 @@ Main structure categories:
 
 ## In Progress
 - Clarifying how building differs between main base and gates
-- Tuning first wall placement spacing and build distance
+- Tuning first wall placement spacing, build distance, and first cost values
 - Tuning turret range, bullet speed, rate of fire, and placement spacing
 - Deciding how freeform the first placement loop should remain before adding stronger snapping or more advanced ghost presentation
 

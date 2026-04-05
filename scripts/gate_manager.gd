@@ -36,6 +36,7 @@ signal progression_changed()
 @export var pylon_repair_breather_duration: float = 5.0
 @export var pylon_repair_break_distance: float = 0.75
 @export var player_spawn_spacing: float = 3.0
+@export var starting_scrap: int = 100
 @export var core_upgrade_base_cost: int = 25
 @export var core_upgrade_cost_step: int = 15
 @export var core_upgrade_health_bonus: float = 100.0
@@ -729,7 +730,7 @@ func _clear_gate_mode(reset_scrap: bool) -> void:
 	_cave_reward_collected = false
 	_clear_cave_reward_local()
 	if reset_scrap:
-		_stored_scrap = 0
+		_stored_scrap = max(starting_scrap, 0)
 	_clear_gate_content_local()
 	gate_state_changed.emit(false)
 	progression_changed.emit()
@@ -873,7 +874,7 @@ func _apply_progression_to_base_objective(add_upgrade_bonus: bool) -> void:
 
 
 func _reset_progression_state() -> void:
-	_stored_scrap = 0
+	_stored_scrap = max(starting_scrap, 0)
 	_core_upgrade_level = 0
 	_apply_progression_to_base_objective(false)
 

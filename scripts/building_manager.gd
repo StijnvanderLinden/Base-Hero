@@ -9,6 +9,8 @@ signal status_changed(message: String)
 @export var placement_distance: float = 3.0
 @export var max_walls: int = 20
 @export var max_turrets: int = 6
+@export var wall_cost: int = 4
+@export var turret_cost: int = 12
 @export var wall_spacing: float = 1.8
 @export var turret_spacing: float = 2.4
 @export var core_clear_radius: float = 3.5
@@ -62,12 +64,17 @@ func get_build_preview_for_peer(peer_id: int, structure_type: String) -> Diction
 	var structure_position := _build_position_for_player(player_node, structure_type)
 	var structure_rotation_y := _build_rotation_for_player(player_node)
 	var can_build_now := _is_building_allowed()
+	var cost := _cost_for_type(structure_type)
+	var can_afford := _can_afford_structure(structure_type)
+	var is_valid_position := _is_valid_structure_position(structure_type, structure_position)
 	return {
 		"visible": true,
-		"valid": can_build_now and _is_valid_structure_position(structure_type, structure_position),
+		"valid": can_build_now and can_afford and is_valid_position,
 		"position": structure_position,
 		"rotation_y": structure_rotation_y,
 		"type": structure_type,
+		"cost": cost,
+		"status_text": _preview_status_text(structure_type, can_build_now, can_afford, is_valid_position),
 	}
 
 
@@ -94,6 +101,9 @@ func request_structure_placement(peer_id: int, structure_type: String) -> bool:
 	if not _can_place_more_of_type(structure_type):
 		status_changed.emit("%s limit reached." % _structure_display_name(structure_type))
 		return false
+	if not _can_afford_structure(structure_type):
+		status_changed.emit(_insufficient_scrap_message(structure_type))
+		return false
 
 	var player_node = _player_node(peer_id)
 	if player_node == null:
@@ -104,10 +114,13 @@ func request_structure_placement(peer_id: int, structure_type: String) -> bool:
 	if not _is_valid_structure_position(structure_type, structure_position):
 		status_changed.emit("Invalid %s placement." % structure_type)
 		return false
+	if not _spend_structure_cost(structure_type):
+		status_changed.emit(_insufficient_scrap_message(structure_type))
+		return false
 
 	var structure_id := _next_structure_id(structure_type)
 	_spawn_structure_for_all(structure_type, structure_id, structure_position, structure_rotation_y)
-	status_changed.emit("%s placed." % _structure_display_name(structure_type))
+	status_changed.emit(_placement_success_message(structure_type))
 	_increment_structure_id(structure_type)
 	return true
 
@@ -245,7 +258,11 @@ func _player_node(peer_id: int) -> Node3D:
 
 
 func _build_position_for_player(player_node: Node3D, structure_type: String) -> Vector3:
-	var forward := Vector3(sin(player_node.rotation.y), 0.0, cos(player_node.rotation.y))
+	var forward := Vector3.ZERO
+	if player_node.has_method("get_build_forward_vector"):
+		forward = player_node.get_build_forward_vector()
+	else:
+		forward = -player_node.global_basis.z
 	if forward.length_squared() <= 0.001:
 		forward = Vector3.FORWARD
 	var target_position := player_node.global_position + forward.normalized() * placement_distance
@@ -256,6 +273,8 @@ func _build_position_for_player(player_node: Node3D, structure_type: String) -> 
 
 
 func _build_rotation_for_player(player_node: Node3D) -> float:
+	if player_node.has_method("get_build_rotation_y"):
+		return player_node.get_build_rotation_y()
 	var quarter_turn := PI * 0.5
 	return snappedf(player_node.rotation.y, quarter_turn)
 
@@ -385,6 +404,64 @@ func _structure_name(structure_type: String, structure_id: int) -> String:
 func _structure_display_name(structure_type: String) -> String:
 	structure_type = _normalized_structure_type(structure_type)
 	return structure_type.capitalize()
+
+
+func _cost_for_type(structure_type: String) -> int:
+	structure_type = _normalized_structure_type(structure_type)
+	match structure_type:
+		"turret":
+			return max(turret_cost, 0)
+		_:
+			return max(wall_cost, 0)
+
+
+func _can_afford_structure(structure_type: String) -> bool:
+	var cost := _cost_for_type(structure_type)
+	if cost <= 0:
+		return true
+	if gate_manager == null or not gate_manager.has_method("can_afford_scrap"):
+		return true
+	return gate_manager.can_afford_scrap(cost)
+
+
+func _spend_structure_cost(structure_type: String) -> bool:
+	var cost := _cost_for_type(structure_type)
+	if cost <= 0:
+		return true
+	if gate_manager == null or not gate_manager.has_method("consume_scrap"):
+		return true
+	return gate_manager.consume_scrap(cost)
+
+
+func _current_stored_scrap() -> int:
+	if gate_manager == null or not gate_manager.has_method("get_stored_scrap"):
+		return 0
+	return int(gate_manager.get_stored_scrap())
+
+
+func _insufficient_scrap_message(structure_type: String) -> String:
+	var cost := _cost_for_type(structure_type)
+	return "Need %d scrap for %s. Stored: %d." % [cost, _structure_display_name(structure_type).to_lower(), _current_stored_scrap()]
+
+
+func _placement_success_message(structure_type: String) -> String:
+	var cost := _cost_for_type(structure_type)
+	if cost <= 0:
+		return "%s placed." % _structure_display_name(structure_type)
+	return "%s placed for %d scrap. Stored: %d." % [_structure_display_name(structure_type), cost, _current_stored_scrap()]
+
+
+func _preview_status_text(structure_type: String, can_build_now: bool, can_afford: bool, is_valid_position: bool) -> String:
+	var cost := _cost_for_type(structure_type)
+	if not can_build_now:
+		return "LOCKED"
+	if not can_afford:
+		return "NO SCRAP"
+	if not is_valid_position:
+		return "BLOCKED"
+	if cost <= 0:
+		return "FREE"
+	return "%d SCRAP" % cost
 
 
 func get_projectiles_root() -> Node3D:

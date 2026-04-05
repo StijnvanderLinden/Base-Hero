@@ -186,7 +186,7 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 	if is_breather:
 		status_label.text = "Wave %d cleared. Breather before next push." % wave_index
 		return
-	status_label.text = "Wave %d live. Space attacks, 1/2 select build, Q places." % wave_index
+	status_label.text = "Wave %d live. Space attacks, Q toggles build, LMB places, R rotates." % wave_index
 
 
 func _on_gate_state_changed(is_active: bool) -> void:
