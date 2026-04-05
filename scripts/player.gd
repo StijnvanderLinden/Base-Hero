@@ -1,7 +1,15 @@
 extends CharacterBody3D
 
-@export var move_speed: float = 6.0
-@export var gravity: float = 24.0
+# How fast the player moves in meters per second.
+@export var speed: float = 6.0
+# The downward acceleration when in the air, in meters per second squared.
+@export var fall_acceleration: float = 24.0
+@export var mouse_sensitivity: float = 0.003
+@export var min_camera_pitch_degrees: float = -55.0
+@export var max_camera_pitch_degrees: float = -12.0
+@export var min_camera_distance: float = 2.5
+@export var max_camera_distance: float = 8.0
+@export var camera_zoom_step: float = 0.5
 @export var max_health: float = 100.0
 @export var attack_range: float = 2.4
 @export var attack_damage: float = 34.0
@@ -11,6 +19,7 @@ extends CharacterBody3D
 var peer_id: int = 1
 var spawn_position: Vector3 = Vector3.ZERO
 var _input_vector: Vector2 = Vector2.ZERO
+var target_velocity: Vector3 = Vector3.ZERO
 var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
 var _attack_was_pressed: bool = false
@@ -28,10 +37,13 @@ var _current_build_type: String = "wall"
 var _wall_preview_mesh: BoxMesh
 var _turret_preview_mesh: CylinderMesh
 var _channel_locked: bool = false
+var _camera_pitch: float = 0.0
 
-@onready var body_mesh: MeshInstance3D = $BodyMesh
-@onready var camera_pivot: Node3D = $CameraPivot
-@onready var camera: Camera3D = $CameraPivot/Camera3D
+@onready var pivot: Node3D = $Pivot
+@onready var body_mesh: MeshInstance3D = $Pivot/BodyMesh
+@onready var camera_pivot: Node3D = $Pivot/CameraPivot
+@onready var spring_arm: SpringArm3D = $Pivot/CameraPivot/SpringArm3D
+@onready var camera: Camera3D = $Pivot/CameraPivot/SpringArm3D/Camera3D
 @onready var label: Label3D = $Label3D
 @onready var build_preview_root: Node3D = $BuildPreview
 @onready var build_preview_mesh: MeshInstance3D = $BuildPreview/PreviewMesh
@@ -48,14 +60,16 @@ func _ready() -> void:
 	add_to_group("players")
 	global_position = spawn_position
 	current_health = max_health
+	_camera_pitch = deg_to_rad(clamp(-25.0, min_camera_pitch_degrees, max_camera_pitch_degrees))
+	_update_camera_pitch()
+	spring_arm.spring_length = clamp(spring_arm.spring_length, min_camera_distance, max_camera_distance)
 	_update_label()
 	if _is_local_player():
 		build_preview_root.top_level = true
 		build_preview_root.visible = true
-		camera_pivot.top_level = true
 		camera.current = true
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		_initialize_preview_meshes()
-		_update_camera_anchor()
 		_update_build_preview()
 	else:
 		build_preview_root.visible = false
@@ -66,7 +80,6 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if _is_local_player():
-		_update_camera_anchor()
 		_update_build_preview()
 
 	if _hit_flash_time_remaining <= 0.0:
@@ -94,12 +107,12 @@ func _physics_process(delta: float) -> void:
 			if interact_pressed and not _channel_locked:
 				_perform_server_interact()
 		_simulate_movement(delta)
-		_sync_state.rpc(global_position, velocity, rotation.y)
+		_sync_state.rpc(global_position, velocity, pivot.rotation.y)
 		return
 
 	if _is_local_player():
 		var submitted_input := Vector2.ZERO if _channel_locked else _read_input_vector()
-		_submit_input.rpc_id(1, submitted_input)
+		_submit_input.rpc_id(1, submitted_input, pivot.rotation.y)
 		if attack_pressed and not _channel_locked:
 			_request_attack.rpc_id(1)
 		if build_pressed and not _channel_locked:
@@ -109,37 +122,81 @@ func _physics_process(delta: float) -> void:
 
 
 func _simulate_movement(delta: float) -> void:
-	if not is_on_floor():
-		velocity.y -= gravity * delta
-	else:
-		velocity.y = 0.0
-
-	var direction := Vector3(_input_vector.x, 0.0, _input_vector.y)
+	var direction := pivot.basis * Vector3(_input_vector.x, 0.0, _input_vector.y)
+	direction.y = 0.0
 	if _channel_locked:
 		direction = Vector3.ZERO
-	if direction.length_squared() > 1.0:
+
+	if direction != Vector3.ZERO:
 		direction = direction.normalized()
 
-	velocity.x = direction.x * move_speed
-	velocity.z = direction.z * move_speed
+	target_velocity.x = direction.x * speed
+	target_velocity.z = direction.z * speed
 
-	if direction.length_squared() > 0.001:
-		rotation.y = atan2(direction.x, direction.z)
+	if not is_on_floor():
+		target_velocity.y -= fall_acceleration * delta
+	else:
+		target_velocity.y = 0.0
 
+	velocity = target_velocity
 	move_and_slide()
+	target_velocity = velocity
 
 
 func _read_input_vector() -> Vector2:
-	var input := Vector2.ZERO
-	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
-		input.x -= 1.0
-	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
-		input.x += 1.0
-	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
-		input.y -= 1.0
-	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
-		input.y += 1.0
-	return input.normalized()
+	return Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _is_local_player():
+		return
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_adjust_camera_zoom(-camera_zoom_step)
+			get_viewport().set_input_as_handled()
+			return
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_adjust_camera_zoom(camera_zoom_step)
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		get_viewport().set_input_as_handled()
+		return
+	if _channel_locked:
+		return
+	if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		return
+	if event is InputEventMouseMotion:
+		_apply_mouse_look(event.relative)
+		get_viewport().set_input_as_handled()
+
+
+func _apply_mouse_look(relative: Vector2) -> void:
+	pivot.rotation.y -= relative.x * mouse_sensitivity
+	_camera_pitch = clamp(
+		_camera_pitch - relative.y * mouse_sensitivity,
+		deg_to_rad(min_camera_pitch_degrees),
+		deg_to_rad(max_camera_pitch_degrees)
+	)
+	_update_camera_pitch()
+
+
+func _update_camera_pitch() -> void:
+	camera_pivot.rotation.x = _camera_pitch
+
+
+func _adjust_camera_zoom(delta_length: float) -> void:
+	spring_arm.spring_length = clamp(
+		spring_arm.spring_length + delta_length,
+		min_camera_distance,
+		max_camera_distance
+	)
 
 
 func _consume_attack_pressed() -> bool:
@@ -216,12 +273,16 @@ func apply_server_damage(amount: float) -> void:
 func _server_respawn() -> void:
 	global_position = spawn_position
 	velocity = Vector3.ZERO
+	target_velocity = Vector3.ZERO
+	pivot.rotation = Vector3.ZERO
+	_camera_pitch = deg_to_rad(clamp(-25.0, min_camera_pitch_degrees, max_camera_pitch_degrees))
+	_update_camera_pitch()
 	current_health = max_health
 	_hit_flash_time_remaining = 0.0
 	var gate_manager = _gate_manager()
 	if gate_manager != null and gate_manager.has_method("notify_player_respawn"):
 		gate_manager.notify_player_respawn(peer_id)
-	_sync_state.rpc(global_position, velocity, rotation.y)
+	_sync_state.rpc(global_position, velocity, pivot.rotation.y)
 	_sync_health.rpc(current_health)
 	_update_label()
 	_update_body_visuals()
@@ -231,6 +292,7 @@ func reset_for_match() -> void:
 	if not multiplayer.is_server():
 		return
 	_input_vector = Vector2.ZERO
+	target_velocity = Vector3.ZERO
 	_attack_cooldown_remaining = 0.0
 	_server_respawn()
 
@@ -240,12 +302,13 @@ func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refil
 		return
 	global_position = target_position
 	velocity = Vector3.ZERO
-	rotation.y = facing_y
+	target_velocity = Vector3.ZERO
+	pivot.rotation.y = facing_y
 	if refill_health:
 		current_health = max_health
 		_sync_health.rpc(current_health)
 		_update_label()
-	_sync_state.rpc(global_position, velocity, rotation.y)
+	_sync_state.rpc(global_position, velocity, pivot.rotation.y)
 
 
 func set_channel_locked(active: bool) -> void:
@@ -259,6 +322,7 @@ func _apply_channel_lock(active: bool) -> void:
 	_channel_locked = active
 	if active:
 		_input_vector = Vector2.ZERO
+		target_velocity = Vector3.ZERO
 		velocity.x = 0.0
 		velocity.z = 0.0
 
@@ -294,12 +358,6 @@ func _configure_build_preview_feedback(is_valid: bool = true, structure_type: St
 	var state_text := "VALID" if is_valid else "BLOCKED"
 	build_preview_label.text = "%s %s" % [_build_type_label(structure_type), state_text]
 	build_preview_label.modulate = _preview_valid_text_color if is_valid else _preview_invalid_text_color
-
-
-func _update_camera_anchor() -> void:
-	camera_pivot.global_position = global_position + Vector3(0.0, 1.5, 0.0)
-	camera_pivot.global_rotation = Vector3.ZERO
-
 
 func _start_hit_flash() -> void:
 	_hit_flash_time_remaining = hit_flash_duration
@@ -437,12 +495,13 @@ func _gate_manager() -> Node:
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func _submit_input(new_input: Vector2) -> void:
+func _submit_input(new_input: Vector2, facing_y: float) -> void:
 	if not multiplayer.is_server():
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
 	_input_vector = new_input
+	pivot.rotation.y = facing_y
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -479,7 +538,7 @@ func _sync_state(server_position: Vector3, server_velocity: Vector3, facing_y: f
 		return
 	global_position = server_position
 	velocity = server_velocity
-	rotation.y = facing_y
+	pivot.rotation.y = facing_y
 
 
 @rpc("authority", "call_remote", "reliable")
