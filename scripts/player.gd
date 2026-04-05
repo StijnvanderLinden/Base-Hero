@@ -10,6 +10,7 @@ extends CharacterBody3D
 @export var min_camera_distance: float = 2.5
 @export var max_camera_distance: float = 8.0
 @export var camera_zoom_step: float = 0.5
+@export var camera_follow_smoothing: float = 16.0
 @export var max_health: float = 100.0
 @export var attack_range: float = 2.4
 @export var attack_damage: float = 34.0
@@ -67,9 +68,11 @@ func _ready() -> void:
 	if _is_local_player():
 		build_preview_root.top_level = true
 		build_preview_root.visible = true
+		camera_pivot.top_level = true
 		camera.current = true
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		_initialize_preview_meshes()
+		_update_camera_anchor(1.0)
 		_update_build_preview()
 	else:
 		build_preview_root.visible = false
@@ -80,6 +83,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if _is_local_player():
+		_update_camera_anchor(delta)
 		_update_build_preview()
 
 	if _hit_flash_time_remaining <= 0.0:
@@ -196,6 +200,22 @@ func _adjust_camera_zoom(delta_length: float) -> void:
 		spring_arm.spring_length + delta_length,
 		min_camera_distance,
 		max_camera_distance
+	)
+
+
+func _update_camera_anchor(delta: float) -> void:
+	var target_position := global_position + Vector3(0.0, 1.5, 0.0)
+	var target_rotation := Vector3(_camera_pitch, pivot.global_rotation.y, 0.0)
+	if delta >= 1.0:
+		camera_pivot.global_position = target_position
+		camera_pivot.global_rotation = target_rotation
+		return
+	var weight = clamp(camera_follow_smoothing * delta, 0.0, 1.0)
+	camera_pivot.global_position = camera_pivot.global_position.lerp(target_position, weight)
+	camera_pivot.global_rotation = Vector3(
+		lerp_angle(camera_pivot.global_rotation.x, target_rotation.x, weight),
+		lerp_angle(camera_pivot.global_rotation.y, target_rotation.y, weight),
+		0.0
 	)
 
 
@@ -538,6 +558,8 @@ func _sync_state(server_position: Vector3, server_velocity: Vector3, facing_y: f
 		return
 	global_position = server_position
 	velocity = server_velocity
+	if _is_local_player():
+		return
 	pivot.rotation.y = facing_y
 
 
