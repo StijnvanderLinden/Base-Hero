@@ -38,6 +38,11 @@ Main structure categories:
 - Shared scrap costs now gate wall and turret placement with server-side refusal feedback
 - Players can repair damaged walls and turrets with the normal interact input when standing nearby
 - Damaged structures now show clearer repairable state feedback and a local repair prompt appears when the player is in range
+- Placement now follows the camera aim point with server-validated requested positions, and walls use snap-assist for cleaner chains and corner turns
+- A local ground reticle now shows the aimed placement target before the snapped ghost resolves
+- Turrets now snap into cleaner anchor positions around nearby walls to speed up support layouts
+- Holding left mouse in wall mode now supports short drag placement across new snapped cells
+- Holding build now keeps a live preview in place, and wall holds preview a whole line that builds on release
 - Wall health and destruction
 - Turret health, target scanning, and server-spawned bullet projectiles that hit enemies
 - Wall replication to connected clients and late joiners

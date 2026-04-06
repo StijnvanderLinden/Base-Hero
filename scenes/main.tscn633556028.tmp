@@ -54,26 +54,6 @@ script = ExtResource("7")
 wall_scene = ExtResource("8")
 turret_scene = ExtResource("9")
 turret_bullet_scene = ExtResource("10")
-grid_size = null
-placement_distance = null
-min_placement_distance = null
-max_walls = null
-max_turrets = null
-wall_cost = null
-turret_cost = null
-repair_interaction_radius = null
-wall_repair_amount = null
-turret_repair_amount = null
-wall_repair_cost = null
-turret_repair_cost = null
-wall_spacing = null
-turret_spacing = null
-wall_chain_spacing = null
-wall_snap_assist_radius = null
-turret_anchor_spacing = null
-turret_snap_assist_radius = null
-core_clear_radius = null
-floor_limit = null
 
 [node name="CaveManager" type="Node" parent="." unique_id=889331207]
 script = ExtResource("15")
