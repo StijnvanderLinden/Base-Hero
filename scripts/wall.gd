@@ -10,6 +10,7 @@ var current_health: float = 180.0
 var wall_manager: Node
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color(0.74, 0.75, 0.8)
+var _damaged_color: Color = Color(0.95, 0.56, 0.42)
 var _inactive_color: Color = Color(0.35, 0.37, 0.42)
 var _defense_active: bool = true
 
@@ -134,6 +135,13 @@ func _update_label() -> void:
 	if not _defense_active:
 		label.text = "Wall Offline"
 		return
+	if can_be_repaired():
+		var repair_cost := _repair_cost()
+		if repair_cost > 0:
+			label.text = "Wall HP:%d | E Repair (%d)" % [int(round(current_health)), repair_cost]
+			return
+		label.text = "Wall HP:%d | E Repair" % int(round(current_health))
+		return
 	label.text = "Wall HP:%d" % int(round(current_health))
 
 
@@ -151,7 +159,17 @@ func _update_body_visuals() -> void:
 	if _hit_flash_time_remaining > 0.0:
 		material.albedo_color = Color(1.0, 1.0, 1.0)
 		return
-	material.albedo_color = _base_color if _defense_active else _inactive_color
+	if not _defense_active:
+		material.albedo_color = _inactive_color
+		return
+	var health_ratio = clamp(current_health / max(max_health, 0.001), 0.0, 1.0)
+	material.albedo_color = _damaged_color.lerp(_base_color, health_ratio)
+
+
+func _repair_cost() -> int:
+	if wall_manager == null or not wall_manager.has_method("get_repair_cost_for_type"):
+		return 0
+	return int(wall_manager.get_repair_cost_for_type("wall"))
 
 
 @rpc("authority", "call_remote", "reliable")

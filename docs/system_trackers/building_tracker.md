@@ -37,6 +37,7 @@ Main structure categories:
 - Players can switch between wall and turret building during a live session
 - Shared scrap costs now gate wall and turret placement with server-side refusal feedback
 - Players can repair damaged walls and turrets with the normal interact input when standing nearby
+- Damaged structures now show clearer repairable state feedback and a local repair prompt appears when the player is in range
 - Wall health and destruction
 - Turret health, target scanning, and server-spawned bullet projectiles that hit enemies
 - Wall replication to connected clients and late joiners

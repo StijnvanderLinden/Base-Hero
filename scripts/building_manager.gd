@@ -158,6 +158,34 @@ func request_structure_repair(peer_id: int) -> bool:
 	return true
 
 
+func get_repair_cost_for_type(structure_type: String) -> int:
+	return _repair_cost_for_type(structure_type)
+
+
+func get_repair_prompt_for_peer(peer_id: int) -> Dictionary:
+	if not _session_active:
+		return {"visible": false, "text": ""}
+	var player_node = _player_node(peer_id)
+	if player_node == null:
+		return {"visible": false, "text": ""}
+	var structure = _nearest_repairable_structure(player_node.global_position)
+	if structure == null:
+		return {"visible": false, "text": ""}
+	var structure_type := "wall"
+	if structure.has_method("get_structure_kind"):
+		structure_type = _normalized_structure_type(structure.get_structure_kind())
+	var cost := _repair_cost_for_type(structure_type)
+	var text := "Press E to repair %s" % _structure_display_name(structure_type)
+	if structure.has_method("get_current_health"):
+		text += " (%d/%d HP)" % [int(round(structure.get_current_health())), int(round(_max_health_for_structure(structure)))]
+	if cost > 0:
+		if _can_afford_repair(structure_type):
+			text += " for %d scrap" % cost
+		else:
+			text = "Need %d scrap to repair %s" % [cost, _structure_display_name(structure_type)]
+	return {"visible": true, "text": text}
+
+
 func despawn_wall_for_all(wall_id: int) -> void:
 	despawn_structure_for_all("wall", wall_id)
 
@@ -487,6 +515,14 @@ func _current_stored_scrap() -> int:
 	if gate_manager == null or not gate_manager.has_method("get_stored_scrap"):
 		return 0
 	return int(gate_manager.get_stored_scrap())
+
+
+func _max_health_for_structure(structure: Node) -> float:
+	if structure == null:
+		return 0.0
+	if "max_health" in structure:
+		return float(structure.max_health)
+	return 0.0
 
 
 func _insufficient_scrap_message(structure_type: String) -> String:

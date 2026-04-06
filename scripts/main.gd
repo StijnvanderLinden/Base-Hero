@@ -17,6 +17,13 @@ extends Node3D
 @onready var restart_button: Button = $UI/Panel/VBoxContainer/RestartButton
 @onready var town_hall_upgrade_button: Button = $UI/Panel/VBoxContainer/TownHallUpgradeButton
 @onready var core_upgrade_button: Button = $UI/Panel/VBoxContainer/CoreUpgradeButton
+@onready var scrap_panel: PanelContainer = $UI/ScrapPanel
+@onready var scrap_value_label: Label = $UI/ScrapPanel/HBoxContainer/ScrapValueLabel
+@onready var status_mode_label: Label = $UI/StatusPanel/VBoxContainer/ModeLabel
+@onready var core_health_label: Label = $UI/StatusPanel/VBoxContainer/CoreHealthLabel
+@onready var core_health_bar: ProgressBar = $UI/StatusPanel/VBoxContainer/CoreHealthBar
+@onready var player_health_label: Label = $UI/StatusPanel/VBoxContainer/PlayerHealthLabel
+@onready var player_health_bar: ProgressBar = $UI/StatusPanel/VBoxContainer/PlayerHealthBar
 @onready var status_label: Label = $UI/StatusPanel/VBoxContainer/StatusLabel
 @onready var run_info_label: Label = $UI/RunPanel/VBoxContainer/RunInfoLabel
 @onready var cave_panel: PanelContainer = $UI/CavePanel
@@ -27,6 +34,11 @@ extends Node3D
 @onready var claim_panel: PanelContainer = $UI/ClaimPanel
 @onready var claim_progress_label: Label = $UI/ClaimPanel/VBoxContainer/ClaimProgressLabel
 @onready var claim_progress_bar: ProgressBar = $UI/ClaimPanel/VBoxContainer/ClaimProgressBar
+@onready var interaction_prompt_panel: PanelContainer = $UI/InteractionPromptPanel
+@onready var interaction_prompt_label: Label = $UI/InteractionPromptPanel/InteractionPromptLabel
+@onready var controls_panel: PanelContainer = $UI/ControlsPanel
+@onready var controls_context_label: Label = $UI/ControlsPanel/VBoxContainer/ControlsContextLabel
+@onready var controls_body_label: Label = $UI/ControlsPanel/VBoxContainer/ControlsBodyLabel
 
 var _latest_run_info_base: String = "Base | Stored Scrap 0 | Core Lv 0 | Max HP 300"
 
@@ -66,8 +78,18 @@ func _ready() -> void:
 	_on_status_changed("Core defense prototype ready.")
 	_on_run_info_changed("Base | Stored Scrap 0 | Core Lv 0 | Max HP 300")
 	_refresh_progression_ui()
+	_refresh_scrap_display()
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
+	_refresh_status_overview()
+	_refresh_controls_panel()
+	_refresh_interaction_prompt()
+
+
+func _process(_delta: float) -> void:
+	_refresh_status_overview()
+	_refresh_controls_panel()
+	_refresh_interaction_prompt()
 
 
 func _on_host_pressed() -> void:
@@ -132,6 +154,10 @@ func _on_run_info_changed(message: String) -> void:
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
 	_refresh_progression_ui()
+	_refresh_scrap_display()
+	_refresh_status_overview()
+	_refresh_controls_panel()
+	_refresh_interaction_prompt()
 
 
 func _on_session_changed(in_session: bool) -> void:
@@ -151,6 +177,9 @@ func _on_session_changed(in_session: bool) -> void:
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
 	_refresh_progression_ui()
+	_refresh_scrap_display()
+	_refresh_status_overview()
+	_refresh_controls_panel()
 
 
 func _on_core_destroyed() -> void:
@@ -200,6 +229,8 @@ func _on_gate_state_changed(is_active: bool) -> void:
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
 	_refresh_progression_ui()
+	_refresh_status_overview()
+	_refresh_controls_panel()
 
 
 func _on_raid_state_changed(is_active: bool) -> void:
@@ -211,6 +242,8 @@ func _on_raid_state_changed(is_active: bool) -> void:
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
 	_refresh_progression_ui()
+	_refresh_status_overview()
+	_refresh_controls_panel()
 
 
 func _refresh_progression_ui() -> void:
@@ -232,10 +265,25 @@ func _refresh_progression_ui() -> void:
 	core_upgrade_button.text = "Upgrade Core to Lv %d (%d Scrap)" % [next_level, next_cost]
 	core_upgrade_button.disabled = not is_host or progression_locked or not gate_manager.can_purchase_core_upgrade()
 	run_info_label.text = _compose_run_info(_latest_run_info_base)
+	_refresh_scrap_display()
 
 
 func _compose_run_info(base_message: String) -> String:
 	return "%s%s" % [base_message, raid_manager.get_run_info_suffix()]
+
+
+func _refresh_scrap_display() -> void:
+	if scrap_panel == null:
+		return
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	scrap_panel.visible = has_session
+	if not has_session:
+		scrap_value_label.text = "0"
+		return
+	var scrap_amount := 0
+	if gate_manager != null and gate_manager.has_method("get_stored_scrap"):
+		scrap_amount = int(gate_manager.get_stored_scrap())
+	scrap_value_label.text = str(scrap_amount)
 
 
 func _refresh_claim_progress_ui() -> void:
@@ -335,3 +383,118 @@ func _get_port() -> int:
 		parsed_port = network_manager.default_port
 		port_input.text = str(parsed_port)
 	return parsed_port
+
+
+func _refresh_status_overview() -> void:
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	if not has_session:
+		status_mode_label.text = "Offline"
+		core_health_label.text = "Core: 300 / 300"
+		core_health_bar.value = 100.0
+		player_health_label.text = "Player: Not connected"
+		player_health_bar.value = 0.0
+		return
+
+	var core_current := 0.0
+	var core_maximum := 1.0
+	if core_objective != null and core_objective.has_method("get_current_health"):
+		core_current = float(core_objective.get_current_health())
+		core_maximum = max(float(core_objective.max_health), 1.0)
+	core_health_label.text = "Core: %d / %d" % [int(round(core_current)), int(round(core_maximum))]
+	core_health_bar.value = clamp((core_current / core_maximum) * 100.0, 0.0, 100.0)
+
+	var player := _local_player_node()
+	if player == null:
+		player_health_label.text = "Player: Spawning"
+		player_health_bar.value = 0.0
+		status_mode_label.text = _current_mode_label(null)
+		return
+
+	var player_current := float(player.current_health)
+	var player_maximum = max(float(player.max_health), 1.0)
+	player_health_label.text = "Player: %d / %d" % [int(round(player_current)), int(round(player_maximum))]
+	player_health_bar.value = clamp((player_current / player_maximum) * 100.0, 0.0, 100.0)
+	status_mode_label.text = _current_mode_label(player)
+
+
+func _refresh_controls_panel() -> void:
+	if controls_panel == null:
+		return
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	controls_panel.visible = has_session
+	if not has_session:
+		return
+	var player := _local_player_node()
+	controls_context_label.text = _current_mode_label(player)
+	controls_body_label.text = _controls_hint_text(player)
+
+
+func _local_player_node() -> Node:
+	var local_peer_id := multiplayer.get_unique_id()
+	for node in get_tree().get_nodes_in_group("players"):
+		if node == null:
+			continue
+		if int(node.get("peer_id")) == local_peer_id:
+			return node
+	return null
+
+
+func _current_mode_label(player: Node) -> String:
+	if raid_manager.is_raid_active():
+		return "Mode: Raid Defense"
+	if raid_manager.is_upgrade_channeling():
+		return "Mode: Town Hall Upgrade"
+	if gate_manager.is_gate_active():
+		if gate_manager.is_build_phase_active():
+			return "Mode: Gate Build Phase"
+		if gate_manager.is_extraction_active():
+			return "Mode: Extraction"
+		if gate_manager.is_cave_activation_channeling():
+			return "Mode: Cave Activation"
+		if gate_manager.is_repair_channeling():
+			return "Mode: Pylon Repair"
+		return "Mode: Gate Pressure"
+	if player != null and player.has_method("is_build_mode_active") and player.is_build_mode_active():
+		return "Mode: Base Building"
+	return "Mode: Base Defense"
+
+
+func _controls_hint_text(player: Node) -> String:
+	if player != null and player.has_method("is_channel_locked") and player.is_channel_locked():
+		return "Movement limited while channeling. Stay in range and press E when the objective asks for it."
+
+	var hints: Array[String] = []
+	hints.append("LMB attack")
+	hints.append("E interact")
+	hints.append("1 wall")
+	hints.append("2 turret")
+
+	var build_active := false
+	var build_type := "wall"
+	if player != null and player.has_method("is_build_mode_active"):
+		build_active = player.is_build_mode_active()
+	if player != null and player.has_method("get_current_build_type"):
+		build_type = String(player.get_current_build_type()).capitalize()
+
+	if build_active:
+		hints.append("Q exit build")
+		hints.append("R rotate")
+		hints.append("Build: %s" % build_type)
+		return " | ".join(hints) + " | LMB place"
+
+	hints.append("Q enter build")
+	return " | ".join(hints)
+
+
+func _refresh_interaction_prompt() -> void:
+	if interaction_prompt_panel == null:
+		return
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	if not has_session:
+		interaction_prompt_panel.visible = false
+		return
+	var prompt: Dictionary = {"visible": false, "text": ""}
+	if building_manager != null and building_manager.has_method("get_repair_prompt_for_peer"):
+		prompt = building_manager.get_repair_prompt_for_peer(multiplayer.get_unique_id())
+	interaction_prompt_panel.visible = bool(prompt.get("visible", false))
+	interaction_prompt_label.text = String(prompt.get("text", ""))

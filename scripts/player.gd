@@ -314,6 +314,18 @@ func _is_local_player() -> bool:
 	return multiplayer.get_unique_id() == peer_id
 
 
+func is_build_mode_active() -> bool:
+	return _build_mode_active
+
+
+func get_current_build_type() -> String:
+	return _current_build_type
+
+
+func is_channel_locked() -> bool:
+	return _channel_locked
+
+
 func get_build_forward_vector() -> Vector3:
 	var forward := -look_pivot.global_basis.z
 	forward.y = 0.0

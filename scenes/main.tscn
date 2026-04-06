@@ -7,15 +7,23 @@
 [ext_resource type="PackedScene" uid="uid://csvwa2gkpvrcx" path="res://scenes/enemy.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/core_objective.tscn" id="6"]
 [ext_resource type="Script" uid="uid://58ctddcth0tr" path="res://scripts/building_manager.gd" id="7"]
-[ext_resource type="Script" path="res://scripts/cave_manager.gd" id="15"]
 [ext_resource type="PackedScene" path="res://scenes/wall.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/turret.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/turret_bullet.tscn" id="10"]
 [ext_resource type="Script" uid="uid://dnd2pms23kqlx" path="res://scripts/gate_manager.gd" id="11"]
-[ext_resource type="Script" path="res://scripts/raid_manager.gd" id="12"]
-[ext_resource type="PackedScene" path="res://scenes/construct_enemy.tscn" id="13"]
+[ext_resource type="Script" uid="uid://ba7x5no0apyp8" path="res://scripts/raid_manager.gd" id="12"]
+[ext_resource type="PackedScene" uid="uid://e188ha1oc6sf" path="res://scenes/construct_enemy.tscn" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/pylon.tscn" id="14"]
-[ext_resource type="Script" path="res://scripts/health_bar_overlay.gd" id="16"]
+[ext_resource type="Script" uid="uid://d4el77f8fdqv5" path="res://scripts/cave_manager.gd" id="15"]
+[ext_resource type="Script" uid="uid://ogak35rmciib" path="res://scripts/health_bar_overlay.gd" id="16"]
+[ext_resource type="Texture2D" uid="uid://cpsmtds5k0wpy" path="res://ui/icons/host.svg" id="17"]
+[ext_resource type="Texture2D" uid="uid://ecrv3nlun7xj" path="res://ui/icons/join.svg" id="18"]
+[ext_resource type="Texture2D" uid="uid://dmvhtr44e3yqy" path="res://ui/icons/leave.svg" id="19"]
+[ext_resource type="Texture2D" uid="uid://d2rwlxd3citvc" path="res://ui/icons/gate.svg" id="20"]
+[ext_resource type="Texture2D" uid="uid://g4ur051x8qry" path="res://ui/icons/restart.svg" id="21"]
+[ext_resource type="Texture2D" uid="uid://dypwbn3uq64ha" path="res://ui/icons/town_hall.svg" id="22"]
+[ext_resource type="Texture2D" uid="uid://bkwy8jejqapxf" path="res://ui/icons/core_upgrade.svg" id="23"]
+[ext_resource type="Texture2D" uid="uid://ce5n0xdmhffpq" path="res://ui/icons/scrap.svg" id="24"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(40, 1, 40)
@@ -26,6 +34,8 @@ roughness = 0.9
 
 [sub_resource type="BoxMesh" id="2"]
 size = Vector3(40, 1, 40)
+
+[sub_resource type="StyleBoxEmpty" id="4"]
 
 [node name="Main" type="Node3D" unique_id=1861883003]
 script = ExtResource("1")
@@ -147,46 +157,54 @@ placeholder_text = "Port"
 [node name="HostButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=2083758483]
 layout_mode = 2
 text = "Host Session"
+icon = ExtResource("17")
 
 [node name="JoinButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=474207484]
 layout_mode = 2
 text = "Join Session"
+icon = ExtResource("18")
 
 [node name="LeaveButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649416]
 layout_mode = 2
 disabled = true
 text = "Leave Session"
+icon = ExtResource("19")
 
 [node name="GateButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649418]
 layout_mode = 2
 disabled = true
 text = "Start Gate Run"
+icon = ExtResource("20")
 
 [node name="RestartButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649417]
 layout_mode = 2
 disabled = true
 text = "Restart Session"
+icon = ExtResource("21")
 
 [node name="TownHallUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649420]
 layout_mode = 2
 disabled = true
 text = "Start Town Hall Upgrade"
+icon = ExtResource("22")
 
 [node name="CoreUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649419]
 layout_mode = 2
 disabled = true
 text = "Upgrade Core to Lv 1 (25 Scrap)"
+icon = ExtResource("23")
 
 [node name="RunPanel" type="PanelContainer" parent="UI" unique_id=636919108]
-layout_mode = 1
-anchors_preset = 9
+anchors_preset = 6
 anchor_left = 1.0
+anchor_top = 0.5
 anchor_right = 1.0
-offset_left = -264.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 98.0
+anchor_bottom = 0.5
+offset_left = -248.0
+offset_top = -41.0
+offset_bottom = 41.0
 grow_horizontal = 0
+grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/RunPanel" unique_id=2144960710]
 layout_mode = 2
@@ -204,46 +222,16 @@ autowrap_mode = 3
 
 [node name="CavePanel" type="PanelContainer" parent="UI" unique_id=636919109]
 visible = false
-layout_mode = 1
-anchors_preset = 9
+anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = -340.0
-offset_top = 114.0
+offset_top = 170.0
 offset_right = -16.0
-offset_bottom = 278.0
+offset_bottom = 334.0
 grow_horizontal = 0
-
-[node name="ClaimPanel" type="PanelContainer" parent="UI" unique_id=636919111]
-visible = false
-layout_mode = 1
-anchors_preset = 10
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -160.0
-offset_top = 16.0
-offset_right = 160.0
-offset_bottom = 96.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="UI/ClaimPanel" unique_id=2144960713]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="TitleLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=675620099]
-layout_mode = 2
-text = "Pylon Claim"
-horizontal_alignment = 1
-
-[node name="ClaimProgressLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=636461640]
-layout_mode = 2
-text = ""
-horizontal_alignment = 1
-
-[node name="ClaimProgressBar" type="ProgressBar" parent="UI/ClaimPanel/VBoxContainer" unique_id=2083758484]
-layout_mode = 2
-max_value = 100.0
-value = 0.0
-show_percentage = false
+grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/CavePanel" unique_id=2144960711]
 layout_mode = 2
@@ -287,18 +275,99 @@ text = "Detail"
 
 [node name="CaveDetailValueLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=636461639]
 layout_mode = 2
-text = ""
+autowrap_mode = 3
+
+[node name="ScrapPanel" type="PanelContainer" parent="UI" unique_id=1175308186]
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -83.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = -615.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("4")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/ScrapPanel" unique_id=2114829549]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="ScrapIcon" type="TextureRect" parent="UI/ScrapPanel/HBoxContainer" unique_id=204732997]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+texture = ExtResource("24")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ScrapValueLabel" type="Label" parent="UI/ScrapPanel/HBoxContainer" unique_id=1454805302]
+layout_mode = 2
+theme_override_font_sizes/font_size = 23
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ClaimPanel" type="PanelContainer" parent="UI" unique_id=636919111]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -160.0
+offset_top = 16.0
+offset_right = 160.0
+offset_bottom = 96.0
+grow_horizontal = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/ClaimPanel" unique_id=2144960713]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=675620099]
+layout_mode = 2
+text = "Pylon Claim"
+horizontal_alignment = 1
+
+[node name="ClaimProgressLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=636461640]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ClaimProgressBar" type="ProgressBar" parent="UI/ClaimPanel/VBoxContainer" unique_id=2083758484]
+layout_mode = 2
+show_percentage = false
+
+[node name="InteractionPromptPanel" type="PanelContainer" parent="UI" unique_id=636919112]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -160.0
+offset_right = 190.0
+offset_bottom = -116.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InteractionPromptLabel" type="Label" parent="UI/InteractionPromptPanel" unique_id=636461641]
+layout_mode = 2
+text = "Press E to repair Wall"
+horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="StatusPanel" type="PanelContainer" parent="UI" unique_id=636919110]
-layout_mode = 1
-anchors_preset = 6
+anchors_preset = 3
+anchor_left = 1.0
 anchor_top = 1.0
+anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 16.0
-offset_top = -112.0
+offset_top = -188.0
 offset_right = 336.0
 offset_bottom = -16.0
+grow_horizontal = 0
 grow_vertical = 0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/StatusPanel" unique_id=2144960712]
@@ -310,9 +379,59 @@ layout_mode = 2
 text = "Status"
 horizontal_alignment = 1
 
+[node name="ModeLabel" type="Label" parent="UI/StatusPanel/VBoxContainer" unique_id=1404471675]
+layout_mode = 2
+text = "Mode: Base Defense"
+horizontal_alignment = 1
+
+[node name="CoreHealthLabel" type="Label" parent="UI/StatusPanel/VBoxContainer" unique_id=2046333422]
+layout_mode = 2
+text = "Core: 300 / 300"
+
+[node name="CoreHealthBar" type="ProgressBar" parent="UI/StatusPanel/VBoxContainer" unique_id=2068566617]
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="PlayerHealthLabel" type="Label" parent="UI/StatusPanel/VBoxContainer" unique_id=170139684]
+layout_mode = 2
+text = "Player: Not connected"
+
+[node name="PlayerHealthBar" type="ProgressBar" parent="UI/StatusPanel/VBoxContainer" unique_id=1417183271]
+layout_mode = 2
+show_percentage = false
+
 [node name="StatusLabel" type="Label" parent="UI/StatusPanel/VBoxContainer" unique_id=636461634]
 layout_mode = 2
 text = "Offline. Host or join to begin."
+autowrap_mode = 3
+
+[node name="ControlsPanel" type="PanelContainer" parent="UI" unique_id=1683095974]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -128.0
+offset_right = 344.0
+grow_vertical = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/ControlsPanel" unique_id=127894573]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="UI/ControlsPanel/VBoxContainer" unique_id=941332160]
+layout_mode = 2
+text = "Controls"
+horizontal_alignment = 1
+
+[node name="ControlsContextLabel" type="Label" parent="UI/ControlsPanel/VBoxContainer" unique_id=1436080195]
+layout_mode = 2
+text = "Mode: Base Defense"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ControlsBodyLabel" type="Label" parent="UI/ControlsPanel/VBoxContainer" unique_id=2012675517]
+layout_mode = 2
+text = "LMB attack | E interact | 1 wall | 2 turret | Q enter build"
 autowrap_mode = 3
 
 [connection signal="pressed" from="UI/Panel/VBoxContainer/HostButton" to="." method="_on_host_pressed"]
