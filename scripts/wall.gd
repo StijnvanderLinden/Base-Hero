@@ -73,7 +73,7 @@ func get_spawn_rotation_y() -> float:
 
 
 func get_hit_radius() -> float:
-	return 0.95
+	return 1.35
 
 
 func can_be_targeted() -> bool:

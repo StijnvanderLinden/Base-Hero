@@ -41,8 +41,9 @@ Main structure categories:
 - Placement now follows the camera aim point with server-validated requested positions, and walls use snap-assist for cleaner chains and corner turns
 - A local ground reticle now shows the aimed placement target before the snapped ghost resolves
 - Turrets now snap into cleaner anchor positions around nearby walls to speed up support layouts
-- Holding left mouse in wall mode now supports short drag placement across new snapped cells
-- Holding build now keeps a live preview in place, and wall holds preview a whole line that builds on release
+- Wall placement now uses a selected start point and end point, with the live preview filling the line between the two clicks
+- Wall meshes now fill a full grid cell so perpendicular joins read as closed corners instead of leaving a visible gap
+- Active wall segments can now be cancelled before placement, and the preview explicitly indicates when it is waiting for the endpoint
 - Wall health and destruction
 - Turret health, target scanning, and server-spawned bullet projectiles that hit enemies
 - Wall replication to connected clients and late joiners
@@ -56,7 +57,8 @@ Main structure categories:
 - Tuning first wall placement spacing, build distance, and first cost values
 - Tuning repair cost, repair amount, and interaction radius for early defense maintenance
 - Tuning turret range, bullet speed, rate of fire, and placement spacing
-- Deciding how freeform the first placement loop should remain before adding stronger snapping or more advanced ghost presentation
+- Tuning how forgiving wall line start and end selection should be around existing placed walls
+- Tuning the wall segment UX so start, cancel, and confirm states stay readable under pressure
 
 ---
 
@@ -121,8 +123,8 @@ Main structure categories:
 ---
 
 ## Next Recommended Task
-Extend the first building loop:
-- validate wall and turret building in multiplayer sessions
-- decide whether turret placement should share the same budget as walls or use separate costs later
-- improve the placement preview presentation further if needed
-- decide whether resources stay free in testing or become constrained next
+Validate the new wall line workflow:
+- test two-click wall start and end selection in multiplayer sessions
+- verify corners and perpendicular joins read clearly once bespoke wall meshes are introduced
+- decide whether wall start selection should become more permissive around existing walls for cleaner T-junction authoring
+- keep tuning turret placement readability separately from wall line placement

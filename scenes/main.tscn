@@ -24,6 +24,7 @@
 [ext_resource type="Texture2D" uid="uid://dypwbn3uq64ha" path="res://ui/icons/town_hall.svg" id="22"]
 [ext_resource type="Texture2D" uid="uid://bkwy8jejqapxf" path="res://ui/icons/core_upgrade.svg" id="23"]
 [ext_resource type="Texture2D" uid="uid://ce5n0xdmhffpq" path="res://ui/icons/scrap.svg" id="24"]
+[ext_resource type="Shader" uid="uid://els4c2u4cbck" path="res://resources/shaders/build_grid_overlay.gdshader" id="25"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(40, 1, 40)
@@ -34,6 +35,20 @@ roughness = 0.9
 
 [sub_resource type="BoxMesh" id="2"]
 size = Vector3(40, 1, 40)
+
+[sub_resource type="ShaderMaterial" id="5"]
+render_priority = 0
+shader = ExtResource("25")
+shader_parameter/line_color = Color(1, 0.86, 0.24, 0.48)
+shader_parameter/fill_color = Color(1, 0.82, 0.18, 0.015)
+shader_parameter/cells_per_side = 18.0
+shader_parameter/line_width = 0.028
+shader_parameter/glow_width = 0.11
+shader_parameter/pulse_speed = 1.8
+shader_parameter/pulse_strength = 0.06
+
+[sub_resource type="PlaneMesh" id="6"]
+size = Vector2(1, 1)
 
 [sub_resource type="StyleBoxEmpty" id="4"]
 
@@ -54,26 +69,6 @@ script = ExtResource("7")
 wall_scene = ExtResource("8")
 turret_scene = ExtResource("9")
 turret_bullet_scene = ExtResource("10")
-grid_size = null
-placement_distance = null
-min_placement_distance = null
-max_walls = null
-max_turrets = null
-wall_cost = null
-turret_cost = null
-repair_interaction_radius = null
-wall_repair_amount = null
-turret_repair_amount = null
-wall_repair_cost = null
-turret_repair_cost = null
-wall_spacing = null
-turret_spacing = null
-wall_chain_spacing = null
-wall_snap_assist_radius = null
-turret_anchor_spacing = null
-turret_snap_assist_radius = null
-core_clear_radius = null
-floor_limit = null
 
 [node name="CaveManager" type="Node" parent="." unique_id=889331207]
 script = ExtResource("15")
@@ -115,6 +110,12 @@ shape = SubResource("1")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="World/GateFloor" unique_id=1620916820]
 material_override = SubResource("3")
 mesh = SubResource("2")
+
+[node name="BuildGridOverlay" type="MeshInstance3D" parent="World" unique_id=1620916821]
+visible = false
+material_override = SubResource("5")
+cast_shadow = 0
+mesh = SubResource("6")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="World" unique_id=1281557970]
 transform = Transform3D(0.76604444, 0.52654076, -0.3686878, 0, 0.57357645, 0.81915206, 0.6427876, -0.62750685, 0.43938506, 0, 8, 0)

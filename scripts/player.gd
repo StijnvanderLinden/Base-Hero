@@ -5,8 +5,8 @@ extends CharacterBody3D
 # The downward acceleration when in the air, in meters per second squared.
 @export var fall_acceleration: float = 24.0
 @export var mouse_sensitivity: float = 0.0035
-@export var min_camera_pitch_degrees: float = -55.0
-@export var max_camera_pitch_degrees: float = 35.0
+@export var min_camera_pitch_degrees: float = -70.0
+@export var max_camera_pitch_degrees: float = 50.0
 @export var min_camera_distance: float = 2.5
 @export var max_camera_distance: float = 8.0
 @export var camera_zoom_step: float = 0.5
@@ -62,6 +62,11 @@ var _current_build_preview_position: Vector3 = Vector3.ZERO
 var _current_build_preview_rotation_y: float = 0.0
 var _current_build_preview_valid: bool = false
 var _has_current_build_preview: bool = false
+var _wall_segment_active: bool = false
+var _wall_segment_anchor_position: Vector3 = Vector3.ZERO
+var _wall_segment_preview_positions: Array = []
+var _wall_segment_preview_valid: bool = false
+var _wall_segment_rotation_y: float = 0.0
 var _build_drag_active: bool = false
 var _build_drag_last_position: Vector3 = Vector3.ZERO
 var _build_drag_axis: Vector3 = Vector3.ZERO
@@ -154,7 +159,10 @@ func _physics_process(delta: float) -> void:
 			if attack_pressed and not _channel_locked:
 				_perform_server_attack()
 			if build_pressed and not _channel_locked and _build_mode_active:
-				_begin_build_hold()
+				if _current_build_type == "wall":
+					_handle_wall_segment_click_server()
+				else:
+					_begin_build_hold()
 			if build_released and _build_hold_active:
 				_confirm_build_hold_server()
 			if interact_pressed and not _channel_locked:
@@ -169,7 +177,10 @@ func _physics_process(delta: float) -> void:
 		if attack_pressed and not _channel_locked:
 			_request_attack.rpc_id(1)
 		if build_pressed and not _channel_locked and _build_mode_active:
-			_begin_build_hold()
+			if _current_build_type == "wall":
+				_handle_wall_segment_click_remote()
+			else:
+				_begin_build_hold()
 		if build_released and _build_hold_active:
 			_confirm_build_hold_remote()
 		if interact_pressed and not _channel_locked:
@@ -213,6 +224,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_adjust_camera_zoom(camera_zoom_step)
+			get_viewport().set_input_as_handled()
+			return
+		if event.button_index == MOUSE_BUTTON_RIGHT and _cancel_wall_segment():
 			get_viewport().set_input_as_handled()
 			return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -354,6 +368,10 @@ func is_build_mode_active() -> bool:
 	return _build_mode_active
 
 
+func is_wall_segment_active() -> bool:
+	return _wall_segment_active and _current_build_type == "wall"
+
+
 func get_current_build_type() -> String:
 	return _current_build_type
 
@@ -493,14 +511,14 @@ func _update_build_preview() -> void:
 		return
 
 	var preview: Dictionary
-	if _is_local_player() and _build_hold_active and _build_hold_type == "wall" and manager.has_method("get_wall_line_preview_from_request"):
-		var hold_request := _local_build_request()
-		_current_build_target_position = hold_request.get("position", global_position)
+	if _is_local_player() and _wall_segment_active and _current_build_type == "wall" and manager.has_method("get_wall_line_preview_from_request"):
+		var wall_request := _local_build_request()
+		_current_build_target_position = wall_request.get("position", global_position)
 		preview = manager.get_wall_line_preview_from_request(
 			peer_id,
-			_build_hold_anchor_position,
+			_wall_segment_anchor_position,
 			_current_build_target_position,
-			_build_hold_rotation_y
+			float(wall_request.get("rotation_y", get_build_rotation_y()))
 		)
 	elif _is_local_player() and _build_hold_active and manager.has_method("get_build_preview_from_request"):
 		preview = manager.get_build_preview_from_request(
@@ -539,7 +557,11 @@ func _update_build_preview() -> void:
 	_current_build_preview_rotation_y = float(preview.get("rotation_y", 0.0))
 	_current_build_preview_valid = bool(preview.get("valid", false))
 	_has_current_build_preview = true
-	if _build_hold_active:
+	if _wall_segment_active:
+		_wall_segment_preview_valid = _current_build_preview_valid
+		_wall_segment_preview_positions = preview_positions
+		_wall_segment_rotation_y = _current_build_preview_rotation_y
+	elif _build_hold_active:
 		_build_hold_preview_valid = _current_build_preview_valid
 		_build_hold_preview_positions = preview_positions
 	_update_build_reticle(_current_build_target_position, bool(preview.get("valid", false)))
@@ -548,9 +570,18 @@ func _update_build_preview() -> void:
 		preview.get("type", _current_build_type),
 		int(preview.get("total_cost", preview.get("cost", 0))),
 		int(preview.get("count", 1)),
-		String(preview.get("status_text", "VALID"))
+		_wall_preview_status_text(preview)
 	)
 	_apply_preview_positions(preview_positions, _current_build_preview_rotation_y)
+
+
+func _wall_preview_status_text(preview: Dictionary) -> String:
+	var status_text := String(preview.get("status_text", "VALID"))
+	if not (_wall_segment_active and _current_build_type == "wall"):
+		return status_text
+	if bool(preview.get("valid", false)):
+		return "SELECT END"
+	return "END BLOCKED"
 
 
 func _configure_build_preview_feedback(is_valid: bool = true, structure_type: String = "wall", total_cost: int = 0, count: int = 1, status_text: String = "VALID") -> void:
@@ -676,6 +707,73 @@ func _reset_build_hold_state() -> void:
 	_build_hold_rotation_y = 0.0
 	_build_hold_preview_positions = []
 	_build_hold_preview_valid = false
+
+
+func _begin_wall_segment() -> void:
+	if not _has_current_build_preview or not _current_build_preview_valid:
+		return
+	_wall_segment_active = true
+	_wall_segment_anchor_position = _current_build_preview_position
+	_wall_segment_preview_positions = [_current_build_preview_position]
+	_wall_segment_preview_valid = true
+	_wall_segment_rotation_y = _current_build_preview_rotation_y
+
+
+func _reset_wall_segment_state() -> void:
+	_wall_segment_active = false
+	_wall_segment_anchor_position = Vector3.ZERO
+	_wall_segment_preview_positions = []
+	_wall_segment_preview_valid = false
+	_wall_segment_rotation_y = 0.0
+
+
+func _cancel_wall_segment() -> bool:
+	if not (_build_mode_active and _wall_segment_active and _current_build_type == "wall"):
+		return false
+	_reset_wall_segment_state()
+	if _is_local_player():
+		_update_build_preview()
+	return true
+
+
+func _handle_wall_segment_click_server() -> void:
+	if _current_build_type != "wall":
+		return
+	if not _wall_segment_active:
+		_begin_wall_segment()
+		return
+	_confirm_wall_segment_server()
+
+
+func _handle_wall_segment_click_remote() -> void:
+	if _current_build_type != "wall":
+		return
+	if not _wall_segment_active:
+		_begin_wall_segment()
+		return
+	_confirm_wall_segment_remote()
+
+
+func _confirm_wall_segment_server() -> void:
+	if not _wall_segment_active:
+		return
+	if not _wall_segment_preview_valid or _wall_segment_preview_positions.is_empty():
+		return
+	var manager = _building_manager()
+	if manager == null:
+		return
+	if manager.has_method("request_structure_batch_placement"):
+		manager.request_structure_batch_placement(peer_id, "wall", _wall_segment_preview_positions, _wall_segment_rotation_y)
+		_reset_wall_segment_state()
+
+
+func _confirm_wall_segment_remote() -> void:
+	if not _wall_segment_active:
+		return
+	if not _wall_segment_preview_valid or _wall_segment_preview_positions.is_empty():
+		return
+	_request_build_batch.rpc_id(1, "wall", _wall_segment_preview_positions, _wall_segment_rotation_y)
+	_reset_wall_segment_state()
 
 
 func _confirm_build_hold_server() -> void:
@@ -834,6 +932,7 @@ func _set_build_type(new_build_type: String) -> void:
 	if _current_build_type == new_build_type and _build_mode_active:
 		return
 	_reset_build_hold_state()
+	_reset_wall_segment_state()
 	_reset_build_drag_state()
 	_current_build_type = new_build_type
 	_build_mode_active = true
@@ -845,7 +944,10 @@ func _set_build_type(new_build_type: String) -> void:
 
 
 func _toggle_build_mode_active() -> void:
+	if _cancel_wall_segment():
+		return
 	_reset_build_hold_state()
+	_reset_wall_segment_state()
 	_reset_build_drag_state()
 	_build_mode_active = not _build_mode_active
 	if _is_local_player():
@@ -867,7 +969,7 @@ func _rotate_build_clockwise() -> void:
 func _initialize_preview_meshes() -> void:
 	if _wall_preview_mesh == null:
 		_wall_preview_mesh = BoxMesh.new()
-		_wall_preview_mesh.size = Vector3(2.0, 1.6, 0.7)
+		_wall_preview_mesh.size = Vector3(2.0, 1.6, 2.0)
 	if _turret_preview_mesh == null:
 		_turret_preview_mesh = CylinderMesh.new()
 		_turret_preview_mesh.top_radius = 0.6

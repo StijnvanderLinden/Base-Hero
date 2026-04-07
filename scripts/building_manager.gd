@@ -17,7 +17,7 @@ signal status_changed(message: String)
 @export var turret_repair_amount: float = 60.0
 @export var wall_repair_cost: int = 2
 @export var turret_repair_cost: int = 4
-@export var wall_spacing: float = 1.8
+@export var wall_spacing: float = 2.0
 @export var turret_spacing: float = 2.4
 @export var wall_chain_spacing: float = 2.0
 @export var wall_snap_assist_radius: float = 1.2
@@ -121,7 +121,7 @@ func get_wall_line_preview_from_request(peer_id: int, anchor_position: Vector3, 
 		return {"visible": false, "valid": false, "positions": []}
 	var anchor_transform := _resolved_build_transform(player_node, "wall", anchor_position, desired_rotation_y, true, true)
 	var start_position: Vector3 = anchor_transform.get("position", Vector3.ZERO)
-	var rotation_y: float = float(anchor_transform.get("rotation_y", desired_rotation_y))
+	var rotation_y := _wall_line_rotation_y(start_position, desired_position, float(anchor_transform.get("rotation_y", desired_rotation_y)))
 	var line_positions := _wall_line_positions(start_position, desired_position, rotation_y)
 	var count := line_positions.size()
 	var total_cost := _total_cost_for_type("wall", count)
@@ -462,24 +462,24 @@ func get_min_placement_distance() -> float:
 	return max(min_placement_distance, 0.0)
 
 
+func get_grid_size() -> float:
+	return max(grid_size, 0.001)
+
+
+func get_active_build_area_center() -> Vector3:
+	return _active_area_center()
+
+
+func get_active_build_area_size() -> float:
+	return max(floor_limit * 2.0, get_grid_size())
+
+
 func get_wall_drag_step() -> float:
 	return max(wall_chain_spacing, grid_size)
 
 
 func _is_valid_structure_position(structure_type: String, structure_position: Vector3) -> bool:
-	var area_center := _active_area_center()
-	if absf(structure_position.x - area_center.x) > floor_limit or absf(structure_position.z - area_center.z) > floor_limit:
-		return false
-	if structure_position.distance_to(_active_objective_position()) < core_clear_radius:
-		return false
-	if structures_root == null:
-		return false
-
-	var minimum_spacing := _spacing_for_type(structure_type)
-	for structure in structures_root.get_children():
-		if structure_position.distance_to(structure.global_position) < minimum_spacing:
-			return false
-	return true
+	return _is_structure_position_available(structure_type, structure_position)
 
 
 func _is_building_allowed() -> bool:
@@ -810,7 +810,8 @@ func _wall_chain_snap(desired_position: Vector3, straight_only: bool = false) ->
 
 func _wall_line_positions(anchor_position: Vector3, desired_position: Vector3, rotation_y: float) -> Array:
 	var positions: Array = []
-	var drag_axis := _drag_axis_from_rotation(rotation_y)
+	var line_rotation_y := _wall_line_rotation_y(anchor_position, desired_position, rotation_y)
+	var drag_axis := _drag_axis_from_rotation(line_rotation_y)
 	var step := get_wall_drag_step()
 	var offset := desired_position - anchor_position
 	offset.y = 0.0
@@ -822,6 +823,16 @@ func _wall_line_positions(anchor_position: Vector3, desired_position: Vector3, r
 		position = _snap_position_to_grid(position, "wall")
 		positions.append(position)
 	return positions
+
+
+func _wall_line_rotation_y(anchor_position: Vector3, desired_position: Vector3, fallback_rotation_y: float) -> float:
+	var offset := desired_position - anchor_position
+	offset.y = 0.0
+	if offset.length_squared() <= 0.001:
+		return snappedf(fallback_rotation_y, PI * 0.5)
+	if absf(offset.x) >= absf(offset.z):
+		return 0.0
+	return PI * 0.5
 
 
 func _drag_axis_from_rotation(rotation_y: float) -> Vector3:
@@ -866,6 +877,8 @@ func _is_structure_position_available(structure_type: String, structure_position
 		return false
 	if structures_root == null:
 		return false
+	if _is_player_occupying_structure_cell(structure_type, structure_position):
+		return false
 	var minimum_spacing := _spacing_for_type(structure_type)
 	for structure in structures_root.get_children():
 		if structure_position.distance_to(structure.global_position) < minimum_spacing:
@@ -874,6 +887,27 @@ func _is_structure_position_available(structure_type: String, structure_position
 		if structure_position.distance_to(planned_position) < minimum_spacing:
 			return false
 	return true
+
+
+func _is_player_occupying_structure_cell(structure_type: String, structure_position: Vector3) -> bool:
+	if players_root == null:
+		return false
+	var snapped_target := _snap_position_to_grid(structure_position, structure_type)
+	var half_cell := get_grid_size() * 0.5
+	for player in players_root.get_children():
+		if not player is Node3D:
+			continue
+		if player.has_method("can_be_targeted") and not player.can_be_targeted():
+			continue
+		var player_position: Vector3 = player.global_position
+		var player_radius := 0.75
+		if player.has_method("get_hit_radius"):
+			player_radius = float(player.get_hit_radius())
+		var dx = max(absf(player_position.x - snapped_target.x) - half_cell, 0.0)
+		var dz = max(absf(player_position.z - snapped_target.z) - half_cell, 0.0)
+		if dx * dx + dz * dz < player_radius * player_radius:
+			return true
+	return false
 
 
 func _turret_anchor_snap(desired_position: Vector3) -> Dictionary:

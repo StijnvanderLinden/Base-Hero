@@ -8,6 +8,7 @@ extends Node3D
 @onready var raid_manager = $RaidManager
 @onready var core_objective = $World/CoreObjective
 @onready var startup_camera: Camera3D = $World/StartupCamera
+@onready var build_grid_overlay: MeshInstance3D = $World/BuildGridOverlay
 @onready var address_input: LineEdit = $UI/Panel/VBoxContainer/AddressInput
 @onready var port_input: LineEdit = $UI/Panel/VBoxContainer/PortInput
 @onready var host_button: Button = $UI/Panel/VBoxContainer/HostButton
@@ -84,12 +85,14 @@ func _ready() -> void:
 	_refresh_status_overview()
 	_refresh_controls_panel()
 	_refresh_interaction_prompt()
+	_refresh_build_grid_overlay()
 
 
 func _process(_delta: float) -> void:
 	_refresh_status_overview()
 	_refresh_controls_panel()
 	_refresh_interaction_prompt()
+	_refresh_build_grid_overlay()
 
 
 func _on_host_pressed() -> void:
@@ -157,6 +160,7 @@ func _on_run_info_changed(message: String) -> void:
 	_refresh_scrap_display()
 	_refresh_status_overview()
 	_refresh_controls_panel()
+	_refresh_build_grid_overlay()
 	_refresh_interaction_prompt()
 
 
@@ -180,6 +184,7 @@ func _on_session_changed(in_session: bool) -> void:
 	_refresh_scrap_display()
 	_refresh_status_overview()
 	_refresh_controls_panel()
+	_refresh_build_grid_overlay()
 
 
 func _on_core_destroyed() -> void:
@@ -471,19 +476,58 @@ func _controls_hint_text(player: Node) -> String:
 
 	var build_active := false
 	var build_type := "wall"
+	var wall_segment_active := false
 	if player != null and player.has_method("is_build_mode_active"):
 		build_active = player.is_build_mode_active()
 	if player != null and player.has_method("get_current_build_type"):
 		build_type = String(player.get_current_build_type()).capitalize()
+	if player != null and player.has_method("is_wall_segment_active"):
+		wall_segment_active = player.is_wall_segment_active()
 
 	if build_active:
-		hints.append("Q exit build")
+		if wall_segment_active:
+			hints.append("Q cancel wall")
+			hints.append("RMB cancel")
+		else:
+			hints.append("Q exit build")
 		hints.append("R rotate")
 		hints.append("Build: %s" % build_type)
+		if wall_segment_active:
+			return " | ".join(hints) + " | LMB confirm end"
+		if build_type == "Wall":
+			return " | ".join(hints) + " | LMB set start"
 		return " | ".join(hints) + " | LMB place"
 
 	hints.append("Q enter build")
 	return " | ".join(hints)
+
+
+func _refresh_build_grid_overlay() -> void:
+	if build_grid_overlay == null:
+		return
+	var player := _local_player_node()
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	var show_overlay := false
+	if has_session and player != null and player.has_method("is_build_mode_active"):
+		show_overlay = player.is_build_mode_active()
+	build_grid_overlay.visible = show_overlay
+	if not show_overlay:
+		return
+	var area_center := Vector3.ZERO
+	var area_size := 36.0
+	var grid_size := 2.0
+	if building_manager != null:
+		if building_manager.has_method("get_active_build_area_center"):
+			area_center = building_manager.get_active_build_area_center()
+		if building_manager.has_method("get_active_build_area_size"):
+			area_size = float(building_manager.get_active_build_area_size())
+		if building_manager.has_method("get_grid_size"):
+			grid_size = float(building_manager.get_grid_size())
+	build_grid_overlay.global_position = Vector3(area_center.x, 0.56, area_center.z)
+	build_grid_overlay.scale = Vector3(area_size, 1.0, area_size)
+	var material := build_grid_overlay.get_active_material(0) as ShaderMaterial
+	if material != null:
+		material.set_shader_parameter("cells_per_side", max(area_size / max(grid_size, 0.001), 1.0))
 
 
 func _refresh_interaction_prompt() -> void:
