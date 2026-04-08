@@ -6,19 +6,23 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-First Runtime Slice Implemented
+Design Refactor Confirmed, Runtime Alignment Needed
 
 ---
 
 ## Current Design Summary
-Pylons are foothold objectives inside gates.
+Pylons are foothold objectives inside gates and the center of the repeatable channeling loop.
 
 Current confirmed direction:
-- pylons have functional and damaged states
-- captured pylons can activate caves through resource spend and channeling
-- existing nearby defenses are reused for cave expeditions
-- damaged pylons disable defenses and safe-zone effects
-- repairing pylons is a gameplay event under enemy pressure
+- pylons have uncaptured, functional, channeling, and shutdown states
+- the first activation on a pylon is free
+- repeat activations on that same pylon cost gold
+- early pylons allow any building type around the foothold
+- existing nearby defenses are reused across repeated channel attempts
+- generated essence is stored in a physical holder object during active runs
+- milestone rewards are always safe while generated essence remains vulnerable
+- failure resets the pylon loop without forcing structure rebuilds
+- later pylon variants may apply debuffs such as build restrictions, no heal or repair rules, or heavier elite pressure
 
 ---
 
@@ -28,40 +32,42 @@ Current confirmed direction:
 - First runtime pylon foothold now exists in the gate prototype
 - Pylons now begin uncaptured and are manually claimed by starting a claim channel at the pylon
 - Claim completion now depends on clearing finite construct waves rather than waiting out a timer alone
-- Pylons now switch between functional and damaged states in runtime
-- The live pylon now controls a visible cave barrier that shifts through sealed, channeling, open, and disabled presentation states
-- Nearby walls and turrets now go offline when the active pylon is damaged
-- Damaged pylons now support a first repair channel plus lighter repair defense event
-- Repair channeling now breaks if the channeling player dies or leaves the repair spot, and can be restarted
 
 ---
 
 ## In Progress
-- Defining activation and repair behavior for the first milestone
+- Replacing the old cave-facing activation flow with the finalized channeling loop
+- Defining the first essence holder behavior and milestone thresholds
+- Defining the first shutdown sequence and failure reset behavior
 
 ---
 
 ## Blockers / Problems
-- Damaged pylons do not yet have a repair interaction or persistent reclaim flow
-- Cave presentation exists, but there is still no separate cave travel or interior space yet
-- Repair event failure does not yet have extra consequences beyond remaining damaged
+- Current runtime still reflects older cave-oriented pylon behavior and naming
+- Essence holder visuals, warning feedback, and loss rules are not implemented yet
+- Shutdown behavior is not implemented yet
+- Repeat activation gold costs and efficiency falloff are not implemented yet
 
 ---
 
 ## Must Have
 - Captured or functional pylon state
-- Damaged pylon state
-- Cave activation from a pylon
-- Defense activation and deactivation rules
-- Repair loop under enemy pressure
+- Repeatable channel activation from a pylon
+- First activation free rule
+- Repeat activation gold cost rule
+- Essence holder risk object
+- Milestone rewards with safe banking
+- Shutdown phase
+- Defense reuse without rebuild friction
 
 ---
 
 ## Should Have
 - Clear pylon-state readability in world presentation
 - Safe-zone benefits linked to pylon state
-- Better feedback for activation, failure, and repair
+- Better feedback for holder threat and milestone completion
 - Travel unlock behavior tied to pylon state
+- Debuff variants that create distinct tactical identities for later pylons
 
 ---
 
@@ -69,7 +75,8 @@ Current confirmed direction:
 - Pylon-specific upgrades
 - Different pylon archetypes
 - Stronger pylon area buffs
-- Multi-stage repair or reclaim variants
+- Biome-specific channel modifiers
+- Specific build-restriction pylons such as walls-only, turrets-only, or traps-only events
 
 ---
 
@@ -82,24 +89,25 @@ Current confirmed direction:
 ---
 
 ## Open Questions
-- What exact resource should activate a cave at a pylon?
-- How visible should the damaged state be from a distance?
-- How much enemy attention should repair events draw?
-- Should repair fully restore the area immediately or restore it in one clean step?
+- What exact gold cost curve should repeat activations use?
+- How visible should holder danger be from a distance?
+- How much durability should the holder have relative to pylon defenses?
+- When should older pylon efficiency drop enough to push players toward deeper ones?
 
 ---
 
 ## Recent Decisions
-- Caves are activated from pylons, not found randomly
-- Existing pylon defenses are reused for cave events
-- Failure damages pylons instead of removing player resources
-- Repairing pylons is a gameplay event with enemy pressure
+- Pylon channeling replaces caves as the main gate reward activity
+- First pylon activation is free to support learning and scouting
+- Repeat pylon activations cost gold
+- Early pylons allow unrestricted building to teach the core loop clearly
+- Essence holder destruction only removes unbanked generated essence
+- Failure resets the pylon loop and auto-repairs defenses rather than demanding rebuilds
 
 ---
 
 ## Next Recommended Task
-Implement the next pylon milestone:
-- connect the visible cave entrance to actual cave travel or transition logic
-- add stronger repair-event failure consequences if needed
-- keep damaged-pylon readability clear during multiplayer play
-- decide what persists between failed expeditions and later returns
+Implement the first pylon channel runtime slice:
+- add one essence holder object with health, visuals, and warning feedback
+- replace the old cave state machine with milestone and shutdown states
+- apply first-free and repeat-gold activation rules on the server

@@ -1,13 +1,13 @@
 # Gate System Specification
 
 ## Purpose
-The Gate System provides persistent biome expedition zones that players revisit to gather resources, unlock footholds, and progress deeper over time.
+The Gate System provides persistent biome expedition zones that players revisit to gather resources, discover pylons, and fuel long-term progression through pylon channeling.
 
 Gates should feel different from main base raids:
 - more exploratory
 - more layered
-- more about holding partially secured territory
-- more about balancing external defense with internal cave progress
+- more about finding and securing tactical footholds
+- more about deciding how greedy to be with an active pylon channel
 - less about one-time all-in defense
 
 Gates are one of the main engines of progression for the main base.
@@ -16,39 +16,41 @@ Gates are one of the main engines of progression for the main base.
 
 ## Design Goals
 - Create replayable expedition spaces with persistence
-- Reward deeper pushes rather than passive waiting
-- Support co-op pressure split between overworld defense and cave exploration
-- Feed resources and rare materials back into the main base
-- Make failure meaningful through loss of control rather than inventory punishment
+- Preserve exploration, gathering, and hidden reward discovery inside the overworld gate space
+- Make pylon channeling the primary gate gameplay loop once a foothold is secured
+- Reward deeper pushes and later channel phases more than safe early exits
+- Feed tactical and long-term resources back into the main base without collapsing them into one currency
 - Stay readable in 3D multiplayer
 
 ---
 
 ## Core Fantasy
-Players enter a dangerous biome through a gate, capture pylons to create footholds, activate caves from those pylons, and then choose how much attention to give to defending the outside versus pushing deeper inside.
+Players enter a dangerous biome through a gate, explore hostile overworld space, secure pylons as footholds, and decide how long they can hold an escalating channeling event before cashing out or failing.
 
 The key emotional loop is:
 - enter
 - scout
-- secure a pylon
-- activate a cave
-- defend the outside pressure
-- push deeper inside
-- recover from setbacks and reclaim control
+- gather
+- discover a pylon
+- build a foothold
+- start channeling
+- survive pressure spikes
+- push milestone rewards
+- decide when to stop
 - return stronger next time
 
 ---
 
 ## Core Loop
 1. Enter a persistent gate biome
-2. Build a small defense footprint around an uncaptured pylon
-3. Start the pylon claim channel when ready
-4. Survive the claim waves and secure the foothold
-5. Unlock the cave from the claimed pylon
-6. Spend resources at the captured pylon to activate a cave expedition
-7. Defend the pylon outside while exploring deeper inside the cave
-8. Repair disabled pylons after failed cave attempts
-9. Extract or return to base with progress and rewards
+2. Explore the overworld to gather resources, fight roaming enemies, and discover rewards or pylons
+3. Build a small defense footprint around an uncaptured pylon
+4. Start the pylon claim event when ready
+5. Survive the claim waves and secure the foothold
+6. Start a channeling event at the captured pylon
+7. Defend the pylon and its essence holder while generated essence accumulates and milestones approach
+8. Choose whether to stop after a milestone, push for a better payout, or risk failure
+9. Extract or return to base with banked progression rewards and remaining tactical resources
 
 ---
 
@@ -66,9 +68,9 @@ A gate contains:
 - multiple depth layers
 - pylon foothold objectives
 - biome exploration enemies
-- cave entrances tied to pylons
-- local resources and rare materials
-- recovery loops after failure
+- local resources and gold pickups
+- hidden rewards and side discoveries
+- repeatable channeling opportunities tied to captured pylons
 
 Gates are not intended to be fully cleared in one tier.
 
@@ -90,12 +92,12 @@ Each gate contains multiple layers of escalating danger.
 ### Inner Layer
 - high difficulty
 - rarer materials
-- more demanding pylon and cave pressure
+- stronger pylon pressure and better channel payout potential
 
 ### Deep Or Core Layer
 - extreme difficulty
 - elite encounters
-- strongest cave rewards and progression opportunities
+- strongest pylon rewards and progression opportunities
 
 Players can attempt to go deeper early, but they are not expected to fully overcome those layers before their current tier supports it.
 
@@ -107,47 +109,46 @@ Pylons are the main foothold objectives inside gates.
 Pylons define:
 - safe local control
 - defensive coverage area
-- cave expedition access points
-- recovery anchors after failure
+- a repeatable channeling objective
+- a place where exploration risk turns into progression rewards
 
-Captured pylons are the bridge between overworld gate traversal and cave progression.
+Captured pylons are the bridge between overworld gate traversal and the main gate reward loop.
 
----
-
-## Overworld Versus Cave Roles
-
-### Overworld Gate Space
-The overworld around a captured pylon is where:
-- existing defenses are placed and reused
-- claim and repair defense events happen
-- enemies pressure the pylon during cave expeditions
-- players may fight manually to stabilize the area
-- repair and recovery gameplay happens after failure
-
-### Cave Space
-The cave is where:
-- players push deeper for the main rewards
-- enemies, encounters, and loot escalate by depth
-- rare materials and final rewards are found
-
-The design intent is that the cave produces the primary rewards, while the outside pylon area remains the defensive pressure point.
+Early rule:
+- early pylons should allow any building type so players can learn the gate loop with minimal rules friction
 
 ---
 
-## Cave Activation Flow
-At a captured pylon, players may begin a sustained channel that opens the cave entrance.
+## Overworld Role
+The gate overworld is not just tower defense.
 
-Activation flow:
+The overworld must include:
+- exploration
+- resource gathering
+- enemy encounters
+- hidden rewards
+- pylon discovery
+
+The pylon channeling event is the main commitment point inside that broader overworld space, not the entire identity of the gate.
+
+---
+
+## Pylon Channeling Flow
+At a captured pylon, players may begin a channeling event.
+
+Activation rules:
+- the first activation on a pylon is free
+- later activations on that same pylon cost gold
+- repeat activations should stay viable, but older pylons become less efficient than newly discovered deeper pylons
+
+Channeling flow:
 1. claim the pylon first
-2. interact again at the pylon to start the cave channel
-3. open the magical barrier at the cave entrance
-4. keep outside enemy pressure active and escalating while the cave stays open
-5. interact again to stop the channel and close the cave entrance
-
-The player does not build a new defense setup inside the cave.
-The player relies on the existing defenses already placed around the pylon.
-
-Before cave activation, the pylon must first be claimed through its own finite wave event.
+2. build and repair defenses around the foothold
+3. interact at the pylon to begin the channel
+4. survive escalating enemy waves while channel progress advances over time
+5. defend the physical essence holder that stores generated essence
+6. secure milestone rewards at 1/3, 2/3, and 3/3 progress
+7. choose whether to stop and survive shutdown or keep pushing into higher danger
 
 ---
 
@@ -158,66 +159,114 @@ Core rules:
 - only near captured pylons
 - small tactical setups only
 - not full fortress-scale construction
-- cave expeditions reuse those existing defenses rather than allowing a second build phase inside the cave
+- early pylons allow walls, turrets, traps, healing, and repair without special restrictions
+- the same defenses are reused across repeated channel attempts at that foothold
 
 Design reason:
 - keeps the main base as the center of large-scale building
 - preserves gate readability
 - makes pylon capture meaningfully change the local space
-- makes cave activation feel like committing an already-built foothold to pressure
+- keeps repeat attempts focused on tactical preparation rather than full rebuild friction
+
+Later pylon variants may introduce debuffs that change how a foothold can be defended, such as:
+- no healing or repair during the event
+- walls-only building
+- turrets-only building
+- traps-only building
+- heavier elite pressure
+
+These variants should make later pylons feel mechanically distinct while preserving the same core channeling loop.
 
 ---
 
-## Rewards
-Gate rewards should support longer-term progression.
+## Milestones And Rewards
+Channeling is divided into three milestone segments:
+- 1/3
+- 2/3
+- 3/3
 
-Gate regions provide:
-- a dependable progression resource
-- rarer materials from deeper layers
-- biome-specific materials
-- components or special rewards later
+Reward rules:
+- 1/3 grants a large essence reward that is banked immediately
+- 2/3 grants more banked essence plus one research point
+- 3/3 grants a major reward such as an augment or permanent unlock
+- milestone rewards are always safe and cannot be lost
 
-During cave expeditions:
-- the pylon generates passive resource gain only while the cave is actively open
-- that passive gain ramps upward with the same outside pressure waves that escalate enemy danger
-- deeper cave exploration provides the primary rewards
-- final rewards should come from deeper encounters, chests, bosses, or equivalent payoff points
+Generated essence between milestones is not automatically safe.
+It remains vulnerable while stored in the essence holder or during shutdown.
 
-In the current prototype slice:
-- the cave primarily acts as a sustained open-door pressure state
-- enemy pressure keeps ramping while the cave remains open
-- no real interior cave content exists yet
+---
 
-Design rule:
-- passive gain must never outperform exploration rewards
-- players should be incentivized to go deeper rather than wait outside
-- leaving the cave open longer should feel greedier because both rewards and danger keep climbing together
+## Essence Generation And Capacity
+Generated essence increases over time while a channel is active.
+
+Phase scaling:
+- Phase 1 uses the base generation rate
+- Phase 2 increases generation to about 2.5x the base rate
+- Phase 3 increases generation to about 5x the base rate
+
+Capacity rules:
+- only generated essence is capped by essence capacity
+- excess generated essence beyond capacity is lost
+- milestone rewards bypass capacity and are always banked safely
+
+This keeps risk-taking valuable without allowing infinite hoarding.
+
+---
+
+## Difficulty Scaling
+Each channel milestone increases danger.
+
+Scaling rules:
+- enemy difficulty spikes at each milestone
+- spawn rate increases at each milestone
+- later phases should force more manual intervention from players even if defenses are strong
+
+Final phase behavior:
+- the last phase enters an enrage state
+- spawns become rapid
+- elite enemies appear
+- the channel should feel chaotic and unstable before completion
+
+---
+
+## Essence Holder Risk
+During channeling, generated essence is stored in a physical holder object near the pylon.
+
+If the holder is destroyed:
+- all unbanked generated essence is lost
+- milestone rewards remain safe
+
+Required feedback:
+- holder glow intensity increases with stored essence
+- visible damage state appears as the holder degrades
+- warning indicators communicate imminent loss risk
+
+---
+
+## Stop Channel And Shutdown
+Players may stop a channel voluntarily.
+
+When they stop:
+- a 15 second shutdown begins
+- enemies continue attacking
+- generated essence is locked and stops increasing
+- locked generated essence can still be lost if the holder is destroyed before shutdown completes
+
+Shutdown should create a final tension spike instead of functioning like an instant safe cash-out.
 
 ---
 
 ## Failure And Recovery In Gates
-Failure occurs when the pylon or linked expedition core is destroyed during an active cave expedition.
+Failure occurs when the channel collapses before a safe exit, typically because the pylon defense breaks or the essence holder is destroyed at the wrong time.
 
 On failure:
-- the cave collapses
-- the barrier closes immediately
-- the pylon becomes damaged
+- the pylon resets to its reusable foothold state
+- all linked defenses are automatically repaired for the next attempt
+- unbanked generated essence is lost
+- any gold spent to start the run is lost
 
-This failure does not remove player loot or inventory.
-The consequence is loss of local control and safety.
-
----
-
-## Damaged Pylon Consequences
-When a pylon is damaged:
-- all linked defenses become inactive
-- turrets do not function
-- safe-zone effects are disabled
-- the area becomes hostile again
-
-The pylon is not permanently lost, but the team loses control of that foothold until it is repaired.
-
-Repair starts with a locked repair channel and then a lighter defense event.
+Failure does not remove structures, inventory, or milestone rewards.
+The setback is tactical tempo loss, not rebuild punishment.
 
 ---
 
@@ -225,10 +274,11 @@ Repair starts with a locked repair channel and then a lighter defense event.
 Persistent gate progression may include:
 - revealed map areas
 - captured pylons
-- damaged versus functional pylon state
 - unlocked travel points
 - known routes and resource locations
 - gate-specific world state later
+
+Pylon reuse is expected, but newer and deeper pylons should gradually offer better efficiency than older ones.
 
 This persistence is part of the core gate identity, not a side feature.
 
@@ -242,7 +292,7 @@ Biome affects:
 - exploration enemy families
 - local hazards
 - material types
-- cave feel and encounter identity
+- hidden reward structure
 - later mechanic identity
 
 Biome mechanics are biome-specific, not global.
@@ -257,8 +307,8 @@ Gate expeditions must work cleanly in co-op.
 
 Requirements:
 - shared pylon state
-- synchronized cave activation state
-- clear outside-versus-inside pressure readability
+- synchronized channel and shutdown state
+- clear holder risk readability
 - fair reward presentation
 - good navigation clarity under pressure
 
@@ -267,11 +317,11 @@ Authority rule:
 
 Server handles:
 - pylon capture state
-- cave activation state
-- damaged versus repaired pylon state
+- channel activation costs and validation
 - enemy spawns
-- map progression
-- passive resource generation
+- holder health and destruction
+- milestone completion
+- generated essence values and capacity overflow
 - success and failure outcomes
 
 ---
@@ -280,9 +330,9 @@ Server handles:
 The early playable gate direction should prove:
 - one persistent gate biome
 - one basic pylon capture flow
-- one cave activation flow from a captured pylon
-- one simple outside-defense versus inside-exploration tension loop
-- one damaged-pylon recovery loop
+- one basic pylon channeling flow from a captured pylon
+- one essence holder risk object
+- one shutdown phase
 - one basic exploration enemy family
 - construct enemies for pylon pressure
 
@@ -290,10 +340,9 @@ The early playable gate direction should prove:
 
 ## Future Extensions
 Possible future additions:
-- multiple cave branches from a single foothold
-- more layered cave events
-- elite deep-layer encounters
-- biome mutators
-- gate-specific world-state changes
+- biome-specific holder rules or modifiers
+- elite milestone variants
+- pylon mutators that change risk-reward behavior
+- pylon debuffs that constrain building or support options on specific footholds
 - stronger local progression systems
 - special hazards or weather

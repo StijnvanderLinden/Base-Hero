@@ -153,57 +153,84 @@ This creates a better mix of:
 
 ---
 
-### Caves are activated from pylons, not found randomly
+### Cave system removed in favor of pylon channeling
 Decision:
-Cave expeditions begin from captured pylons through intentional activation rather than random cave discovery.
+The cave system was removed and replaced with pylon channeling as the primary gate reward loop.
 
 Reason:
-This keeps pylons central to gate progression, makes footholds matter mechanically, and ties cave access directly to player-controlled progression rather than scattered randomness.
+The cave direction added too much structural complexity for the current prototype, split focus away from the overworld gate space, and created more implementation burden than value for the first multiplayer-safe slice.
 
 ---
 
-### Pylon defenses are reused for cave events
+### Pylon channeling is the primary gate gameplay loop
 Decision:
-Players use the existing defenses around a captured pylon during cave expeditions instead of building a new defense setup inside the cave.
+Captured pylons now drive the main gate loop through repeatable channeling events rather than cave expeditions.
 
 Reason:
-This keeps the system readable, avoids duplicating the build loop, and makes preparing a foothold around the pylon a meaningful commitment before entering the cave.
+This keeps pylons central to gate progression, preserves exploration in the overworld, and creates a cleaner defend-push-cash-out loop that is easier to prototype and read in co-op.
 
 ---
 
-### Failure damages pylons instead of removing player resources
+### First pylon activation is free
 Decision:
-If a cave expedition fails, the pylon becomes damaged and local control is lost rather than removing player inventory or loot.
+The first time players activate a captured pylon, the channel start is free.
 
 Reason:
-This creates a meaningful setback through loss of safety and control without making failure feel overly punishing or discouraging experimentation.
+This removes fear of trying newly discovered pylons, supports learning and scouting, and reduces the chance that players avoid experimentation because they are afraid of wasting resources.
 
 ---
 
-### Players retain collected loot on cave failure
+### Repeat pylon activations cost gold
 Decision:
-Players keep the resources and loot they already collected if a cave expedition fails.
+After the first free run, repeat activations on that pylon cost gold.
 
 Reason:
-This preserves player momentum, prevents frustration from hard wipe punishment, and makes the recovery loop focus on reclaiming the foothold rather than replacing lost inventory.
+This keeps repeat farming from being frictionless, turns gold into a meaningful tactical spend, and helps newer deeper pylons become the better long-term targets over time.
 
 ---
 
-### Repairing pylons is a gameplay event with enemy pressure
+### Essence has capacity limits
 Decision:
-Repairing a damaged pylon requires time, modest resources, and defending against enemy pressure while local defenses remain inactive.
+Generated essence is limited by an essence capacity cap, and overflow is lost.
 
 Reason:
-This turns recovery into active gameplay, preserves tension after failure, and avoids a flat or purely administrative repair action.
+This prevents infinite hoarding from one foothold, encourages spending between runs, and keeps the progression loop moving instead of rewarding passive stockpiling.
 
 ---
 
-### Passive resource gain is secondary to cave exploration
+### Milestone rewards are always safe
 Decision:
-Active caves may generate a small passive resource gain at the pylon, but the primary rewards must come from going deeper into the cave.
+Rewards earned at 1/3, 2/3, and 3/3 channel milestones are banked immediately and cannot be lost.
 
 Reason:
-This keeps players incentivized to explore, prevents idle outside play from becoming optimal, and maintains the intended risk-versus-reward tension of cave expeditions.
+This lets players feel steady progress even when they fail later, reduces frustration, and supports the intended push-your-luck structure without making it too punitive.
+
+---
+
+### Essence holder introduces reward risk
+Decision:
+Generated essence is stored in a physical holder object that can be destroyed during a channel.
+
+Reason:
+This creates a clear risk object for players to defend, adds readable tension to the battlefield, and separates safe milestone rewards from vulnerable generated rewards in a concrete way.
+
+---
+
+### Shutdown phase creates the final cash-out tension
+Decision:
+Stopping a channel triggers a 15 second shutdown where generated essence stops increasing but remains vulnerable.
+
+Reason:
+This prevents instant safe exits, creates one final defensive spike before payout, and makes the stop decision carry real tension instead of functioning like a free reset.
+
+---
+
+### Gold is tactical and essence is progression
+Decision:
+Gold is used for defenses and repeat channel starts, while essence is reserved for long-term progression.
+
+Reason:
+This keeps short-term tactical decisions separate from long-term growth, makes each currency easier to understand, and prevents one resource from doing too many jobs at once.
 
 ---
 
