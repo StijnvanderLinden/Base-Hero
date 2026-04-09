@@ -1,21 +1,23 @@
 # Progression System Specification
 
 ## Purpose
-The Progression System defines how long-term player and base growth unlocks stronger options without breaking the game’s core loop.
+The Progression System defines how long-term player and base growth is driven by gathered materials, material-specific essence conversion, and unified core research trees.
 
 Progression must:
 - reinforce the return-to-base loop
 - support both player power and base power
-- give gates meaningful reward value through pylon channeling
-- unlock deeper build expression over time
+- give gates meaningful reward value through material-specific pylon channeling
+- unlock deeper build expression over time without relying on generic currencies
 
 ---
 
 ## Design Goals
 - Preserve the base as the progression anchor
-- Keep gold and essence in clearly different roles
-- Let players improve themselves as well as the base
-- Make pylon milestones and deeper gate pushes feed future build potential
+- Keep gold limited to structure-building decisions
+- Make exploration materials the entry point to progression
+- Convert pylon success into material-specific research value
+- Let players improve weapons, armor, abilities, and passives through one unified core path per material
+- Turn repeated pylon clears into a structured mastery ladder with escalating reward tiers
 - Avoid overwhelming the early prototype with too many systems at once
 
 ---
@@ -23,153 +25,163 @@ Progression must:
 ## Core Progression Structure
 Progression is split between:
 - tactical run economy
-- long-term progression economy
+- long-term material progression
 
 Tactical run economy uses gold for:
 - building defenses
-- starting repeat pylon channel attempts
+- repairing or supporting structure play if other systems allow it
 
-Long-term progression economy uses pylon rewards for:
-- banked essence
-- research points
-- major rewards such as augments or unlocks
+Long-term material progression uses gathered and converted resources for:
+- raw materials gathered during exploration
+- banked material-specific essence produced by pylon channeling
+- rare or elite materials used by advanced research nodes
+- completion reward packages tied to pylon mastery
 
 Base progression improves:
-- core durability
-- town hall tiering
-- material unlock infrastructure such as forge advancement later
+- core durability and function
+- access to additional material trees
+- infrastructure that supports broader crafting or research later
 
 Player progression improves:
-- active weapon expression
-- augment capacity
-- access to stronger material tiers
-- access to higher-tier fused augments
+- weapon options
+- armor paths
+- abilities
+- passive bonuses
 
 ---
 
-## Gold Versus Essence
+## Gold Versus Material Progression
 Gold is a tactical resource.
 
 Gold is spent on:
 - building defenses in a run
-- starting a channel after the first free activation on a pylon
+- other structure-side tactical choices when defined by runtime systems
 
-Essence is a progression resource.
+Gold is not spent on:
+- starting pylon channels
+- unlocking long-term research
 
-Essence is earned through:
-- safe milestone rewards during channeling
-- vulnerable generated essence accumulated while a channel remains active
+Materials and material essence drive progression.
+
+Progression is fueled by:
+- metals, gems, and other exploration materials
+- matching material spent to activate pylons
+- matching material essence generated during active channeling
+- special materials used by advanced research nodes
 
 Design rule:
 - gold should pressure short-term tactical choices
-- essence should drive long-term progression decisions
+- material gathering and conversion should drive long-term progression decisions
 
 ---
 
-## Milestone Rewards
+## Exploration To Conversion Loop
+The progression loop is:
+1. explore and gather materials
+2. locate a pylon tied to one of those materials
+3. spend the matching material to start the channel ritual
+4. defend the pylon while that material is converted into matching material essence
+5. bank the resulting essence and completion rewards into core research
+6. repeat to deepen specialization or broaden into new material trees
+
+This makes exploration a direct prerequisite for progression instead of a side economy.
+
+---
+
+## Pylon Conversion Rewards
 Channeling milestones define the most reliable progression payouts.
 
 Reward structure:
-- 1/3 grants a large banked essence reward
-- 2/3 grants more banked essence plus one research point
-- 3/3 grants a major reward such as an augment or unlock
+- 1/3 grants a safe banked payout of matching material essence
+- 2/3 grants more banked matching material essence and may add special material rewards on eligible pylons
+- 3/3 grants a completion reward package whose quality scales with active modifier count
 
 Milestone rules:
 - milestone rewards are always safe
 - milestone rewards are banked immediately
-- milestone rewards bypass essence capacity
+- milestone rewards bypass the matching material essence cap
 
 This keeps progress feeling meaningful even when a run ends badly.
 
 ---
 
-## Generated Essence And Capacity
-Generated essence accumulates over time during active channeling.
+## Material Essence Conversion And Capacity
+Material essence accumulates over time during active channeling.
 
 Scaling:
-- Phase 1 uses the base rate
-- Phase 2 increases generation to about 2.5x
-- Phase 3 increases generation to about 5x
+- Phase 1 uses the base conversion rate
+- Phase 2 increases conversion to about 2.5x
+- Phase 3 increases conversion to about 5x
 
 Capacity rules:
-- stored essence is capped by essence capacity
+- each material has its own essence storage capacity
+- stored essence is capped per material type
 - overflow is lost
-- only generated essence is subject to the cap
+- only generated matching material essence is subject to the cap
 
-Generated essence remains a risk-bearing resource until it is secured through shutdown completion or another safe banking rule defined by the runtime.
-
----
-
-## Research Points
-Research points are milestone rewards tied to deeper pylon commitment.
-
-Current role:
-- unlock broader progression options than raw essence alone
-- pace new systems, upgrades, or unlock branches
-- reward pushing beyond the first safe milestone
-
-Research points should feel rarer and more strategic than essence.
+Generated material essence remains a risk-bearing resource until it is secured through shutdown completion or another safe banking rule defined by the runtime.
 
 ---
 
-## Major Rewards
-Full channel completion grants a major reward.
+## Unified Core Research
+The player's core stores materials and material essence and uses them to unlock unified research trees.
 
-Possible major rewards include:
-- augments
-- permanent unlocks
-- access tokens for stronger future options
+Each material unlocks one research tree that can include:
+- weapons
+- armor
+- abilities
+- passive bonuses
 
-Major rewards should create visible spikes in build expression rather than acting as simple numeric payouts.
-
----
-
-## Weapon Progression Hooks
-The modular weapon system should connect to progression through:
-- weapon type choice or unlock order
-- increased augment slot capacity
-- higher material tier access
-- improved access to fusion tiers or fusion facilities
-- major reward unlocks earned from full pylon channels
-
-The player should feel that returning to base with rewards directly expands how the active weapon can evolve.
+Research rule:
+- progression is no longer driven by one universal essence pool
+- research costs are paid using matching material essence and, for advanced nodes, special materials
+- different material trees should support different combat identities and team roles
 
 ---
 
-## Material Progression
-Material progression should be tied to forge or equivalent base-side unlocks.
+## Special Materials
+Special materials are rare progression resources.
+
+Sources may include:
+- elite enemies
+- pylon events
+- overworld encounters
+
+Role:
+- gate advanced research nodes
+- unlock stronger abilities or upgrades
+- add excitement to higher-risk content without becoming a generic universal currency
+
+---
+
+## Repeated Pylon Clear Progression
+Repeated pylon clears are a progression ladder, not just a farm loop.
 
 Rules:
-- materials are slotted directly into the weapon system
-- players do not manually craft weapon shapes from those materials
-- stronger or more specialized materials unlock through progression
+- each pylon tracks its own completion-based modifier escalation
+- the first successful clear on a pylon is a learning run with only that pylon's base modifier active
+- later successful clears unlock additional shared global modifiers for future runs on that same pylon
+- players do not manually choose modifiers, which keeps the ladder predictable and easier to balance
 
-This keeps progression focused on expanding options rather than replacing the entire weapon.
-
----
-
-## Augment Progression
-Augment progression should include:
-- greater slot capacity
-- stronger augment tiers through fusion
-- broader access to synergistic combinations
-- full-channel rewards that meaningfully change build options
-
-The player’s build identity should become more complex over time because the system allows more meaningful combinations, not because the player is forced to abandon the old weapon.
+Progression intent:
+- teach a pylon on the first clear
+- reward mastery on later clears
+- provide a clear reason to revisit a pylon beyond its first completion
+- improve completion reward quality as modifier count rises
 
 ---
 
 ## Base Versus Player Investment
 Progression choices should create tension between:
 - improving the main base
-- improving the player’s weapon platform
+- improving the player's personal core research paths
 
 This supports the game’s central loop:
 - bring resources home
 - choose whether to strengthen the base or the player
 - prepare for harder gates and raids
 
-Research points and major rewards should widen the available choice space, while essence should remain the steady resource that funds core upgrades.
+Material essence should fund steady research growth, while special materials should unlock stronger or more specialized endpoints.
 
 ---
 
@@ -177,9 +189,9 @@ Research points and major rewards should widen the available choice space, while
 Progression should support team diversity.
 
 Desirable outcomes:
-- one player invests into melee control identity
-- one player invests into ranged pressure identity
-- one player invests into elemental or utility identity
+- one player invests into an iron-focused defensive build
+- one player invests into a fire-focused offensive build
+- one player invests into a lightning or utility-focused support build
 
 The progression system should support complementary builds instead of flattening all players into the same strongest option.
 
@@ -187,15 +199,17 @@ The progression system should support complementary builds instead of flattening
 
 ## Early Scope Boundaries
 Do define now:
-- progression hooks for gold, essence, research points, and major rewards
+- progression hooks for materials, material essence, special materials, and completion rewards
 - base-versus-player investment tension
-- essence capacity as a pacing lever
-- the distinction between safe milestone rewards and vulnerable generated essence
+- per-material essence capacity as a pacing lever
+- the distinction between safe milestone rewards and vulnerable generated material essence
+- modifier-count-based reward tier scaling for repeated pylon clears
+- unified material research trees on the player core
 
 Do not fully define yet:
-- full progression tree structure
+- the full set of research nodes for every material
 - exact economy values
-- exact unlock order per tier
-- every base building tied to progression
+- exact unlock order per tree
+- every base building tied to material progression
 
 This system should remain a high-level progression truth document until the first implementation slice is requested.

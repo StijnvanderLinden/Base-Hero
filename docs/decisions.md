@@ -171,30 +171,30 @@ This keeps pylons central to gate progression, preserves exploration in the over
 
 ---
 
-### First pylon activation is free
+### Pylons are tied to specific materials
 Decision:
-The first time players activate a captured pylon, the channel start is free.
+Each pylon is tied to one specific material family, such as a metal or gem type.
 
 Reason:
-This removes fear of trying newly discovered pylons, supports learning and scouting, and reduces the chance that players avoid experimentation because they are afraid of wasting resources.
+This gives pylons a clearer identity, creates progression paths per material, and supports co-op specialization instead of treating all pylons as identical currency sources.
 
 ---
 
-### Repeat pylon activations cost gold
+### Pylon channeling costs matching material, not gold
 Decision:
-After the first free run, repeat activations on that pylon cost gold.
+Starting a pylon channel requires only the material that matches that pylon's identity.
 
 Reason:
-This keeps repeat farming from being frictionless, turns gold into a meaningful tactical spend, and helps newer deeper pylons become the better long-term targets over time.
+This makes exploration directly fuel progression, reinforces material importance, and keeps gold focused on structure-building rather than progression rituals.
 
 ---
 
-### Essence has capacity limits
+### Generic essence is replaced by material-based essence
 Decision:
-Generated essence is limited by an essence capacity cap, and overflow is lost.
+The game no longer uses one universal essence resource. Pylon channeling converts gathered materials into matching material-specific essence instead.
 
 Reason:
-This prevents infinite hoarding from one foothold, encourages spending between runs, and keeps the progression loop moving instead of rewarding passive stockpiling.
+This creates stronger ties between exploration, pylon identity, and progression while avoiding a flat universal currency that weakens material specialization.
 
 ---
 
@@ -207,12 +207,12 @@ This lets players feel steady progress even when they fail later, reduces frustr
 
 ---
 
-### Essence holder introduces reward risk
+### Material essence has per-material capacity limits
 Decision:
-Generated essence is stored in a physical holder object that can be destroyed during a channel.
+Each material has its own essence capacity, and overflow is lost.
 
 Reason:
-This creates a clear risk object for players to defend, adds readable tension to the battlefield, and separates safe milestone rewards from vulnerable generated rewards in a concrete way.
+This prevents hoarding, encourages spending within specific material paths, and keeps conversion-based progression moving instead of allowing passive stockpiling.
 
 ---
 
@@ -225,12 +225,102 @@ This prevents instant safe exits, creates one final defensive spike before payou
 
 ---
 
-### Gold is tactical and essence is progression
+### Material essence holder introduces reward risk
 Decision:
-Gold is used for defenses and repeat channel starts, while essence is reserved for long-term progression.
+Generated matching material essence is stored in a physical holder object that can be destroyed during a channel.
 
 Reason:
-This keeps short-term tactical decisions separate from long-term growth, makes each currency easier to understand, and prevents one resource from doing too many jobs at once.
+This creates a clear risk object for players to defend, adds readable tension to the battlefield, and separates safe milestone rewards from vulnerable generated rewards in a concrete way.
+
+---
+
+### Gold is for structures, material essence is for progression
+Decision:
+Gold is used for building structures, while progression is driven by materials, material-specific essence, and special materials.
+
+Reason:
+This keeps short-term tactical building decisions separate from long-term growth and avoids overloading gold with too many jobs.
+
+---
+
+### Every pylon has one fixed base modifier
+Decision:
+Each pylon uses one fixed base modifier that is always active on that pylon's channel runs.
+
+Reason:
+This gives each pylon a stable tactical identity, keeps location-based mastery meaningful, and avoids needing a large random modifier pool to make pylons feel different.
+
+---
+
+### Global modifiers are shared and not manually selected
+Decision:
+All pylons use one shared global modifier sequence, and players do not manually choose which modifiers are active.
+
+Reason:
+This prevents dominant player-selected challenge setups, keeps balancing under tighter control, and reduces decision overload during repeated runs.
+
+---
+
+### Pylon modifier escalation is tracked per pylon
+Decision:
+Repeated successful full clears increase modifier difficulty only for that specific pylon, not for all pylons globally.
+
+Reason:
+This preserves each pylon as its own mastery ladder, lets players learn one location at a time, and keeps progression readable instead of globally flattening pylon difficulty.
+
+---
+
+### The first pylon clear is a base-modifier-only learning run
+Decision:
+The first successful clear on a pylon uses only that pylon's fixed base modifier, with global modifiers added only on later runs.
+
+Reason:
+This creates a cleaner onboarding run, teaches the pylon's core identity before extra complexity is added, and makes later escalation feel earned instead of abrupt.
+
+---
+
+### Global modifier order is designed as a progression curve
+Decision:
+The shared global sequence is ordered so the first modifier is simple, the second adds meaningful challenge, and the third creates a mastery-level pressure spike.
+
+Reason:
+This makes repeated clears feel like a structured progression ladder rather than a flat list of interchangeable difficulty toggles.
+
+---
+
+### Full pylon completion rewards scale with modifier count
+Decision:
+Completion reward quality increases based on how many modifiers were active on the successful run.
+
+Reason:
+This keeps revisiting and mastering a pylon rewarding, aligns payout with challenge, and supports repeated clears as a meaningful progression path rather than simple repetition.
+
+---
+
+### Materials are converted into essence through channeling
+Decision:
+Pylon channeling converts the matching input material into matching material essence over time, with higher phases increasing the conversion rate.
+
+Reason:
+This ties progression rewards directly to successful defense, strengthens the risk-versus-reward curve inside the event, and makes pushing deeper through a channel materially valuable.
+
+---
+
+### Core research is unified per material
+Decision:
+Each material unlocks one unified research tree on the player core that can include weapons, armor, abilities, and passive bonuses.
+
+Reason:
+This keeps progression readable, supports strong specialization identities, and avoids splitting related growth into too many disconnected systems.
+
+---
+
+### Exploration is required to fuel progression
+Decision:
+Players must gather materials during exploration before they can fuel pylon channeling and advance research.
+
+Reason:
+This keeps exploration meaningfully connected to progression, prevents passive progression without field play, and supports co-op coordination around material priorities.
 
 ---
 
