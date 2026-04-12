@@ -467,10 +467,17 @@ func get_grid_size() -> float:
 
 
 func get_active_build_area_center() -> Vector3:
+	if gate_manager != null and gate_manager.has_method("get_active_build_area_center"):
+		return gate_manager.get_active_build_area_center()
 	return _active_area_center()
 
 
 func get_active_build_area_size() -> float:
+	if gate_manager != null and gate_manager.has_method("get_active_build_area_size"):
+		var active_size = gate_manager.get_active_build_area_size()
+		if active_size is Vector2:
+			return max(max(active_size.x, active_size.y), get_grid_size())
+		return max(float(active_size), get_grid_size())
 	return max(floor_limit * 2.0, get_grid_size())
 
 
@@ -494,6 +501,8 @@ func _is_building_allowed() -> bool:
 
 func _active_area_center() -> Vector3:
 	if gate_manager != null and gate_manager.has_method("is_gate_active") and gate_manager.is_gate_active():
+		if gate_manager.has_method("get_active_build_area_center"):
+			return gate_manager.get_active_build_area_center()
 		if gate_manager.has_method("get_gate_center"):
 			return gate_manager.get_gate_center()
 	return Vector3.ZERO
@@ -717,7 +726,7 @@ func _resolved_build_transform(player_node: Node3D, structure_type: String, desi
 	var resolved_rotation_y := snappedf(desired_rotation_y, PI * 0.5)
 	if preserve_requested_position:
 		var anchored_position := _snap_position_to_grid(desired_position, structure_type)
-		anchored_position.y = _build_height_for_type(structure_type)
+		anchored_position = _project_to_active_surface(anchored_position, structure_type)
 		return {
 			"position": anchored_position,
 			"rotation_y": resolved_rotation_y,
@@ -753,7 +762,7 @@ func _resolved_build_transform(player_node: Node3D, structure_type: String, desi
 			snap_assisted = true
 			snap_kind = String(turret_anchor.get("kind", "anchor"))
 			resolved_rotation_y = float(turret_anchor.get("rotation_y", resolved_rotation_y))
-	snapped_position.y = _build_height_for_type(structure_type)
+	snapped_position = _project_to_active_surface(snapped_position, structure_type)
 	return {
 		"position": snapped_position,
 		"rotation_y": resolved_rotation_y,
@@ -766,8 +775,17 @@ func _snap_position_to_grid(world_position: Vector3, structure_type: String) -> 
 	var snapped_position := world_position
 	snapped_position.x = round(snapped_position.x / grid_size) * grid_size
 	snapped_position.z = round(snapped_position.z / grid_size) * grid_size
-	snapped_position.y = _build_height_for_type(structure_type)
+	snapped_position.y = 0.0
 	return snapped_position
+
+
+func _project_to_active_surface(world_position: Vector3, structure_type: String) -> Vector3:
+	var vertical_offset := _build_height_for_type(structure_type)
+	if gate_manager != null and gate_manager.has_method("project_structure_position") and gate_manager.has_method("is_gate_active") and gate_manager.is_gate_active():
+		return gate_manager.project_structure_position(world_position, vertical_offset)
+	var projected := world_position
+	projected.y = vertical_offset
+	return projected
 
 
 func _wall_chain_snap(desired_position: Vector3, straight_only: bool = false) -> Dictionary:
@@ -870,6 +888,9 @@ func _are_structure_positions_valid(structure_type: String, positions: Array) ->
 
 
 func _is_structure_position_available(structure_type: String, structure_position: Vector3, planned_positions: Array = []) -> bool:
+	if gate_manager != null and gate_manager.has_method("is_gate_active") and gate_manager.is_gate_active():
+		if not gate_manager.has_method("is_position_in_build_zone") or not gate_manager.is_position_in_build_zone(structure_position):
+			return false
 	var area_center := _active_area_center()
 	if absf(structure_position.x - area_center.x) > floor_limit or absf(structure_position.z - area_center.z) > floor_limit:
 		return false

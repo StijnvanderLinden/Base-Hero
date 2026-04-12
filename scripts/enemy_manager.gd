@@ -46,6 +46,7 @@ var _raid_spawn_interval_runtime: float = 2.2
 var _raid_spawns_per_wave_runtime: int = 8
 var _raid_breather_duration_runtime: float = 5.0
 var _raid_wave_enemy_bonus_runtime: int = 2
+var _spawn_point_provider: Node
 
 
 func set_roots(enemy_root: Node3D, player_root: Node3D) -> void:
@@ -64,6 +65,10 @@ func set_objective(target_objective: Node3D) -> void:
 
 func set_spawn_center(new_spawn_center: Vector3) -> void:
 	_spawn_center = new_spawn_center
+
+
+func set_spawn_point_provider(provider: Node) -> void:
+	_spawn_point_provider = provider
 
 
 func get_current_objective() -> Node3D:
@@ -362,6 +367,8 @@ func force_restart() -> void:
 
 
 func _next_spawn_position(enemy_id: int) -> Vector3:
+	if _spawn_point_provider != null and _spawn_point_provider.has_method("get_enemy_spawn_position"):
+		return _spawn_point_provider.get_enemy_spawn_position(enemy_id)
 	var angle := float(enemy_id) * 0.9
 	return _spawn_center + Vector3(cos(angle) * spawn_radius, 0.6, sin(angle) * spawn_radius)
 

@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Wall And Turret Prototype Implemented
+Wall And Turret Prototype Implemented With Gate Build-Zone Validation
 
 ---
 
@@ -24,12 +24,16 @@ Main structure categories:
 - turrets
 - support structures later
 
+During expeditions, gate building is now constrained to the active pylon build zone so defenses stay readable and predictable on generated terrain.
+
 ---
 
 ## Implemented
 - One server-authoritative wall placement prototype
 - One server-authoritative turret placement prototype
 - Grid-snapped wall placement validation on the server
+- Gate-run placement validation now checks against the active pylon build zone
+- Gate-run structure Y placement now projects onto the pylon foundation surface
 - Local valid/invalid structure placement preview for the active player
 - Preview wall orientation now matches the final placed wall
 - Players can rotate build preview orientation and final wall/turret placement during a live session
@@ -53,7 +57,7 @@ Main structure categories:
 ---
 
 ## In Progress
-- Clarifying how building differs between main base and gates
+- Clarifying how building differs between main base and gates beyond the first build-zone rule set
 - Tuning first wall placement spacing, build distance, and first cost values
 - Tuning repair cost, repair amount, and interaction radius for early defense maintenance
 - Tuning turret range, bullet speed, rate of fire, and placement spacing
@@ -64,7 +68,8 @@ Main structure categories:
 
 ## Blockers / Problems
 - No final decision on shared resources vs individual building permissions
-- Building in gates is not yet finalized
+- Gate build zones still use placeholder foundation visuals
+- Build preview readability at the edge of the circular zone still needs tuning
 
 ---
 
@@ -75,6 +80,7 @@ Main structure categories:
 - Clear valid/invalid placement behavior
 - Basic structure health
 - Building tied to objective defense
+- Legal gate placement only inside the active pylon build zone
 
 ---
 
@@ -83,6 +89,7 @@ Main structure categories:
 - Cost system tied to progression resource
 - Co-op-friendly shared building interaction
 - Distinct difference between base building and gate building
+- Clearer edge feedback when a placement leaves the circular build zone
 
 ---
 
@@ -119,12 +126,13 @@ Main structure categories:
 - Building should support combat rather than replace combat
 - The first building step should be one simple wall with server-validated placement before adding turrets
 - The first turret should be a straightforward auto-fire defense, not a complex upgrade tree or ability platform
+- Gate structures are built on an automatic pylon foundation zone rather than directly on raw uneven terrain
 
 ---
 
 ## Next Recommended Task
-Validate the new wall line workflow:
-- test two-click wall start and end selection in multiplayer sessions
-- verify corners and perpendicular joins read clearly once bespoke wall meshes are introduced
-- decide whether wall start selection should become more permissive around existing walls for cleaner T-junction authoring
+Validate gate build-zone readability and placement rules:
+- test wall and turret placement at the inner and outer edges of the pylon zone
+- verify structure heights stay consistent on generated terrain during expeditions
+- keep tuning wall line behavior so circular-zone limits remain readable under pressure
 - keep tuning turret placement readability separately from wall line placement

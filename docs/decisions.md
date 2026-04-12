@@ -387,6 +387,33 @@ This keeps fusion exciting, preserves the system’s behavior-first design, and 
 
 ---
 
+### Expeditions use finite generated terrain
+Decision:
+Each expedition run uses a finite procedurally generated terrain area instead of a flat temporary combat floor.
+
+Reason:
+This gives expeditions stronger spatial identity, makes pylon placement meaningfully dependent on terrain, and preserves readability better than a large open infinite landscape.
+
+---
+
+### Pylon placement creates the gate build zone automatically
+Decision:
+Placing a pylon automatically creates a flat circular build zone around it.
+
+Reason:
+This keeps gate defense construction predictable on uneven terrain, reduces placement frustration under pressure, and ties the defended footprint directly to the pylon.
+
+---
+
+### Gate enemies spawn from an outer ring around the build zone
+Decision:
+Gate enemy pressure spawns outside the pylon build zone using a configurable ring rather than arbitrary nearby points.
+
+Reason:
+This keeps attacks readable, prevents unfair inside-zone spawns, and supports clear outer-pressure-to-inner-defense combat flow.
+
+---
+
 ## Rules
 Update this file when:
 - a major design or technical choice is made

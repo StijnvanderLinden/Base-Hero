@@ -31,6 +31,10 @@ signal progression_changed()
 @export var pylon_radius_upgrade_step: float = 6.0
 @export var pylon_max_radius_upgrade_step: float = 10.0
 @export var pylon_efficiency_upgrade_step: float = 0.2
+@export var pylon_build_radius: float = 12.0
+@export var pylon_flatten_radius: float = 14.0
+@export var enemy_spawn_min_radius: float = 18.0
+@export var enemy_spawn_max_radius: float = 26.0
 
 var gate_root: Node3D
 var players_root: Node3D
@@ -40,6 +44,7 @@ var building_manager: Node
 var cave_manager: Node
 var network_manager: Node
 var research_manager: Node
+var world_generator: Node
 var _session_active: bool = false
 var _gate_active: bool = false
 var _extraction_active: bool = false
@@ -91,6 +96,10 @@ func set_research_manager(manager: Node) -> void:
 	research_manager = manager
 
 
+func set_world_generator(generator: Node) -> void:
+	world_generator = generator
+
+
 func set_cave_manager(manager: Node) -> void:
 	cave_manager = manager
 
@@ -136,6 +145,8 @@ func start_gate_run() -> void:
 		return
 
 	_reset_gate_runtime_state(false)
+	if world_generator != null and world_generator.has_method("generate_world"):
+		world_generator.generate_world(int(Time.get_unix_time_from_system()) + randi())
 	_gate_active = true
 	spawn_resource_nodes_local()
 	_sync_gate_setup.rpc(true)
@@ -457,6 +468,7 @@ func purchase_pylon_upgrade(upgrade_type: String) -> bool:
 func _teleport_players_to_gate() -> void:
 	if players_root == null:
 		return
+	var spawn_center := _gate_spawn_center()
 	var player_index := 0
 	for player in players_root.get_children():
 		if not player is Node3D:
@@ -466,7 +478,9 @@ func _teleport_players_to_gate() -> void:
 		var row := int(player_index / 2)
 		var column := player_index % 2
 		var offset := Vector3((float(column) * player_spawn_spacing) - (player_spawn_spacing * 0.5), 0.0, 4.0 + float(row) * player_spawn_spacing)
-		player.teleport_to_position(gate_center + offset, PI, true)
+		var spawn_position := spawn_center + offset
+		spawn_position = _project_to_terrain(spawn_position, 1.2)
+		player.teleport_to_position(spawn_position, PI, true)
 		player_index += 1
 
 
@@ -515,12 +529,15 @@ func _teleport_peer_to_gate(peer_id: int) -> void:
 	var row := int(peer_slot / 2)
 	var column := peer_slot % 2
 	var offset := Vector3((float(column) * player_spawn_spacing) - (player_spawn_spacing * 0.5), 0.0, 4.0 + float(row) * player_spawn_spacing)
-	player.teleport_to_position(gate_center + offset, PI, true)
+	var spawn_position := _project_to_terrain(_gate_spawn_center() + offset, 1.2)
+	player.teleport_to_position(spawn_position, PI, true)
 
 
 func _set_enemy_pressure_to_gate() -> void:
 	if enemy_manager == null:
 		return
+	if enemy_manager.has_method("set_spawn_point_provider"):
+		enemy_manager.set_spawn_point_provider(self)
 	if enemy_manager.has_method("start_gate_pressure") and _gate_objective != null:
 		enemy_manager.start_gate_pressure(_gate_objective, _gate_objective.global_position, false)
 		return
@@ -537,6 +554,8 @@ func _set_enemy_pressure_to_gate() -> void:
 func _stop_enemy_pressure() -> void:
 	if enemy_manager == null:
 		return
+	if enemy_manager.has_method("set_spawn_point_provider"):
+		enemy_manager.set_spawn_point_provider(null)
 	if enemy_manager.has_method("set_objective") and base_objective != null:
 		enemy_manager.set_objective(base_objective)
 	if enemy_manager.has_method("set_spawn_center") and base_objective != null:
@@ -596,6 +615,8 @@ func _clear_gate_mode(reset_scrap: bool) -> void:
 	if reset_scrap:
 		_stored_scrap = max(starting_scrap, 0)
 	_clear_gate_content_local()
+	if world_generator != null and world_generator.has_method("clear_world"):
+		world_generator.clear_world()
 	gate_state_changed.emit(false)
 	progression_changed.emit()
 
@@ -761,7 +782,9 @@ func spawn_resource_nodes_local() -> void:
 		var resource_id := String(descriptor.get("id", ""))
 		var resource_node = RESOURCE_NODE_SCENE.instantiate()
 		resource_node.name = "Resource_%s" % resource_id
-		resource_node.setup(resource_id, String(descriptor.get("type", "iron_ore")), descriptor.get("position", gate_center), int(descriptor.get("amount", 0)), _collected_crystal_ids.has(resource_id) if String(descriptor.get("type", "")) == "crystal" else _collected_resource_ids.has(resource_id))
+		var resource_position: Vector3 = descriptor.get("position", gate_center)
+		resource_position = _project_to_terrain(resource_position, 0.35)
+		resource_node.setup(resource_id, String(descriptor.get("type", "iron_ore")), resource_position, int(descriptor.get("amount", 0)), _collected_crystal_ids.has(resource_id) if String(descriptor.get("type", "")) == "crystal" else _collected_resource_ids.has(resource_id))
 		gate_root.add_child(resource_node)
 		_resource_nodes[resource_id] = resource_node
 	_update_resource_reveal_states()
@@ -799,10 +822,12 @@ func _try_place_pylon(peer_id: int, player: Node3D) -> bool:
 		return false
 	var placement_position := _placement_position_for_player(player)
 	if not _is_valid_pylon_position(placement_position):
-		status_changed.emit("Find open terrain inside the expedition floor before placing the pylon.")
+		status_changed.emit("Find stable terrain with enough open space before placing the pylon.")
 		return false
 	_spawn_gate_content_local()
 	_gate_objective.global_position = placement_position
+	if world_generator != null and world_generator.has_method("create_or_update_build_zone"):
+		world_generator.create_or_update_build_zone(placement_position, pylon_build_radius, pylon_flatten_radius, enemy_spawn_min_radius, enemy_spawn_max_radius)
 	_placed_pylon_positions.append(placement_position)
 	_apply_pylon_upgrade_runtime(false)
 	_update_resource_reveal_states()
@@ -816,19 +841,68 @@ func _placement_position_for_player(player: Node3D) -> Vector3:
 	if player.has_method("get_build_forward_vector"):
 		forward = player.get_build_forward_vector()
 	var position := player.global_position + forward * pylon_place_distance
-	position.y = gate_center.y
-	return position
+	return _project_to_terrain(position, 0.0)
 
 
 func _is_valid_pylon_position(position: Vector3) -> bool:
-	if absf(position.x - gate_center.x) > pylon_floor_half_extent:
-		return false
-	if absf(position.z - gate_center.z) > pylon_floor_half_extent:
-		return false
+	if world_generator != null and world_generator.has_method("is_valid_pylon_position"):
+		if not world_generator.is_valid_pylon_position(position, pylon_flatten_radius):
+			return false
+	else:
+		if absf(position.x - gate_center.x) > pylon_floor_half_extent:
+			return false
+		if absf(position.z - gate_center.z) > pylon_floor_half_extent:
+			return false
 	for existing_position in _placed_pylon_positions:
 		if position.distance_to(existing_position) < pylon_min_spacing:
 			return false
 	return true
+
+
+func get_active_build_area_center() -> Vector3:
+	if _gate_objective != null:
+		return _gate_objective.global_position
+	return _gate_spawn_center()
+
+
+func get_active_build_area_size() -> Vector2:
+	return Vector2(pylon_build_radius * 2.0, pylon_build_radius * 2.0)
+
+
+func project_structure_position(world_position: Vector3, vertical_offset: float = 0.0) -> Vector3:
+	if world_generator != null and world_generator.has_method("project_to_build_surface"):
+		return world_generator.project_to_build_surface(world_position, vertical_offset)
+	return _project_to_terrain(world_position, vertical_offset)
+
+
+func is_position_in_build_zone(world_position: Vector3, margin: float = 0.0) -> bool:
+	if world_generator != null and world_generator.has_method("is_position_in_build_zone"):
+		return world_generator.is_position_in_build_zone(world_position, margin)
+	if _gate_objective == null:
+		return false
+	return _gate_objective.global_position.distance_to(world_position) <= max(pylon_build_radius - margin, 0.0)
+
+
+func get_enemy_spawn_position(enemy_id: int) -> Vector3:
+	if world_generator != null and world_generator.has_method("get_enemy_spawn_position"):
+		return world_generator.get_enemy_spawn_position(get_active_build_area_center(), enemy_id)
+	var angle := float(enemy_id % 12) / 12.0 * TAU
+	var radius := enemy_spawn_max_radius
+	return get_active_build_area_center() + Vector3(cos(angle), 0.0, sin(angle)) * radius
+
+
+func _project_to_terrain(world_position: Vector3, vertical_offset: float = 0.0) -> Vector3:
+	if world_generator != null and world_generator.has_method("project_to_terrain"):
+		return world_generator.project_to_terrain(world_position, vertical_offset)
+	var projected := world_position
+	projected.y = gate_center.y + vertical_offset
+	return projected
+
+
+func _gate_spawn_center() -> Vector3:
+	if world_generator != null and "world_center" in world_generator:
+		return world_generator.world_center
+	return gate_center
 
 
 func _start_pylon_channel() -> void:

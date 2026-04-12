@@ -5,6 +5,7 @@ extends Node3D
 @onready var building_manager = $BuildingManager
 @onready var cave_manager = $CaveManager
 @onready var gate_manager = $GateManager
+@onready var world_generator = $WorldGenerator
 @onready var research_manager = $ResearchManager
 @onready var raid_manager = $RaidManager
 @onready var core_objective = $World/CoreObjective
@@ -57,10 +58,13 @@ func _ready() -> void:
 	enemy_manager.set_roots($World/Enemies, $World/Players)
 	enemy_manager.set_objective(core_objective)
 	enemy_manager.bind_network_manager(network_manager)
+	world_generator.set_dependencies($World, $World/GateFloor)
+	world_generator.bind_network_manager(network_manager)
 	building_manager.set_roots($World/Walls, $World/Projectiles, $World/Players, core_objective)
 	building_manager.bind_network_manager(network_manager)
 	building_manager.set_gate_manager(gate_manager)
 	gate_manager.set_roots($World/GateContent, $World/Players, core_objective)
+	gate_manager.set_world_generator(world_generator)
 	gate_manager.set_research_manager(research_manager)
 	gate_manager.set_cave_manager(cave_manager)
 	gate_manager.set_enemy_manager(enemy_manager)
@@ -594,7 +598,11 @@ func _refresh_build_grid_overlay() -> void:
 		if building_manager.has_method("get_active_build_area_center"):
 			area_center = building_manager.get_active_build_area_center()
 		if building_manager.has_method("get_active_build_area_size"):
-			area_size = float(building_manager.get_active_build_area_size())
+			var active_area_size = building_manager.get_active_build_area_size()
+			if active_area_size is Vector2:
+				area_size = max(active_area_size.x, active_area_size.y)
+			else:
+				area_size = float(active_area_size)
 		if building_manager.has_method("get_grid_size"):
 			grid_size = float(building_manager.get_grid_size())
 	build_grid_overlay.global_position = Vector3(area_center.x, 0.56, area_center.z)
