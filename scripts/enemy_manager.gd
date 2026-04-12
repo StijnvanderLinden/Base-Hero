@@ -5,6 +5,7 @@ signal raid_finished(success: bool)
 
 @export var enemy_scene: PackedScene
 @export var raid_enemy_scene: PackedScene
+@export var raid_breaker_enemy_scene: PackedScene
 @export var max_enemies: int = 6
 @export var spawn_interval: float = 2.8
 @export var min_spawn_interval: float = 1.0
@@ -21,6 +22,7 @@ signal raid_finished(success: bool)
 @export var raid_wave_enemy_bonus: int = 2
 @export var exploration_enemy_base_health: float = 60.0
 @export var construct_enemy_base_health: float = 80.0
+@export var construct_breaker_base_health: float = 140.0
 @export var gate_enemy_health_bonus_per_wave: float = 18.0
 @export var raid_enemy_health_bonus_per_wave: float = 0.0
 
@@ -231,11 +233,25 @@ func _enemy_name(enemy_id: int) -> String:
 
 func _enemy_kind_for_current_pressure() -> String:
 	if _pressure_mode == "raid":
-		return "construct"
+		return _raid_enemy_kind_for_current_spawn()
 	return "exploration"
 
 
+func _raid_enemy_kind_for_current_spawn() -> String:
+	if _wave_index <= 1:
+		return "construct"
+	var spawn_number := _wave_spawned_count + 1
+	var cadence := 4
+	if _wave_index >= 3:
+		cadence = 3
+	if spawn_number % cadence == 0:
+		return "construct_breaker"
+	return "construct"
+
+
 func _scene_for_enemy_kind(enemy_kind: String) -> PackedScene:
+	if enemy_kind == "construct_breaker" and raid_breaker_enemy_scene != null:
+		return raid_breaker_enemy_scene
 	if enemy_kind == "construct" and raid_enemy_scene != null:
 		return raid_enemy_scene
 	return enemy_scene
@@ -245,6 +261,8 @@ func _current_enemy_start_health(enemy_kind: String) -> float:
 	var base_health := exploration_enemy_base_health
 	if enemy_kind == "construct":
 		base_health = construct_enemy_base_health
+	elif enemy_kind == "construct_breaker":
+		base_health = construct_breaker_base_health
 	var wave_bonus := gate_enemy_health_bonus_per_wave if _pressure_mode == "gate" else raid_enemy_health_bonus_per_wave
 	return max(base_health + float(max(_wave_index - 1, 0)) * wave_bonus, 1.0)
 

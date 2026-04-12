@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Design Confirmed, Runtime Not Implemented
+First Runtime Family Slice Started
 
 ---
 
@@ -25,11 +25,12 @@ Current confirmed direction:
 - Design direction for a single evolving weapon platform is now documented
 - Weapon type abstraction is now defined for melee, ranged, and magic families
 - Material slot behavior and progression hooks are now specified
+- The first runtime weapon family slice now exists as a rifle-style ranged projectile prototype
 
 ---
 
 ## In Progress
-- Defining how the first runtime weapon presentation should appear in prototype combat
+- Tuning the first runtime ranged weapon presentation in prototype combat
 - Clarifying when weapon type choice becomes available in progression
 - Deciding the first implementation slice for material application and visuals
 
@@ -37,7 +38,7 @@ Current confirmed direction:
 
 ## Blockers / Problems
 - No runtime weapon-selection or weapon-configuration system exists yet
-- Combat still uses placeholder player attack behavior rather than a lasting weapon platform
+- The runtime still has no weapon family selection or material slot configuration despite the first ranged slice existing
 - Material slot behavior is defined in design only, not implemented in code
 - No forge or material-tier unlock runtime exists yet
 
@@ -90,11 +91,12 @@ Current confirmed direction:
 - Weapon growth should come from materials, augments, and progression hooks
 - Material application is direct through slots rather than manual weapon-shape forging
 - The first defined weapon families are melee, ranged, and magic only
+- The first runtime weapon slice now tests the ranged family with a simple rifle-style projectile
 
 ---
 
 ## Next Recommended Task
 Define the first runtime weapon implementation slice:
-- decide the first weapon family to support in code
 - define the minimal runtime data structure for weapon family plus material slot
-- wire that first weapon platform into the existing combat prototype without redefining combat itself
+- decide whether the ranged prototype is the default starter weapon or just a test branch
+- add the first material-slot hook without redefining combat resolution

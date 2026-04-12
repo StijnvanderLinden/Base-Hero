@@ -30,12 +30,13 @@ Current confirmed direction:
 - Raid failure now interrupts the upgrade without removing gathered materials
 - Base enemy pressure is now idle by default outside active raids
 - Raids now use a first dedicated construct swarm unit rather than the generic exploration enemy
+- Raids now mix in a first heavy construct breaker role on later waves to increase structure pressure
 
 ---
 
 ## In Progress
 - Validating raid pacing and wave counts in multiplayer sessions
-- Defining the next construct role after the first swarm unit
+- Tuning the swarm-to-breaker mix so later raid waves stay readable
 
 ---
 
@@ -90,6 +91,6 @@ Current confirmed direction:
 ## Next Recommended Task
 Validate and extend the first raid slice:
 - test the raid trigger and no-idle-spawn rule in multiplayer sessions
-- add the second construct role after the first swarm unit
+- validate breaker pacing and building pressure in multiplayer sessions
 - improve raid messaging and base-damage consequences
 - add a more explicit town hall upgrade presentation when useful

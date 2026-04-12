@@ -1,140 +1,72 @@
 # Pylon System Tracker
 
-## Purpose
-Tracks implementation state, priorities, open questions, and design evolution for the Pylon System.
-
----
-
 ## Current Status
-Design Refactor Confirmed, Material Ritual Refactor Needed
-
----
+First Runtime Slice Implemented
 
 ## Current Design Summary
-Pylons are foothold objectives inside gates and the center of the repeatable channeling loop.
-
-Current confirmed direction:
-- pylons have uncaptured, functional, channeling, and shutdown states
-- every pylon is tied to one specific material type
-- channeling costs only the matching material for that pylon
-- gold remains for building structures and does not start channels
-- early pylons allow any building type around the foothold
-- existing nearby defenses are reused across repeated channel attempts
-- each pylon has one fixed base modifier that is active on every channel run there
-- repeated full clears on a pylon add shared global modifiers in a fixed order for later runs on that same pylon
-- the first successful clear on a pylon uses only its base modifier as the learning run
-- modifier escalation caps at one base modifier plus three global modifiers
-- generated matching material essence is stored in a physical holder object during active runs
-- milestone rewards are always safe while generated matching material essence remains vulnerable
-- failure resets the pylon loop without forcing structure rebuilds
-- later pylon variants may apply debuffs such as build restrictions, no heal or repair rules, or heavier elite pressure
-
----
+- players place one pylon during an expedition
+- the placed pylon channels iron into essence over time
+- the pylon influence radius expands while channeling continues
+- nearby resource signals are revealed through radius checks
+- the pylon reports crystal counts in range without revealing crystal positions
+- pylon upgrades spend essence on base radius, max radius, efficiency, and HP
 
 ## Implemented
-- Pylons exist as a documented gate objective direction
-- Limited building around pylons is part of the current gate direction
-- First runtime pylon foothold now exists in the gate prototype
-- Pylons now begin uncaptured and are manually claimed by starting a claim channel at the pylon
-- Claim completion now depends on clearing finite construct waves rather than waiting out a timer alone
-- Pylon-specific modifier direction is now documented as a fixed-base plus shared-global system
-- Material-specific ritual activation and conversion are now documented as the current pylon direction
-
----
+- authoritative pylon placement during expeditions
+- authoritative pylon interaction flow through the existing player interact path
+- runtime pylon state fields for level, influence radius, max radius, channel progress, and channeling state
+- channel-time radius growth from the base radius toward the current max radius
+- escalating enemy pressure while the pylon is channeling
+- manual stop behavior that banks essence and increases max radius
+- damaged pylon state when the pylon is destroyed mid-channel
+- first-pass pylon upgrade buttons and costs
 
 ## In Progress
-- Replacing the old cave-facing activation flow with the finalized channeling loop
-- Defining the first material essence holder behavior and milestone thresholds
-- Defining the first shutdown sequence and failure reset behavior
-- Defining how each pylon stores completion count and applies the correct modifier stage on later channel runs
-- Defining the first pylon material mapping and ritual activation costs
-
----
+- tuning the first channel cost and essence gain curve
+- tuning pylon upgrade costs against the new essence flow
+- deciding whether destroyed pylons should be repairable in-run or remain lost for that run
 
 ## Blockers / Problems
-- Current runtime still reflects older cave-oriented pylon behavior and naming
-- Material essence holder visuals, warning feedback, and loss rules are not implemented yet
-- Shutdown behavior is not implemented yet
-- The runtime does not yet validate matching material costs to start channels
-- The runtime does not yet track per-pylon completion state for modifier escalation
-- No first-pass base modifier set or shared global sequence has been implemented yet
-- Exploration materials are not yet linked to pylon activation or conversion outcomes
-
----
+- the prototype still has no true fog-of-war rendering layer
+- current reveal logic uses signal markers and counts rather than a full map system
+- pylon upgrade data is session-scoped and not yet saved persistently
 
 ## Must Have
-- Captured or functional pylon state
-- Repeatable channel activation from a pylon
-- Fixed material identity per pylon
-- Matching material ritual cost for channel starts
-- One fixed base modifier per pylon
-- Shared global modifier order used by all pylons
-- Per-pylon modifier progression capped at three global modifiers
-- Material essence holder risk object
-- Milestone rewards with safe banking
-- Shutdown phase
-- Defense reuse without rebuild friction
-
----
+- valid terrain placement checks
+- one-pylon limit
+- escalating channel enemy pressure
+- radius growth during channeling
+- authoritative essence banking
+- pylon upgrade hooks for radius, cap, efficiency, and HP
 
 ## Should Have
-- Clear pylon-state readability in world presentation
-- Safe-zone benefits linked to pylon state
-- Better feedback for holder threat and milestone completion
-- Travel unlock behavior tied to pylon state
-- Clear communication of pylon material type and ritual cost before a run starts
-- Clear communication of active base and global modifiers before a run starts
-- Modifier combinations that create distinct tactical identities without overcomplicating the event
-
----
+- stronger in-world feedback for radius thresholds
+- explicit destroyed-pylon recovery rules
+- clearer build-area and pylon-area overlap feedback
 
 ## Could Have
-- Pylon-specific upgrades
-- Different pylon archetypes
-- Stronger pylon area buffs
-- Biome-specific channel modifiers
-- Specific base modifier families such as walls-only, turrets-only, or traps-only rule sets
-- Material-specific presentation differences between pylon families
-
----
+- multi-pylon placement limits later in progression
+- pylon-specific visuals by material family
+- deeper pylon event variants beyond the first channel loop
 
 ## Won’t Have (for now)
-- Deep pylon upgrade trees
-- Many different pylon objective types at once
-- Large UI-heavy management layers for pylons early on
-- Permanent pylon loss on failure
-- Gold-funded channel activation
-
----
+- multiple active pylons in the first slice
+- player-chosen channel modifier decks
+- deep pylon management UI trees
 
 ## Open Questions
-- What is the first material-cost curve for channel starts across early pylons?
-- How visible should holder danger be from a distance?
-- How much durability should the holder have relative to pylon defenses?
-- When should older pylon efficiency drop enough to push players toward deeper ones?
-- Which first base modifiers are readable enough to anchor the initial pylon set?
-- What data structure should own per-pylon completion counts for multiplayer-safe progression tracking?
-- How should pylon material type be surfaced in-world before players commit resources?
-
----
+- should manual stop trigger a short shutdown holdout or bank immediately
+- how much permanent radius growth should a strong channel grant
+- should later pylon levels consume essence on every channel or only advanced channels
 
 ## Recent Decisions
-- Pylon channeling replaces caves as the main gate reward activity
-- Every pylon is tied to one specific material type
-- Pylon channeling costs only matching material and not gold
-- Early pylons allow unrestricted building to teach the core loop clearly
-- Material essence holder destruction only removes unbanked generated matching essence
-- Failure resets the pylon loop and auto-repairs defenses rather than demanding rebuilds
-- Every pylon now has one fixed base modifier
-- Shared global modifiers progress in a fixed order and are not chosen manually by players
-- Repeated full clears on a pylon increase its modifier stage up to three global modifiers
-
----
+- the first runtime slice uses a player-placed pylon instead of a pre-claimed gate objective
+- iron is the first raw material input for channel activation
+- crystal positions stay hidden from pylon reveal logic
+- essence is banked only on successful manual stop or retreat
 
 ## Next Recommended Task
-Implement the first material-aware pylon runtime slice:
-- assign one material type to the first test pylon
-- validate matching material cost on the authoritative side before channel start
-- add per-pylon completion tracking on the server
-- define the first shared global modifier sequence with three stages
-- convert matching material into matching material essence during channel phases
+Add a dedicated in-world channel feedback pass:
+- stronger radius threshold effects
+- clearer damaged-state recovery decision
+- optional shutdown phase if the current immediate bank is too forgiving

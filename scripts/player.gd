@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const PLAYER_PROJECTILE_SCENE := preload("res://scenes/player_projectile.tscn")
+
 # How fast the player moves in meters per second.
 @export var speed: float = 6.0
 # The downward acceleration when in the air, in meters per second squared.
@@ -15,9 +17,17 @@ extends CharacterBody3D
 @export var remote_rotation_smoothing: float = 18.0
 @export var remote_snap_distance: float = 3.5
 @export var max_health: float = 100.0
-@export var attack_range: float = 2.4
-@export var attack_damage: float = 34.0
-@export var attack_cooldown: float = 0.45
+@export var attack_range: float = 18.0
+@export var attack_damage: float = 22.0
+@export var attack_cooldown: float = 0.18
+@export var projectile_speed: float = 28.0
+@export var projectile_hit_radius: float = 0.2
+@export var projectile_spawn_forward_offset: float = 0.9
+@export var projectile_spawn_height: float = 1.05
+@export var attack_visual_duration: float = 0.08
+@export var attack_visual_width: float = 0.18
+@export var attack_visual_height: float = 0.18
+@export var attack_visual_depth: float = 0.9
 @export var hit_flash_duration: float = 0.12
 var peer_id: int = 1
 var spawn_position: Vector3 = Vector3.ZERO
@@ -25,6 +35,7 @@ var _input_vector: Vector2 = Vector2.ZERO
 var target_velocity: Vector3 = Vector3.ZERO
 var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
+var _attack_visual_time_remaining: float = 0.0
 var _attack_was_pressed: bool = false
 var _build_was_pressed: bool = false
 var _interact_was_pressed: bool = false
@@ -77,6 +88,11 @@ var _network_target_position: Vector3 = Vector3.ZERO
 var _network_target_velocity: Vector3 = Vector3.ZERO
 var _network_target_facing_y: float = 0.0
 var _has_network_target: bool = false
+var _next_projectile_id: int = 1
+var _attack_visual_root: Node3D
+var _attack_visual_mesh: MeshInstance3D
+var _attack_visual_material: StandardMaterial3D
+var _attack_visual_fire_color: Color = Color(0.52, 0.9, 1.0, 0.46)
 
 @onready var look_pivot: Node3D = $LookPivot
 @onready var visual_pivot: Node3D = $VisualPivot
@@ -109,6 +125,7 @@ func _ready() -> void:
 	spring_arm.spring_length = clamp(spring_arm.spring_length, min_camera_distance, max_camera_distance)
 	_update_label()
 	_sync_visual_orientation()
+	_initialize_attack_visual()
 	if _is_local_player():
 		build_preview_root.top_level = true
 		build_preview_root.visible = true
@@ -136,9 +153,11 @@ func _process(delta: float) -> void:
 		_sync_visual_orientation()
 
 	if _hit_flash_time_remaining <= 0.0:
+		_update_attack_visual(delta)
 		return
 	_hit_flash_time_remaining = max(_hit_flash_time_remaining - delta, 0.0)
 	_update_body_visuals()
+	_update_attack_visual(delta)
 
 
 func _physics_process(delta: float) -> void:
@@ -279,6 +298,61 @@ func _update_camera_anchor(delta: float) -> void:
 		return
 	camera_pivot.global_position = target_position
 	camera_pivot.global_rotation = target_rotation
+
+
+func _initialize_attack_visual() -> void:
+	if _attack_visual_root != null:
+		return
+	_attack_visual_root = Node3D.new()
+	_attack_visual_root.name = "AttackVisual"
+	_attack_visual_root.visible = false
+	visual_pivot.add_child(_attack_visual_root)
+
+	_attack_visual_mesh = MeshInstance3D.new()
+	_attack_visual_mesh.name = "AttackVisualMesh"
+	var slash_mesh := BoxMesh.new()
+	slash_mesh.size = Vector3(attack_visual_width, attack_visual_height, attack_visual_depth)
+	_attack_visual_mesh.mesh = slash_mesh
+	_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
+	_attack_visual_material = StandardMaterial3D.new()
+	_attack_visual_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_attack_visual_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_attack_visual_material.albedo_color = _attack_visual_fire_color
+	_attack_visual_mesh.material_override = _attack_visual_material
+	_attack_visual_root.add_child(_attack_visual_mesh)
+
+
+func _update_attack_visual(delta: float) -> void:
+	if _attack_visual_root == null:
+		return
+	if _attack_visual_time_remaining <= 0.0:
+		_attack_visual_root.visible = false
+		return
+	_attack_visual_time_remaining = max(_attack_visual_time_remaining - delta, 0.0)
+	if _attack_visual_time_remaining <= 0.0:
+		_attack_visual_root.visible = false
+		return
+	var ratio := 1.0
+	if attack_visual_duration > 0.0:
+		ratio = clamp(_attack_visual_time_remaining / attack_visual_duration, 0.0, 1.0)
+	_attack_visual_root.visible = true
+	_attack_visual_root.scale = Vector3(0.9 + (1.0 - ratio) * 0.2, 0.9 + (1.0 - ratio) * 0.2, 0.55 + (1.0 - ratio) * 0.35)
+	_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
+	if _attack_visual_material != null:
+		var color := _attack_visual_fire_color
+		color.a = _attack_visual_fire_color.a * ratio
+		_attack_visual_material.albedo_color = color
+
+
+func _start_attack_feedback() -> void:
+	if _attack_visual_root == null:
+		return
+	_attack_visual_time_remaining = attack_visual_duration
+	_attack_visual_root.visible = true
+	_attack_visual_root.scale = Vector3.ONE
+	_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
+	if _attack_visual_material != null:
+		_attack_visual_material.albedo_color = _attack_visual_fire_color
 
 
 func _update_remote_visual_state(delta: float) -> void:
@@ -452,6 +526,70 @@ func reset_for_match() -> void:
 	target_velocity = Vector3.ZERO
 	_attack_cooldown_remaining = 0.0
 	_server_respawn()
+
+
+func notify_projectile_finished(projectile_id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	_remove_projectile_local(projectile_id)
+	_remove_projectile_remote.rpc(projectile_id)
+
+
+func _attack_direction() -> Vector3:
+	var direction := -look_pivot.global_basis.z
+	direction.y = 0.0
+	if direction.length_squared() <= 0.001:
+		return Vector3.ZERO
+	return direction.normalized()
+
+
+func _projectiles_root() -> Node3D:
+	var manager := _building_manager()
+	if manager != null and manager.has_method("get_projectiles_root"):
+		return manager.get_projectiles_root()
+	return null
+
+
+func _projectile_lifetime() -> float:
+	return attack_range / max(projectile_speed, 0.001)
+
+
+func _spawn_projectile_local(projectile_id: int, start_position: Vector3, direction: Vector3, is_authoritative: bool) -> void:
+	var projectiles_root := _projectiles_root()
+	if projectiles_root == null or PLAYER_PROJECTILE_SCENE == null:
+		return
+	var node_name := _projectile_name(projectile_id)
+	if projectiles_root.has_node(node_name):
+		return
+	var projectile = PLAYER_PROJECTILE_SCENE.instantiate()
+	projectile.name = node_name
+	if projectile.has_method("setup"):
+		projectile.setup(
+			projectile_id,
+			start_position,
+			direction,
+			attack_damage,
+			projectile_speed,
+			_projectile_lifetime(),
+			projectile_hit_radius,
+			is_authoritative,
+			self
+		)
+	projectiles_root.add_child(projectile)
+
+
+func _remove_projectile_local(projectile_id: int) -> void:
+	var projectiles_root := _projectiles_root()
+	if projectiles_root == null:
+		return
+	var node_name := _projectile_name(projectile_id)
+	if not projectiles_root.has_node(node_name):
+		return
+	projectiles_root.get_node(node_name).queue_free()
+
+
+func _projectile_name(projectile_id: int) -> String:
+	return "PlayerProjectile_%d_%d" % [peer_id, projectile_id]
 
 
 func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refill_health: bool = true) -> void:
@@ -859,28 +997,21 @@ func _perform_server_attack() -> void:
 		return
 	if _attack_cooldown_remaining > 0.0:
 		return
+	var projectiles_root := _projectiles_root()
+	if projectiles_root == null:
+		return
+	var direction := _attack_direction()
+	if direction.length_squared() <= 0.001:
+		return
 
 	_attack_cooldown_remaining = attack_cooldown
-	var target = _nearest_enemy_in_range()
-	if target == null:
-		return
-	if target.has_method("apply_server_damage"):
-		target.apply_server_damage(attack_damage)
-
-
-func _nearest_enemy_in_range() -> CharacterBody3D:
-	var best_enemy: CharacterBody3D = null
-	var best_distance := attack_range * attack_range
-	for node in get_tree().get_nodes_in_group("enemies"):
-		if not node is CharacterBody3D:
-			continue
-		if node.has_method("is_alive") and not node.is_alive():
-			continue
-		var distance := global_position.distance_squared_to(node.global_position)
-		if distance <= best_distance:
-			best_distance = distance
-			best_enemy = node
-	return best_enemy
+	_start_attack_feedback()
+	_play_attack_feedback.rpc()
+	var spawn_position := global_position + Vector3(0.0, projectile_spawn_height, 0.0) + direction * projectile_spawn_forward_offset
+	var projectile_id := _next_projectile_id
+	_next_projectile_id += 1
+	_spawn_projectile_local(projectile_id, spawn_position, direction, true)
+	_spawn_projectile_remote.rpc(projectile_id, spawn_position, direction)
 
 
 func _perform_server_wall_build() -> void:
@@ -1216,3 +1347,24 @@ func _play_hit_feedback() -> void:
 	if multiplayer.is_server():
 		return
 	_start_hit_flash()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _play_attack_feedback() -> void:
+	if multiplayer.is_server():
+		return
+	_start_attack_feedback()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _spawn_projectile_remote(projectile_id: int, start_position: Vector3, direction: Vector3) -> void:
+	if multiplayer.is_server():
+		return
+	_spawn_projectile_local(projectile_id, start_position, direction, false)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _remove_projectile_remote(projectile_id: int) -> void:
+	if multiplayer.is_server():
+		return
+	_remove_projectile_local(projectile_id)

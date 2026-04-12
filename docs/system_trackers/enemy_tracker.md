@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-First Enemy Split Started
+Second Construct Role Implemented
 
 ---
 
@@ -38,19 +38,19 @@ Construct role direction:
 - Readable overhead enemy health bars exist
 - Basic wave pressure foundation exists
 - Raids now use a first dedicated construct swarm unit instead of the generic exploration enemy
+- Raids now mix in a first heavy construct breaker role with stronger structure and objective pressure
 
 ---
 
 ## In Progress
 - Splitting the runtime enemy design into exploration enemies versus constructs
-- Defining the next useful construct role beyond the first swarm unit
 - Defining the first biome exploration enemy family
 
 ---
 
 ## Blockers / Problems
 - No biome exploration family exists yet
-- No shield, heavy, siege, or elite construct role is implemented yet
+- No shield, siege, or elite construct role is implemented yet
 - No performance strategy tested for larger raid armies yet
 
 ---
@@ -106,12 +106,13 @@ Construct role direction:
 - Exploration enemies should feel biome-driven rather than army-like
 - Readability matters more than maximum complexity early on
 - The first construct implementation should be a small swarm unit before adding shield, heavy, or siege roles
+- The second construct implementation is now a heavy breaker that targets structures and the objective more aggressively than the swarm unit
 
 ---
 
 ## Next Recommended Task
 Implement the first enemy split:
 - define one first-biome exploration enemy family
-- add the second construct role after the swarm unit
+- validate the heavy breaker in multiplayer raids and pylon events
 - keep behavior readable and strongly role-driven
 - validate both types in multiplayer

@@ -79,14 +79,6 @@ script = ExtResource("15")
 [node name="GateManager" type="Node" parent="." unique_id=889331205]
 script = ExtResource("11")
 gate_objective_scene = ExtResource("14")
-gate_center = Vector3(64, 0.6, 0)
-gate_objective_max_health = 240.0
-extraction_countdown = null
-objective_interaction_radius = null
-player_spawn_spacing = null
-core_upgrade_base_cost = null
-core_upgrade_cost_step = null
-core_upgrade_health_bonus = null
 
 [node name="ResearchManager" type="Node" parent="." unique_id=889331208]
 script = ExtResource("27")

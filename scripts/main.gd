@@ -5,6 +5,7 @@ extends Node3D
 @onready var building_manager = $BuildingManager
 @onready var cave_manager = $CaveManager
 @onready var gate_manager = $GateManager
+@onready var research_manager = $ResearchManager
 @onready var raid_manager = $RaidManager
 @onready var core_objective = $World/CoreObjective
 @onready var startup_camera: Camera3D = $World/StartupCamera
@@ -18,6 +19,13 @@ extends Node3D
 @onready var restart_button: Button = $UI/Panel/VBoxContainer/RestartButton
 @onready var town_hall_upgrade_button: Button = $UI/Panel/VBoxContainer/TownHallUpgradeButton
 @onready var core_upgrade_button: Button = $UI/Panel/VBoxContainer/CoreUpgradeButton
+@onready var research_basic_button: Button = $UI/Panel/VBoxContainer/ResearchBasicButton
+@onready var research_unlock_button: Button = $UI/Panel/VBoxContainer/ResearchUnlockButton
+@onready var branch_unlock_button: Button = $UI/Panel/VBoxContainer/BranchUnlockButton
+@onready var pylon_radius_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonRadiusUpgradeButton
+@onready var pylon_cap_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonCapUpgradeButton
+@onready var pylon_efficiency_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonEfficiencyUpgradeButton
+@onready var pylon_health_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonHealthUpgradeButton
 @onready var scrap_panel: PanelContainer = $UI/ScrapPanel
 @onready var scrap_value_label: Label = $UI/ScrapPanel/HBoxContainer/ScrapValueLabel
 @onready var status_mode_label: Label = $UI/StatusPanel/VBoxContainer/ModeLabel
@@ -41,7 +49,7 @@ extends Node3D
 @onready var controls_context_label: Label = $UI/ControlsPanel/VBoxContainer/ControlsContextLabel
 @onready var controls_body_label: Label = $UI/ControlsPanel/VBoxContainer/ControlsBodyLabel
 
-var _latest_run_info_base: String = "Base | Stored Scrap 0 | Core Lv 0 | Max HP 300"
+var _latest_run_info_base: String = "Base | Scrap 0 | Iron 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
 
 
 func _ready() -> void:
@@ -53,20 +61,24 @@ func _ready() -> void:
 	building_manager.bind_network_manager(network_manager)
 	building_manager.set_gate_manager(gate_manager)
 	gate_manager.set_roots($World/GateContent, $World/Players, core_objective)
+	gate_manager.set_research_manager(research_manager)
 	gate_manager.set_cave_manager(cave_manager)
 	gate_manager.set_enemy_manager(enemy_manager)
 	gate_manager.set_building_manager(building_manager)
 	gate_manager.bind_network_manager(network_manager)
+	research_manager.bind_network_manager(network_manager)
 	raid_manager.set_dependencies(enemy_manager, gate_manager, core_objective)
 	raid_manager.bind_network_manager(network_manager)
 	core_objective.bind_network_manager(network_manager)
 	network_manager.status_changed.connect(_on_status_changed)
 	building_manager.status_changed.connect(_on_status_changed)
 	gate_manager.status_changed.connect(_on_status_changed)
+	research_manager.status_changed.connect(_on_status_changed)
 	raid_manager.status_changed.connect(_on_status_changed)
 	gate_manager.run_info_changed.connect(_on_run_info_changed)
 	gate_manager.gate_state_changed.connect(_on_gate_state_changed)
 	gate_manager.progression_changed.connect(_refresh_progression_ui)
+	research_manager.progression_changed.connect(_refresh_progression_ui)
 	raid_manager.progression_changed.connect(_refresh_progression_ui)
 	raid_manager.raid_state_changed.connect(_on_raid_state_changed)
 	network_manager.session_changed.connect(_on_session_changed)
@@ -77,7 +89,7 @@ func _ready() -> void:
 	port_input.text = str(network_manager.default_port)
 	_on_session_changed(false)
 	_on_status_changed("Core defense prototype ready.")
-	_on_run_info_changed("Base | Stored Scrap 0 | Core Lv 0 | Max HP 300")
+	_on_run_info_changed(_latest_run_info_base)
 	_refresh_progression_ui()
 	_refresh_scrap_display()
 	_refresh_claim_progress_ui()
@@ -147,6 +159,55 @@ func _on_core_upgrade_pressed() -> void:
 	_refresh_progression_ui()
 
 
+func _on_research_basic_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	research_manager.purchase_node("field_tools")
+	_refresh_progression_ui()
+
+
+func _on_research_unlock_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	research_manager.purchase_node("augment_slot")
+	_refresh_progression_ui()
+
+
+func _on_branch_unlock_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	research_manager.purchase_node("augment_branch")
+	_refresh_progression_ui()
+
+
+func _on_pylon_radius_upgrade_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	gate_manager.purchase_pylon_upgrade("base_radius")
+	_refresh_progression_ui()
+
+
+func _on_pylon_cap_upgrade_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	gate_manager.purchase_pylon_upgrade("max_radius")
+	_refresh_progression_ui()
+
+
+func _on_pylon_efficiency_upgrade_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	gate_manager.purchase_pylon_upgrade("channel_efficiency")
+	_refresh_progression_ui()
+
+
+func _on_pylon_health_upgrade_pressed() -> void:
+	if not multiplayer.is_server():
+		return
+	gate_manager.purchase_pylon_upgrade("health")
+	_refresh_progression_ui()
+
+
 func _on_status_changed(message: String) -> void:
 	status_label.text = message
 
@@ -174,7 +235,7 @@ func _on_session_changed(in_session: bool) -> void:
 	if not in_session:
 		cave_manager.clear_all_runtime_state()
 		startup_camera.current = true
-		_latest_run_info_base = "Base | Stored Scrap 0 | Core Lv 0 | Max HP 300"
+		_latest_run_info_base = "Base | Scrap 0 | Iron 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
 		run_info_label.text = _compose_run_info(_latest_run_info_base)
 	else:
 		status_label.text = "Base idle. Start a gate run or begin a town hall upgrade."
@@ -255,11 +316,12 @@ func _refresh_progression_ui() -> void:
 	var has_session := network_manager.multiplayer.multiplayer_peer != null
 	var is_host := has_session and multiplayer.is_server()
 	var progression_locked = raid_manager.is_progression_locked()
+	var gate_active = gate_manager.is_gate_active()
 	var next_cost = gate_manager.get_next_core_upgrade_cost()
 	var next_level = gate_manager.get_core_upgrade_level() + 1
 	var next_town_hall_cost = raid_manager.get_next_town_hall_upgrade_cost()
 	var next_town_hall_level = raid_manager.get_town_hall_level() + 1
-	if gate_manager.is_gate_active():
+	if gate_active:
 		gate_button.text = "Returning..." if gate_manager.is_extraction_active() else "Return to Base"
 		gate_button.disabled = not is_host or not gate_manager.can_return_to_base()
 	else:
@@ -269,8 +331,53 @@ func _refresh_progression_ui() -> void:
 	town_hall_upgrade_button.disabled = not is_host or not raid_manager.can_start_town_hall_upgrade()
 	core_upgrade_button.text = "Upgrade Core to Lv %d (%d Scrap)" % [next_level, next_cost]
 	core_upgrade_button.disabled = not is_host or progression_locked or not gate_manager.can_purchase_core_upgrade()
+	_refresh_research_buttons(is_host, has_session, gate_active)
+	_refresh_pylon_upgrade_buttons(is_host)
 	run_info_label.text = _compose_run_info(_latest_run_info_base)
 	_refresh_scrap_display()
+
+
+func _refresh_research_buttons(is_host: bool, has_session: bool, gate_active: bool) -> void:
+	var field_tools = research_manager.get_node_state("field_tools")
+	var augment_slot = research_manager.get_node_state("augment_slot")
+	var augment_branch = research_manager.get_node_state("augment_branch")
+	research_basic_button.text = _research_button_text(field_tools, "Upgrade")
+	research_unlock_button.text = _research_button_text(augment_slot, "Unlock")
+	branch_unlock_button.text = _research_button_text(augment_branch, "Unlock")
+	research_basic_button.disabled = not has_session or not is_host or gate_active or not research_manager.can_purchase_node("field_tools")
+	research_unlock_button.disabled = not has_session or not is_host or gate_active or not research_manager.can_purchase_node("augment_slot")
+	branch_unlock_button.disabled = not has_session or not is_host or gate_active or not research_manager.can_purchase_node("augment_branch")
+
+
+func _refresh_pylon_upgrade_buttons(is_host: bool) -> void:
+	pylon_radius_upgrade_button.text = "Upgrade Base Radius (%d Essence)" % gate_manager._pylon_upgrade_cost("base_radius")
+	pylon_cap_upgrade_button.text = "Upgrade Radius Cap (%d Essence)" % gate_manager._pylon_upgrade_cost("max_radius")
+	pylon_efficiency_upgrade_button.text = "Upgrade Channel Efficiency (%d Essence)" % gate_manager._pylon_upgrade_cost("channel_efficiency")
+	pylon_health_upgrade_button.text = "Upgrade Pylon Integrity (%d Essence)" % gate_manager._pylon_upgrade_cost("health")
+	pylon_radius_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("base_radius")
+	pylon_cap_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("max_radius")
+	pylon_efficiency_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("channel_efficiency")
+	pylon_health_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("health")
+
+
+func _research_button_text(node_state: Dictionary, action_verb: String) -> String:
+	if node_state.is_empty():
+		return "Research Unavailable"
+	var display_name := String(node_state.get("display_name", "Research"))
+	var level := int(node_state.get("level", 0))
+	var max_level := int(node_state.get("max_level", 1))
+	if level >= max_level:
+		return "%s Maxed" % display_name
+	var essence_cost := int(node_state.get("essence_cost", 0))
+	var crystal_cost := int(node_state.get("crystal_cost", 0))
+	var cost_parts: Array[String] = []
+	if essence_cost > 0:
+		cost_parts.append("%d Essence" % essence_cost)
+	if crystal_cost > 0:
+		cost_parts.append("%d Crystals" % crystal_cost)
+	if cost_parts.is_empty():
+		cost_parts.append("Free")
+	return "%s %s (%s)" % [action_verb, display_name, " + ".join(cost_parts)]
 
 
 func _compose_run_info(base_message: String) -> String:
@@ -295,39 +402,17 @@ func _refresh_claim_progress_ui() -> void:
 	if claim_panel == null:
 		return
 	var snapshot = gate_manager.get_cave_status_snapshot()
-	var claim_channel_remaining := float(snapshot.get("claim_channel_remaining", 0.0))
-	var claim_event_active := bool(snapshot.get("claim_event_active", false))
-	var visible = gate_manager.is_gate_active() and (claim_channel_remaining > 0.0 or claim_event_active)
+	var visible = gate_manager.is_gate_active() and bool(snapshot.get("channel_active", false))
 	claim_panel.visible = visible
 	if not visible:
 		claim_progress_label.text = ""
 		claim_progress_bar.value = 0.0
 		return
-	if claim_channel_remaining > 0.0:
-		var channel_ratio = clamp(float(snapshot.get("claim_progress_ratio", 0.0)), 0.0, 1.0)
-		claim_progress_label.text = "Pylon Claim Channel %0.1fs" % claim_channel_remaining
-		claim_progress_bar.value = channel_ratio * 100.0
-		return
-
-	var total_waves = max(int(snapshot.get("claim_total_waves", 1)), 1)
-	var wave_index = enemy_manager.get_wave_index()
-	var completed_waves = max(wave_index - 1, 0)
-	var wave_progress := 0.0
-	var spawns_per_wave = max(enemy_manager.get_current_spawns_per_wave_count(), 1)
-	var spawned_count = clamp(enemy_manager.get_wave_spawned_count(), 0, spawns_per_wave)
-	var active_enemy_count = max(enemy_manager.get_active_enemy_count(), 0)
-	var defeated_count = clamp(spawned_count - active_enemy_count, 0, spawns_per_wave)
-	if enemy_manager.is_in_breather():
-		completed_waves = min(wave_index, total_waves)
-		wave_progress = 0.0
-	else:
-		var spawn_ratio := float(spawned_count) / float(spawns_per_wave)
-		var defeat_ratio := float(defeated_count) / float(spawns_per_wave)
-		wave_progress = clamp((spawn_ratio * 0.35) + (defeat_ratio * 0.65), 0.0, 1.0)
-	completed_waves = clamp(completed_waves, 0, total_waves)
-	var overall_ratio = clamp((float(completed_waves) + wave_progress) / float(total_waves), 0.0, 1.0)
-	claim_progress_label.text = "Claim Waves %d/%d Cleared" % [completed_waves, total_waves]
-	claim_progress_bar.value = overall_ratio * 100.0
+	var elapsed := float(snapshot.get("channel_elapsed", 0.0))
+	var current_radius := int(round(float(snapshot.get("influence_radius", 0.0))))
+	var max_radius := int(round(float(snapshot.get("max_radius", 0.0))))
+	claim_progress_label.text = "Channel %0.1fs | Radius %d/%d" % [elapsed, current_radius, max_radius]
+	claim_progress_bar.value = clamp(float(snapshot.get("channel_progress_ratio", 0.0)), 0.0, 1.0) * 100.0
 
 
 func _refresh_cave_status_ui() -> void:
@@ -345,40 +430,23 @@ func _refresh_cave_status_ui() -> void:
 
 	var state_label := String(snapshot.get("state_label", "Locked"))
 	var detail_label := String(snapshot.get("detail_label", ""))
+	var influence_radius := int(round(float(snapshot.get("influence_radius", 0.0))))
+	var max_radius := int(round(float(snapshot.get("max_radius", 0.0))))
+	var crystals_remaining := int(snapshot.get("crystals_remaining", 0))
+	var ore_revealed := int(snapshot.get("ore_revealed", 0))
+	var herbs_revealed := int(snapshot.get("herbs_revealed", 0))
+	var caves_revealed := int(snapshot.get("caves_revealed", 0))
+	var treasure_revealed := int(snapshot.get("treasure_revealed", 0))
+	var pending_essence := int(floor(float(snapshot.get("current_reward", 0.0))))
 	var reward_rate := float(snapshot.get("reward_rate", 0.0))
-	var current_reward := int(floor(float(snapshot.get("current_reward", 0.0))))
-	var cave_id := int(snapshot.get("cave_id", 0))
-	var pressure_mode = enemy_manager.get_pressure_mode()
-	var wave_index = enemy_manager.get_wave_index()
-	var pressure_label := "Pressure Idle"
-	if pressure_mode == "gate":
-		pressure_label = "Pressure Wave %d" % wave_index
-		if enemy_manager.is_in_breather():
-			pressure_label += " | Breather %0.1fs" % enemy_manager.get_breather_time_remaining()
-	elif pressure_mode == "raid":
-		pressure_label = "Repair Wave %d" % wave_index
-		if enemy_manager.is_in_breather():
-			pressure_label += " | Breather %0.1fs" % enemy_manager.get_breather_time_remaining()
-
 	var timer_label := ""
-	if bool(snapshot.get("cave_active", false)):
-		timer_label = " | Toggle with E"
-	elif float(snapshot.get("cave_activation_remaining", 0.0)) > 0.0:
-		timer_label = " | Opens in %0.1fs" % float(snapshot.get("cave_activation_remaining", 0.0))
-	elif float(snapshot.get("claim_channel_remaining", 0.0)) > 0.0:
-		timer_label = " | Claim in %0.1fs" % float(snapshot.get("claim_channel_remaining", 0.0))
-	elif float(snapshot.get("repair_channel_remaining", 0.0)) > 0.0:
-		timer_label = " | Repair in %0.1fs" % float(snapshot.get("repair_channel_remaining", 0.0))
+	if bool(snapshot.get("channel_active", false)):
+		timer_label = " | Stop with E"
 	elif bool(snapshot.get("extraction_active", false)):
 		timer_label = " | Extract %0.1fs" % float(snapshot.get("extraction_remaining", 0.0))
-
-	var cave_suffix := ""
-	if cave_id > 0:
-		cave_suffix = " | Cave %d" % cave_id
-
-	cave_state_value_label.text = "%s%s%s" % [state_label, cave_suffix, timer_label]
-	cave_pressure_value_label.text = pressure_label
-	cave_reward_value_label.text = "Gain +%0.1f/s | Bank %d" % [reward_rate, current_reward]
+	cave_state_value_label.text = "%s | Pylon Lv %d%s" % [state_label, int(snapshot.get("pylon_level", 1)), timer_label]
+	cave_pressure_value_label.text = "Influence %d/%d | Crystals in range %d" % [influence_radius, max_radius, crystals_remaining]
+	cave_reward_value_label.text = "Reveal Ore %d | Herbs %d | Caves %d | Treasure %d | +%0.1f/s | Pending %d" % [ore_revealed, herbs_revealed, caves_revealed, treasure_revealed, reward_rate, pending_essence]
 	cave_detail_label.text = detail_label
 
 
@@ -450,15 +518,17 @@ func _current_mode_label(player: Node) -> String:
 	if raid_manager.is_upgrade_channeling():
 		return "Mode: Town Hall Upgrade"
 	if gate_manager.is_gate_active():
-		if gate_manager.is_build_phase_active():
-			return "Mode: Gate Build Phase"
 		if gate_manager.is_extraction_active():
 			return "Mode: Extraction"
-		if gate_manager.is_cave_activation_channeling():
-			return "Mode: Cave Activation"
-		if gate_manager.is_repair_channeling():
-			return "Mode: Pylon Repair"
-		return "Mode: Gate Pressure"
+		if gate_manager.get_gate_pylon_state() == "unplaced":
+			return "Mode: Expedition Search"
+		if gate_manager.get_gate_pylon_state() == "damaged":
+			return "Mode: Pylon Lost"
+		if bool(gate_manager.get_pylon_status_snapshot().get("channel_active", false)):
+			return "Mode: Pylon Channeling"
+		if gate_manager.is_extraction_active():
+			return "Mode: Extraction"
+		return "Mode: Pylon Setup"
 	if player != null and player.has_method("is_build_mode_active") and player.is_build_mode_active():
 		return "Mode: Base Building"
 	return "Mode: Base Defense"
@@ -484,6 +554,10 @@ func _controls_hint_text(player: Node) -> String:
 	if player != null and player.has_method("is_wall_segment_active"):
 		wall_segment_active = player.is_wall_segment_active()
 
+	if gate_manager.is_gate_active() and gate_manager.get_gate_pylon_state() == "unplaced":
+		hints.append("Place pylon with E")
+	if gate_manager.is_gate_active() and bool(gate_manager.get_pylon_status_snapshot().get("channel_active", false)):
+		hints.append("E stop channel")
 	if build_active:
 		if wall_segment_active:
 			hints.append("Q cancel wall")
@@ -540,5 +614,7 @@ func _refresh_interaction_prompt() -> void:
 	var prompt: Dictionary = {"visible": false, "text": ""}
 	if building_manager != null and building_manager.has_method("get_repair_prompt_for_peer"):
 		prompt = building_manager.get_repair_prompt_for_peer(multiplayer.get_unique_id())
+	if not bool(prompt.get("visible", false)) and gate_manager != null and gate_manager.has_method("get_interaction_prompt_for_peer"):
+		prompt = gate_manager.get_interaction_prompt_for_peer(multiplayer.get_unique_id())
 	interaction_prompt_panel.visible = bool(prompt.get("visible", false))
 	interaction_prompt_label.text = String(prompt.get("text", ""))
