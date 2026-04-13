@@ -34,12 +34,15 @@ The first prototype uses a simple clearance radius and slope test instead of adv
 ---
 
 ## Build Zone Foundation
-Placing a pylon creates a circular foundation zone.
+Placing a pylon creates an elevated square foundation platform.
 
 Foundation rules:
 - the zone is centered on the pylon
-- the visible and collidable build surface is flattened to a shared height
-- building during the expedition is only legal inside this zone
+- the buildable interior is a square with a shared raised height
+- the platform extends outward into a square enemy approach ring
+- the platform then slopes down on all sides to reconnect with the surrounding terrain
+- the visible and collidable build surface is flattened to a shared height across the full platform top
+- building during the expedition is only legal inside the inner build square
 - structure placement projects onto this build surface rather than raw terrain
 
 The purpose of the foundation is consistency, not realism.
@@ -48,21 +51,23 @@ The purpose of the foundation is consistency, not realism.
 
 ## Build Placement Rules
 During a gate run:
-- structures must be placed inside the active build zone
+- structures must be placed inside the active inner build square
 - snapped XZ placement still applies
 - final Y position is projected onto the build surface
-- structures outside the zone are invalid even if the raw terrain is clear
+- structures on the outer enemy ring or on the slope are invalid even if the raw terrain is clear
 
 At the main base, the existing base-building rules still apply separately.
 
 ---
 
 ## Enemy Spawn Ring
-Enemy attack pressure uses a spawn ring around the pylon zone.
+Enemy attack pressure uses a square spawn ring around the pylon platform.
 
 Rules:
-- enemies spawn outside the build zone
-- enemies spawn within configurable minimum and maximum ring radii
+- enemies spawn outside the inner build square
+- enemies spawn within configurable minimum and maximum square ring extents
+- the square spawn ring sits on the same raised platform top as the build area
+- the terrain only slopes back down after the outer edge of the spawn ring
 - spawned positions must remain inside world bounds
 - spawn positions project to terrain height
 
@@ -76,6 +81,7 @@ The terrain and build zone system should preserve readability.
 That means:
 - no tiny unusable build pockets
 - no large vertical offsets inside the build zone
+- no z-fighting or jitter between build-zone visuals and the terrain surface
 - no enemy spawns directly on top of the foundation
 - no hidden legality rules beyond visible bounds, terrain, and spacing
 
@@ -83,10 +89,10 @@ That means:
 
 ## Early Prototype Scope
 The first slice includes:
-- circular pylon build zone generation
-- flat foundation creation
-- gate-only build validation against the foundation radius
-- terrain-projected spawn positions in an outer ring
+- elevated square pylon platform generation
+- flat platform top with sloped terrain transition on all sides
+- gate-only build validation against the inner square build area
+- terrain-projected enemy spawn positions in a square outer ring
 
 Do not include yet:
 - multiple build sub-zones

@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/stone_age_enemy.gd" id="1"]
+
+[sub_resource type="BoxShape3D" id="1"]
+size = Vector3(1.4, 2.3, 1.4)
+
+[sub_resource type="BoxMesh" id="2"]
+size = Vector3(1.35, 2.15, 1.25)
+
+[node name="StoneAgeMech" type="CharacterBody3D"]
+script = ExtResource("1")
+move_speed = 2.0
+attack_range = 1.75
+damage_per_second = 40.0
+max_health = 420.0
+body_radius = 0.72
+structure_notice_range = 8.0
+enemy_kind_id = "stone_mech"
+label_prefix = "SM"
+display_name = "Stone Mech"
+enemy_color = Color(0.478431, 0.517647, 0.517647, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.18, 0)
+shape = SubResource("1")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.08, 0, 0, 0, 1, 0, 0, 0, 0.98, 0, 1.18, 0)
+mesh = SubResource("2")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+billboard = 1
+text = "SM"
+font_size = 28

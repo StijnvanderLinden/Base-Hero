@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EraData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/era_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+era_id = "bronze_age"
+display_name = "Era 2: Bronze Age"
+description = "Locked placeholder for the next era."
+enemy_set = Array[String]([])
+structure_set = Array[String]([])
+material_set = Array[String]([])
+augment_pool = Array[String]([])
+unlock_requirements = {"requires_era": "stone_age", "requires_placeholder": true}
+visual_theme_data = {"status": "placeholder"}
+enemy_catalog = {}
+structure_catalog = {}
+research_definitions = {}
+research_node_order = Array[String]([])
+resource_nodes = Array[Dictionary]([])
+channel_costs = {}
+wave_definitions = Array[Dictionary]([])
+player_combat_data = {}
+pylon_data = {}

@@ -31,6 +31,8 @@ var projectiles_root: Node3D
 var players_root: Node3D
 var core_objective: Node3D
 var gate_manager: Node
+var research_manager: Node
+var era_manager: Node
 var _session_active: bool = false
 var _next_wall_id: int = 1
 var _next_turret_id: int = 1
@@ -56,6 +58,14 @@ func bind_network_manager(manager: Node) -> void:
 
 func set_gate_manager(manager: Node) -> void:
 	gate_manager = manager
+
+
+func set_research_manager(manager: Node) -> void:
+	research_manager = manager
+
+
+func set_era_manager(manager: Node) -> void:
+	era_manager = manager
 
 
 func get_wall_preview_for_peer(peer_id: int) -> Dictionary:
@@ -125,8 +135,9 @@ func get_wall_line_preview_from_request(peer_id: int, anchor_position: Vector3, 
 	var line_positions := _wall_line_positions(start_position, desired_position, rotation_y)
 	var count := line_positions.size()
 	var total_cost := _total_cost_for_type("wall", count)
+	var total_costs := _total_costs_for_type("wall", count)
 	var can_build_now := _is_building_allowed()
-	var can_afford := _can_afford_total_cost(total_cost)
+	var can_afford := _can_afford_costs(total_costs)
 	var within_limit := _can_place_count_of_type("wall", count)
 	var is_valid := _are_structure_positions_valid("wall", line_positions)
 	var status_text := _preview_status_text("wall", can_build_now and within_limit, can_afford, is_valid, "chain")
@@ -220,13 +231,14 @@ func request_structure_batch_placement(peer_id: int, structure_type: String, des
 		status_changed.emit("%s limit reached." % _structure_display_name(structure_type))
 		return false
 	var total_cost := _total_cost_for_type(structure_type, positions.size())
-	if not _can_afford_total_cost(total_cost):
+	var total_costs := _total_costs_for_type(structure_type, positions.size())
+	if not _can_afford_costs(total_costs):
 		status_changed.emit(_insufficient_total_scrap_message(structure_type, positions.size(), total_cost))
 		return false
 	if not _are_structure_positions_valid(structure_type, positions):
 		status_changed.emit("Invalid %s placement." % structure_type)
 		return false
-	if not _spend_total_structure_cost(total_cost):
+	if not _spend_total_structure_cost(total_costs):
 		status_changed.emit(_insufficient_total_scrap_message(structure_type, positions.size(), total_cost))
 		return false
 	var snapped_rotation_y := snappedf(desired_rotation_y, PI * 0.5)
@@ -586,6 +598,12 @@ func _increment_structure_id(structure_type: String) -> void:
 
 
 func _scene_for_type(structure_type: String) -> PackedScene:
+	var active_definition := _active_structure_definition(structure_type)
+	var scene_path := String(active_definition.get("scene_path", ""))
+	if scene_path != "":
+		var runtime_scene := load(scene_path) as PackedScene
+		if runtime_scene != null:
+			return runtime_scene
 	structure_type = _normalized_structure_type(structure_type)
 	match structure_type:
 		"turret":
@@ -604,55 +622,67 @@ func _structure_name(structure_type: String, structure_id: int) -> String:
 
 
 func _structure_display_name(structure_type: String) -> String:
+	var active_definition := _active_structure_definition(structure_type)
+	if not active_definition.is_empty():
+		return String(active_definition.get("display_name", structure_type.capitalize()))
 	structure_type = _normalized_structure_type(structure_type)
 	return structure_type.capitalize()
 
 
 func _cost_for_type(structure_type: String) -> int:
-	structure_type = _normalized_structure_type(structure_type)
-	match structure_type:
-		"turret":
-			return max(turret_cost, 0)
-		_:
-			return max(wall_cost, 0)
+	var total_cost := 0
+	for amount in _costs_for_type(structure_type).values():
+		total_cost += int(amount)
+	return max(total_cost, 0)
 
 
 func _total_cost_for_type(structure_type: String, amount: int) -> int:
 	return _cost_for_type(structure_type) * max(amount, 0)
 
 
+func _total_costs_for_type(structure_type: String, amount: int) -> Dictionary:
+	var multiplied_costs: Dictionary = {}
+	for cost_key in _costs_for_type(structure_type).keys():
+		multiplied_costs[cost_key] = int(_costs_for_type(structure_type).get(cost_key, 0)) * max(amount, 0)
+	return multiplied_costs
+
+
 func _can_afford_structure(structure_type: String) -> bool:
-	var cost := _cost_for_type(structure_type)
-	if cost <= 0:
-		return true
-	if gate_manager == null or not gate_manager.has_method("can_afford_scrap"):
-		return true
-	return gate_manager.can_afford_scrap(cost)
+	return _can_afford_costs(_costs_for_type(structure_type))
 
 
-func _can_afford_total_cost(cost: int) -> bool:
-	if cost <= 0:
+func _can_afford_costs(costs: Dictionary) -> bool:
+	if costs.is_empty():
 		return true
-	if gate_manager == null or not gate_manager.has_method("can_afford_scrap"):
+	if gate_manager == null:
 		return true
-	return gate_manager.can_afford_scrap(cost)
+	if gate_manager.has_method("can_afford_costs"):
+		return gate_manager.can_afford_costs(costs)
+	var scrap_cost := int(costs.get("scrap", 0))
+	if scrap_cost <= 0:
+		return true
+	if not gate_manager.has_method("can_afford_scrap"):
+		return true
+	return gate_manager.can_afford_scrap(scrap_cost)
 
 
 func _spend_structure_cost(structure_type: String) -> bool:
-	var cost := _cost_for_type(structure_type)
-	if cost <= 0:
-		return true
-	if gate_manager == null or not gate_manager.has_method("consume_scrap"):
-		return true
-	return gate_manager.consume_scrap(cost)
+	return _spend_total_structure_cost(_costs_for_type(structure_type))
 
 
-func _spend_total_structure_cost(cost: int) -> bool:
-	if cost <= 0:
+func _spend_total_structure_cost(costs: Dictionary) -> bool:
+	if costs.is_empty():
 		return true
-	if gate_manager == null or not gate_manager.has_method("consume_scrap"):
+	if gate_manager == null:
 		return true
-	return gate_manager.consume_scrap(cost)
+	if gate_manager.has_method("consume_costs"):
+		return gate_manager.consume_costs(costs)
+	var scrap_cost := int(costs.get("scrap", 0))
+	if scrap_cost <= 0:
+		return true
+	if not gate_manager.has_method("consume_scrap"):
+		return true
+	return gate_manager.consume_scrap(scrap_cost)
 
 
 func _current_stored_scrap() -> int:
@@ -670,25 +700,25 @@ func _max_health_for_structure(structure: Node) -> float:
 
 
 func _insufficient_scrap_message(structure_type: String) -> String:
-	var cost := _cost_for_type(structure_type)
-	return "Need %d scrap for %s. Stored: %d." % [cost, _structure_display_name(structure_type).to_lower(), _current_stored_scrap()]
+	return "Need %s for %s." % [_cost_text(_costs_for_type(structure_type)), _structure_display_name(structure_type).to_lower()]
 
 
 func _insufficient_total_scrap_message(structure_type: String, count: int, total_cost: int) -> String:
-	return "Need %d scrap for %d %ss. Stored: %d." % [total_cost, count, _structure_display_name(structure_type).to_lower(), _current_stored_scrap()]
+	return "Need %s for %d %ss." % [_cost_text(_total_costs_for_type(structure_type, count)), count, _structure_display_name(structure_type).to_lower()]
 
 
 func _placement_success_message(structure_type: String) -> String:
-	var cost := _cost_for_type(structure_type)
-	if cost <= 0:
+	var costs := _costs_for_type(structure_type)
+	if costs.is_empty():
 		return "%s placed." % _structure_display_name(structure_type)
-	return "%s placed for %d scrap. Stored: %d." % [_structure_display_name(structure_type), cost, _current_stored_scrap()]
+	return "%s placed for %s." % [_structure_display_name(structure_type), _cost_text(costs)]
 
 
 func _batch_placement_success_message(structure_type: String, count: int, total_cost: int) -> String:
-	if total_cost <= 0:
+	var costs := _total_costs_for_type(structure_type, count)
+	if costs.is_empty():
 		return "%d %ss placed." % [count, _structure_display_name(structure_type)]
-	return "%d %ss placed for %d scrap. Stored: %d." % [count, _structure_display_name(structure_type), total_cost, _current_stored_scrap()]
+	return "%d %ss placed for %s." % [count, _structure_display_name(structure_type), _cost_text(costs)]
 
 
 func _preview_status_text(structure_type: String, can_build_now: bool, can_afford: bool, is_valid_position: bool, snap_kind: String = "") -> String:
@@ -1012,6 +1042,38 @@ func _repair_success_message(structure_type: String, repaired_amount: float) -> 
 	if cost <= 0:
 		return "%s repaired for %d HP." % [_structure_display_name(structure_type), int(round(repaired_amount))]
 	return "%s repaired for %d HP at %d scrap. Stored: %d." % [_structure_display_name(structure_type), int(round(repaired_amount)), cost, _current_stored_scrap()]
+
+
+func _costs_for_type(structure_type: String) -> Dictionary:
+	var active_definition := _active_structure_definition(structure_type)
+	if not active_definition.is_empty():
+		return (active_definition.get("costs", {}) as Dictionary).duplicate(true)
+	structure_type = _normalized_structure_type(structure_type)
+	match structure_type:
+		"turret":
+			return {"scrap": max(turret_cost, 0)}
+		_:
+			return {"scrap": max(wall_cost, 0)}
+
+
+func _active_structure_definition(structure_type: String) -> Dictionary:
+	structure_type = _normalized_structure_type(structure_type)
+	if era_manager != null and era_manager.has_method("get_structure_definition"):
+		var structure_definition: Dictionary = era_manager.get_structure_definition(structure_type)
+		if not structure_definition.is_empty():
+			var unlock_feature := String(structure_definition.get("unlocked_variant_feature", ""))
+			if unlock_feature != "" and research_manager != null and research_manager.has_method("has_feature") and research_manager.has_feature(unlock_feature):
+				return (structure_definition.get("upgraded", {}) as Dictionary).duplicate(true)
+			return (structure_definition.get("base", {}) as Dictionary).duplicate(true)
+	return {}
+
+
+func _cost_text(costs: Dictionary) -> String:
+	if costs.is_empty():
+		return "free"
+	if gate_manager != null and gate_manager.has_method("format_costs"):
+		return String(gate_manager.format_costs(costs))
+	return "%d scrap" % int(costs.get("scrap", 0))
 
 
 func get_projectiles_root() -> Node3D:

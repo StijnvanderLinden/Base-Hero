@@ -45,6 +45,7 @@ var cave_manager: Node
 var network_manager: Node
 var research_manager: Node
 var world_generator: Node
+var era_manager: Node
 var _session_active: bool = false
 var _gate_active: bool = false
 var _extraction_active: bool = false
@@ -69,11 +70,12 @@ var _resource_nodes: Dictionary = {}
 var _resource_definitions: Array[Dictionary] = []
 var _collected_resource_ids: Dictionary = {}
 var _collected_crystal_ids: Dictionary = {}
+var _current_era_id: String = "stone_age"
 
 
 func _ready() -> void:
 	add_to_group("gate_manager")
-	_resource_definitions = _build_resource_definitions()
+	_refresh_era_runtime_data()
 
 
 func set_roots(new_gate_root: Node3D, new_players_root: Node3D, new_base_objective: Node3D) -> void:
@@ -85,7 +87,11 @@ func set_roots(new_gate_root: Node3D, new_players_root: Node3D, new_base_objecti
 
 
 func set_enemy_manager(manager: Node) -> void:
+	if enemy_manager != null and enemy_manager.has_signal("gate_pressure_finished") and enemy_manager.gate_pressure_finished.is_connected(_on_gate_pressure_finished):
+		enemy_manager.gate_pressure_finished.disconnect(_on_gate_pressure_finished)
 	enemy_manager = manager
+	if enemy_manager != null and enemy_manager.has_signal("gate_pressure_finished"):
+		enemy_manager.gate_pressure_finished.connect(_on_gate_pressure_finished)
 
 
 func set_building_manager(manager: Node) -> void:
@@ -94,6 +100,11 @@ func set_building_manager(manager: Node) -> void:
 
 func set_research_manager(manager: Node) -> void:
 	research_manager = manager
+
+
+func set_era_manager(manager: Node) -> void:
+	era_manager = manager
+	_refresh_era_runtime_data()
 
 
 func set_world_generator(generator: Node) -> void:
@@ -143,6 +154,11 @@ func start_gate_run() -> void:
 		return
 	if gate_root == null or players_root == null or gate_objective_scene == null:
 		return
+	if era_manager != null and era_manager.has_method("get_default_gate_era_id"):
+		_current_era_id = String(era_manager.get_default_gate_era_id())
+		if era_manager.has_method("set_active_gate_era"):
+			era_manager.set_active_gate_era(_current_era_id)
+	_refresh_era_runtime_data()
 
 	_reset_gate_runtime_state(false)
 	if world_generator != null and world_generator.has_method("generate_world"):
@@ -153,7 +169,7 @@ func start_gate_run() -> void:
 	_teleport_players_to_gate()
 	_stop_enemy_pressure()
 	gate_state_changed.emit(true)
-	status_changed.emit("Expedition live. Gather iron and crystals, then press E to place the pylon.")
+	status_changed.emit("%s live. Gather stone, wood, and crystals, then press E to place the pylon." % get_current_era_name())
 	_emit_run_info()
 	_broadcast_gate_state()
 
@@ -262,7 +278,9 @@ func get_pylon_status_snapshot() -> Dictionary:
 		"influence_radius": _current_pylon_influence_radius(),
 		"max_radius": _current_pylon_radius_cap(),
 		"crystals_remaining": _crystals_remaining_in_radius(),
-		"ore_revealed": int(reveal_counts.get("iron_ore", 0)),
+		"ore_revealed": int(reveal_counts.get("stone_node", 0)),
+		"stone_revealed": int(reveal_counts.get("stone_node", 0)),
+		"wood_revealed": int(reveal_counts.get("wood_node", 0)),
 		"herbs_revealed": int(reveal_counts.get("herb_patch", 0)),
 		"caves_revealed": int(reveal_counts.get("cave_site", 0)),
 		"treasure_revealed": int(reveal_counts.get("treasure_spot", 0)),
@@ -394,8 +412,31 @@ func request_objective_interaction(peer_id: int) -> void:
 	_start_pylon_channel()
 
 
+func request_local_objective_interaction(peer_id: int) -> void:
+	if multiplayer.is_server():
+		request_objective_interaction(peer_id)
+		return
+	_request_objective_interaction_rpc.rpc_id(1)
+
+
+func can_open_pylon_menu_for_peer(peer_id: int) -> bool:
+	if not _gate_active or _gate_objective == null:
+		return false
+	var player := _player_node(peer_id)
+	if player == null:
+		return false
+	return player.global_position.distance_to(_gate_objective.global_position) <= objective_interaction_radius
+
+
 func get_material_amount(material_id: String) -> int:
 	return int(_stored_materials.get(material_id, 0))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_objective_interaction_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	request_objective_interaction(multiplayer.get_remote_sender_id())
 
 
 func get_interaction_prompt_for_peer(peer_id: int) -> Dictionary:
@@ -420,14 +461,11 @@ func get_interaction_prompt_for_peer(peer_id: int) -> Dictionary:
 	if player.global_position.distance_to(_gate_objective.global_position) > objective_interaction_radius:
 		return {"visible": false, "text": ""}
 	if get_gate_pylon_state() == "damaged":
-		return {"visible": true, "text": "Pylon shattered. Retreat to base."}
-	if _pylon_channeling:
-		return {"visible": true, "text": "Press E to stop channeling | Essence %d | Radius %d" % [int(floor(_pending_essence)), int(round(_current_pylon_influence_radius()))]}
+		return {"visible": true, "text": "Press E to open the shattered pylon menu"}
 	var costs := _current_channel_start_costs()
-	var prompt_text := "Press E to start channeling (%d iron" % int(costs.get("iron", 0))
-	if int(costs.get("essence", 0)) > 0:
-		prompt_text += ", %d essence" % int(costs.get("essence", 0))
-	prompt_text += ") | %d crystals in range" % _crystals_remaining_in_radius()
+	var prompt_text := "Press E to open pylon menu | Start channel (%s) | %d crystals in range" % [format_costs(costs), _crystals_remaining_in_radius()]
+	if _pylon_channeling:
+		prompt_text = "Press E to open pylon menu | Stop channel | Essence %d | Radius %d" % [int(floor(_pending_essence)), int(round(_current_pylon_influence_radius()))]
 	return {"visible": true, "text": prompt_text}
 
 
@@ -495,7 +533,7 @@ func _finish_gate(success: bool) -> void:
 		network_manager.restart_match()
 	_stop_enemy_pressure()
 	if success:
-		status_changed.emit("Expedition extracted. Iron %d | Essence %d | Crystals %d." % [get_material_amount("iron"), research_manager.get_essence() if research_manager != null and research_manager.has_method("get_essence") else 0, research_manager.get_crystal_count() if research_manager != null and research_manager.has_method("get_crystal_count") else 0])
+		status_changed.emit("Expedition extracted. %s | Essence %d | Crystals %d." % [_material_summary(), research_manager.get_essence() if research_manager != null and research_manager.has_method("get_essence") else 0, research_manager.get_crystal_count() if research_manager != null and research_manager.has_method("get_crystal_count") else 0])
 	else:
 		status_changed.emit("Expedition failed. Unbanked channel essence was lost.")
 	gate_state_changed.emit(false)
@@ -614,6 +652,7 @@ func _clear_gate_mode(reset_scrap: bool) -> void:
 	_placed_pylon_positions.clear()
 	if reset_scrap:
 		_stored_scrap = max(starting_scrap, 0)
+		_reset_material_inventory()
 	_clear_gate_content_local()
 	if world_generator != null and world_generator.has_method("clear_world"):
 		world_generator.clear_world()
@@ -632,7 +671,7 @@ func _reset_gate_runtime_state(reset_materials: bool) -> void:
 	_collected_resource_ids.clear()
 	_placed_pylon_positions.clear()
 	if reset_materials:
-		_stored_materials["iron"] = 0
+		_reset_material_inventory()
 
 
 func _emit_run_info() -> void:
@@ -650,11 +689,11 @@ func _emit_run_info() -> void:
 			phase_text = "Extract %0.1fs" % _extraction_remaining
 		var essence_total = research_manager.get_essence() if research_manager != null and research_manager.has_method("get_essence") else 0
 		var crystal_total = research_manager.get_crystal_count() if research_manager != null and research_manager.has_method("get_crystal_count") else 0
-		run_info_changed.emit("Expedition | Phase %s | Iron %d | Pending Essence %d | Essence %d | Crystals %d | Core Lv %d" % [phase_text, get_material_amount("iron"), int(floor(_pending_essence)), essence_total, crystal_total, _core_upgrade_level])
+		run_info_changed.emit("%s | Phase %s | %s | Pending Essence %d | Essence %d | Crystals %d | Core Lv %d" % [get_current_era_name(), phase_text, _material_summary(), int(floor(_pending_essence)), essence_total, crystal_total, _core_upgrade_level])
 		return
 	var base_essence = research_manager.get_essence() if research_manager != null and research_manager.has_method("get_essence") else 0
 	var base_crystals = research_manager.get_crystal_count() if research_manager != null and research_manager.has_method("get_crystal_count") else 0
-	run_info_changed.emit("Base | Scrap %d | Iron %d | Essence %d | Crystals %d | Core Lv %d | Max HP %d" % [_stored_scrap, get_material_amount("iron"), base_essence, base_crystals, _core_upgrade_level, int(round(get_current_base_core_max_health()))])
+	run_info_changed.emit("Base | Scrap %d | %s | Essence %d | Crystals %d | Core Lv %d | Max HP %d" % [_stored_scrap, _material_summary(), base_essence, base_crystals, _core_upgrade_level, int(round(get_current_base_core_max_health()))])
 
 
 func _current_channel_rate() -> float:
@@ -674,7 +713,6 @@ func _sync_gate_setup(active: bool) -> void:
 	if multiplayer.is_server():
 		return
 	if active:
-		spawn_resource_nodes_local()
 		return
 	_clear_gate_content_local()
 
@@ -683,6 +721,13 @@ func _sync_gate_setup(active: bool) -> void:
 func _sync_gate_state(snapshot: Dictionary) -> void:
 	if multiplayer.is_server():
 		return
+	var synced_era_id := String(snapshot.get("current_era_id", _current_era_id))
+	var era_changed := synced_era_id != _current_era_id
+	_current_era_id = synced_era_id
+	if era_manager != null and era_manager.has_method("set_active_gate_era"):
+		era_manager.set_active_gate_era(_current_era_id)
+	if era_changed:
+		_refresh_era_runtime_data()
 	_gate_active = bool(snapshot.get("gate_active", false))
 	_extraction_active = bool(snapshot.get("extraction_active", false))
 	_extraction_remaining = float(snapshot.get("extraction_remaining", 0.0))
@@ -690,7 +735,7 @@ func _sync_gate_state(snapshot: Dictionary) -> void:
 	_channel_elapsed = float(snapshot.get("channel_elapsed", 0.0))
 	_pylon_channeling = bool(snapshot.get("pylon_channeling", false))
 	_stored_scrap = int(snapshot.get("stored_scrap", 0))
-	_stored_materials = (snapshot.get("stored_materials", {"iron": 0}) as Dictionary).duplicate(true)
+	_stored_materials = (snapshot.get("stored_materials", _stored_materials) as Dictionary).duplicate(true)
 	_core_upgrade_level = int(snapshot.get("core_upgrade_level", 0))
 	_pylon_upgrades = (snapshot.get("pylon_upgrades", _pylon_upgrades) as Dictionary).duplicate(true)
 	_collected_resource_ids.clear()
@@ -699,7 +744,8 @@ func _sync_gate_state(snapshot: Dictionary) -> void:
 	_collected_crystal_ids.clear()
 	for crystal_id in snapshot.get("collected_crystal_ids", []):
 		_collected_crystal_ids[String(crystal_id)] = true
-	if _gate_active and _resource_nodes.is_empty():
+	if _gate_active and (_resource_nodes.is_empty() or era_changed):
+		_clear_gate_content_local()
 		spawn_resource_nodes_local()
 	if not _gate_active:
 		_clear_gate_content_local()
@@ -733,7 +779,7 @@ func _apply_progression_to_base_objective(add_upgrade_bonus: bool) -> void:
 
 func _reset_progression_state() -> void:
 	_stored_scrap = max(starting_scrap, 0)
-	_stored_materials = {"iron": 0}
+	_reset_material_inventory()
 	_core_upgrade_level = 0
 	_collected_crystal_ids.clear()
 	_pylon_upgrades = {
@@ -802,10 +848,18 @@ func _try_collect_resource(peer_id: int, player: Node3D) -> bool:
 			return false
 		var resource_type := String(collected.get("type", ""))
 		var amount := int(collected.get("amount", 0))
-		if resource_type == "iron_ore":
-			_stored_materials["iron"] = get_material_amount("iron") + amount
+		if resource_type == "stone_node":
+			_stored_materials["stone"] = get_material_amount("stone") + amount
 			_collected_resource_ids[String(resource_id)] = true
-			status_changed.emit("Iron secured: +%d. Stored iron: %d." % [amount, get_material_amount("iron")])
+			status_changed.emit("Stone secured: +%d. Stored stone: %d." % [amount, get_material_amount("stone")])
+		elif resource_type == "wood_node":
+			_stored_materials["wood"] = get_material_amount("wood") + amount
+			_collected_resource_ids[String(resource_id)] = true
+			status_changed.emit("Wood secured: +%d. Stored wood: %d." % [amount, get_material_amount("wood")])
+		elif resource_type == "herb_patch":
+			_stored_materials["herbs"] = get_material_amount("herbs") + max(amount, 1)
+			_collected_resource_ids[String(resource_id)] = true
+			status_changed.emit("Herbs gathered. Stored herbs: %d." % get_material_amount("herbs"))
 		elif resource_type == "crystal":
 			_collected_crystal_ids[String(resource_id)] = true
 			if research_manager != null and research_manager.has_method("add_crystals"):
@@ -825,10 +879,14 @@ func _try_place_pylon(peer_id: int, player: Node3D) -> bool:
 		status_changed.emit("Find stable terrain with enough open space before placing the pylon.")
 		return false
 	_spawn_gate_content_local()
-	_gate_objective.global_position = placement_position
+	var final_pylon_position := placement_position
 	if world_generator != null and world_generator.has_method("create_or_update_build_zone"):
 		world_generator.create_or_update_build_zone(placement_position, pylon_build_radius, pylon_flatten_radius, enemy_spawn_min_radius, enemy_spawn_max_radius)
-	_placed_pylon_positions.append(placement_position)
+		_snap_players_to_new_platform(placement_position)
+		if world_generator.has_method("project_to_build_surface"):
+			final_pylon_position = world_generator.project_to_build_surface(placement_position, 0.0)
+	_gate_objective.global_position = final_pylon_position
+	_placed_pylon_positions.append(final_pylon_position)
 	_apply_pylon_upgrade_runtime(false)
 	_update_resource_reveal_states()
 	status_changed.emit("Pylon placed. Build around it, then interact to begin channeling.")
@@ -845,18 +903,51 @@ func _placement_position_for_player(player: Node3D) -> Vector3:
 
 
 func _is_valid_pylon_position(position: Vector3) -> bool:
+	var required_half_extent := _pylon_slope_half_extent()
 	if world_generator != null and world_generator.has_method("is_valid_pylon_position"):
-		if not world_generator.is_valid_pylon_position(position, pylon_flatten_radius):
+		if not world_generator.is_valid_pylon_position(position, required_half_extent):
 			return false
 	else:
-		if absf(position.x - gate_center.x) > pylon_floor_half_extent:
+		if absf(position.x - gate_center.x) > pylon_floor_half_extent - required_half_extent:
 			return false
-		if absf(position.z - gate_center.z) > pylon_floor_half_extent:
+		if absf(position.z - gate_center.z) > pylon_floor_half_extent - required_half_extent:
 			return false
 	for existing_position in _placed_pylon_positions:
 		if position.distance_to(existing_position) < pylon_min_spacing:
 			return false
 	return true
+
+
+func _pylon_spawn_platform_half_extent() -> float:
+	return max(enemy_spawn_max_radius, pylon_build_radius + 1.0)
+
+
+func _pylon_slope_half_extent() -> float:
+	var slope_width = max(pylon_flatten_radius - pylon_build_radius, 2.0)
+	return _pylon_spawn_platform_half_extent() + slope_width
+
+
+func _snap_players_to_new_platform(platform_center: Vector3) -> void:
+	if players_root == null:
+		return
+	if world_generator == null or not world_generator.has_method("project_to_build_surface"):
+		return
+	var platform_half_extent := _pylon_spawn_platform_half_extent()
+	for node in players_root.get_children():
+		if not node is Node3D:
+			continue
+		var player_node := node as Node3D
+		if absf(player_node.global_position.x - platform_center.x) > platform_half_extent:
+			continue
+		if absf(player_node.global_position.z - platform_center.z) > platform_half_extent:
+			continue
+		var lifted_position: Vector3 = world_generator.project_to_build_surface(player_node.global_position, 0.0)
+		if lifted_position.y <= player_node.global_position.y + 0.05:
+			continue
+		if player_node.has_method("teleport_to_position"):
+			player_node.teleport_to_position(lifted_position, player_node.rotation.y, false)
+		else:
+			player_node.global_position = lifted_position
 
 
 func get_active_build_area_center() -> Vector3:
@@ -880,15 +971,31 @@ func is_position_in_build_zone(world_position: Vector3, margin: float = 0.0) -> 
 		return world_generator.is_position_in_build_zone(world_position, margin)
 	if _gate_objective == null:
 		return false
-	return _gate_objective.global_position.distance_to(world_position) <= max(pylon_build_radius - margin, 0.0)
+	var half_extent = max(pylon_build_radius - margin, 0.0)
+	return absf(world_position.x - _gate_objective.global_position.x) <= half_extent and absf(world_position.z - _gate_objective.global_position.z) <= half_extent
 
 
 func get_enemy_spawn_position(enemy_id: int) -> Vector3:
 	if world_generator != null and world_generator.has_method("get_enemy_spawn_position"):
 		return world_generator.get_enemy_spawn_position(get_active_build_area_center(), enemy_id)
-	var angle := float(enemy_id % 12) / 12.0 * TAU
-	var radius := enemy_spawn_max_radius
-	return get_active_build_area_center() + Vector3(cos(angle), 0.0, sin(angle)) * radius
+	var max_half_extent = max(enemy_spawn_max_radius, enemy_spawn_min_radius + 1.0)
+	var min_half_extent = max(enemy_spawn_min_radius, pylon_build_radius + 1.0)
+	var side_index := posmod(enemy_id, 4)
+	var edge_ratio := fmod(float(enemy_id * 37), 127.0) / 127.0
+	var depth_ratio := fmod(float(enemy_id * 19), 113.0) / 113.0
+	var depth = lerpf(min_half_extent, max_half_extent, depth_ratio)
+	var edge = lerpf(-max_half_extent, max_half_extent, edge_ratio)
+	var local_offset := Vector3.ZERO
+	match side_index:
+		0:
+			local_offset = Vector3(edge, 0.0, -depth)
+		1:
+			local_offset = Vector3(depth, 0.0, edge)
+		2:
+			local_offset = Vector3(edge, 0.0, depth)
+		_:
+			local_offset = Vector3(-depth, 0.0, edge)
+	return _project_to_terrain(get_active_build_area_center() + local_offset, 0.6)
 
 
 func _project_to_terrain(world_position: Vector3, vertical_offset: float = 0.0) -> Vector3:
@@ -909,15 +1016,10 @@ func _start_pylon_channel() -> void:
 	if _gate_objective == null:
 		return
 	var costs := _current_channel_start_costs()
-	var iron_cost := int(costs.get("iron", 0))
-	var essence_cost := int(costs.get("essence", 0))
-	if get_material_amount("iron") < iron_cost:
-		status_changed.emit("Need %d iron before channeling this pylon." % iron_cost)
+	if not can_afford_costs(costs):
+		status_changed.emit("Need %s before channeling this pylon." % format_costs(costs))
 		return
-	if essence_cost > 0 and (research_manager == null or not research_manager.has_method("consume_essence") or not research_manager.consume_essence(essence_cost)):
-		status_changed.emit("Need %d essence before advanced channeling can begin." % essence_cost)
-		return
-	_stored_materials["iron"] = max(get_material_amount("iron") - iron_cost, 0)
+	consume_costs(costs)
 	_pending_essence = 0.0
 	_channel_elapsed = 0.0
 	_pylon_channeling = true
@@ -998,10 +1100,10 @@ func _permanent_radius_bonus_from_channel() -> float:
 
 
 func _current_channel_start_costs() -> Dictionary:
-	return {
-		"iron": pylon_channel_material_cost + int(_pylon_upgrades.get("channel_efficiency", 0)) * 2,
-		"essence": pylon_advanced_channel_essence_cost if _current_pylon_level() >= 3 else 0,
-	}
+	var runtime_costs := {"stone": max(int(round(float(pylon_channel_material_cost) * 0.5)), 1), "wood": max(int(round(float(pylon_channel_material_cost) * 0.3)), 1)}
+	if era_manager != null and era_manager.has_method("get_channel_costs"):
+		runtime_costs = era_manager.get_channel_costs()
+	return runtime_costs
 
 
 func _current_pylon_level() -> int:
@@ -1072,11 +1174,12 @@ func _upgrade_display_name(upgrade_type: String) -> String:
 
 func _build_resource_definitions() -> Array[Dictionary]:
 	return [
-		{"id": "iron_1", "type": "iron_ore", "position": gate_center + Vector3(-10.0, 0.0, 8.0), "amount": 18},
-		{"id": "iron_2", "type": "iron_ore", "position": gate_center + Vector3(9.0, 0.0, -7.0), "amount": 20},
-		{"id": "iron_3", "type": "iron_ore", "position": gate_center + Vector3(-12.0, 0.0, -11.0), "amount": 16},
-		{"id": "herb_1", "type": "herb_patch", "position": gate_center + Vector3(11.0, 0.0, 10.0), "amount": 0},
-		{"id": "cave_1", "type": "cave_site", "position": gate_center + Vector3(-15.0, 0.0, 2.0), "amount": 0},
+		{"id": "stone_1", "type": "stone_node", "position": gate_center + Vector3(-10.0, 0.0, 8.0), "amount": 18},
+		{"id": "stone_2", "type": "stone_node", "position": gate_center + Vector3(9.0, 0.0, -7.0), "amount": 16},
+		{"id": "stone_3", "type": "stone_node", "position": gate_center + Vector3(-12.0, 0.0, -11.0), "amount": 14},
+		{"id": "wood_1", "type": "wood_node", "position": gate_center + Vector3(11.0, 0.0, 10.0), "amount": 10},
+		{"id": "wood_2", "type": "wood_node", "position": gate_center + Vector3(-15.0, 0.0, 2.0), "amount": 10},
+		{"id": "herb_1", "type": "herb_patch", "position": gate_center + Vector3(13.0, 0.0, 12.0), "amount": 1},
 		{"id": "treasure_1", "type": "treasure_spot", "position": gate_center + Vector3(15.0, 0.0, -12.0), "amount": 0},
 		{"id": "crystal_1", "type": "crystal", "position": gate_center + Vector3(17.0, 0.0, 4.0), "amount": 1},
 		{"id": "crystal_2", "type": "crystal", "position": gate_center + Vector3(-16.0, 0.0, -5.0), "amount": 1},
@@ -1102,7 +1205,8 @@ func _update_resource_reveal_states() -> void:
 
 func _revealed_resource_counts() -> Dictionary:
 	var counts := {
-		"iron_ore": 0,
+		"stone_node": 0,
+		"wood_node": 0,
 		"herb_patch": 0,
 		"cave_site": 0,
 		"treasure_spot": 0,
@@ -1141,6 +1245,7 @@ func _crystals_remaining_in_radius() -> int:
 
 func _state_snapshot() -> Dictionary:
 	var snapshot := {
+		"current_era_id": _current_era_id,
 		"gate_active": _gate_active,
 		"extraction_active": _extraction_active,
 		"extraction_remaining": _extraction_remaining,
@@ -1166,6 +1271,113 @@ func _state_snapshot() -> Dictionary:
 		"channel_efficiency": _current_pylon_efficiency(),
 	}
 	return snapshot
+
+
+func get_current_era_name() -> String:
+	if era_manager != null and era_manager.has_method("get_active_gate_era_data"):
+		var data = era_manager.get_active_gate_era_data()
+		if data != null:
+			return String(data.display_name)
+	return "Stone Age"
+
+
+func get_material_display_name(material_id: String) -> String:
+	match material_id:
+		"stone":
+			return "Stone"
+		"wood":
+			return "Wood"
+		"herbs":
+			return "Herbs"
+		"iron":
+			return "Iron"
+		"scrap":
+			return "Scrap"
+		_:
+			return material_id.capitalize()
+
+
+func can_afford_costs(costs: Dictionary) -> bool:
+	for material_id in costs.keys():
+		var amount := int(costs.get(material_id, 0))
+		if amount <= 0:
+			continue
+		if String(material_id) == "scrap":
+			if not can_afford_scrap(amount):
+				return false
+			continue
+		if get_material_amount(String(material_id)) < amount:
+			return false
+	return true
+
+
+func consume_costs(costs: Dictionary) -> bool:
+	if not multiplayer.is_server():
+		return false
+	if not can_afford_costs(costs):
+		return false
+	for material_id in costs.keys():
+		var amount := int(costs.get(material_id, 0))
+		if amount <= 0:
+			continue
+		if String(material_id) == "scrap":
+			consume_scrap(amount)
+			continue
+		var material_key := String(material_id)
+		_stored_materials[material_key] = max(get_material_amount(material_key) - amount, 0)
+	_broadcast_gate_state()
+	return true
+
+
+func format_costs(costs: Dictionary) -> String:
+	var parts: Array[String] = []
+	for material_id in costs.keys():
+		var amount := int(costs.get(material_id, 0))
+		if amount <= 0:
+			continue
+		parts.append("%d %s" % [amount, get_material_display_name(String(material_id))])
+	if parts.is_empty():
+		return "Free"
+	return ", ".join(parts)
+
+
+func get_material_ids() -> Array[String]:
+	if era_manager != null and era_manager.has_method("get_material_ids"):
+		return era_manager.get_material_ids()
+	return ["stone", "wood", "herbs"]
+
+
+func _reset_material_inventory() -> void:
+	_stored_materials.clear()
+	for material_id in get_material_ids():
+		_stored_materials[String(material_id)] = 0
+
+
+func _material_summary() -> String:
+	var parts: Array[String] = []
+	for material_id in get_material_ids():
+		parts.append("%s %d" % [get_material_display_name(String(material_id)), get_material_amount(String(material_id))])
+	return " | ".join(parts)
+
+
+func _refresh_era_runtime_data() -> void:
+	if era_manager != null and era_manager.has_method("get_active_gate_era_id"):
+		_current_era_id = String(era_manager.get_active_gate_era_id())
+	if era_manager != null and era_manager.has_method("get_resource_nodes"):
+		_resource_definitions = era_manager.get_resource_nodes()
+	else:
+		_resource_definitions = _build_resource_definitions()
+	if _stored_materials.is_empty():
+		_reset_material_inventory()
+
+
+func _on_gate_pressure_finished(cleared: bool) -> void:
+	if not multiplayer.is_server() or not cleared:
+		return
+	if not _pylon_channeling:
+		return
+	status_changed.emit("Final Stone Age wave cleared. Essence banked and the pylon steadied.")
+	_stop_pylon_channel(true)
 
 
 func _set_player_channel_lock(peer_id: int, active: bool) -> void:

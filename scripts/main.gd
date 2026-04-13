@@ -1,5 +1,8 @@
 extends Node3D
 
+const BASE_OBJECTIVE_INTERACTION_RADIUS := 4.0
+const ERA_MANAGER_SCRIPT := preload("res://scripts/era_manager.gd")
+
 @onready var network_manager = $NetworkManager
 @onready var enemy_manager = $EnemyManager
 @onready var building_manager = $BuildingManager
@@ -11,6 +14,8 @@ extends Node3D
 @onready var core_objective = $World/CoreObjective
 @onready var startup_camera: Camera3D = $World/StartupCamera
 @onready var build_grid_overlay: MeshInstance3D = $World/BuildGridOverlay
+@onready var side_menu_dimmer: ColorRect = $UI/SideMenuDimmer
+@onready var side_menu_panel: PanelContainer = $UI/Panel
 @onready var address_input: LineEdit = $UI/Panel/VBoxContainer/AddressInput
 @onready var port_input: LineEdit = $UI/Panel/VBoxContainer/PortInput
 @onready var host_button: Button = $UI/Panel/VBoxContainer/HostButton
@@ -27,14 +32,17 @@ extends Node3D
 @onready var pylon_cap_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonCapUpgradeButton
 @onready var pylon_efficiency_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonEfficiencyUpgradeButton
 @onready var pylon_health_upgrade_button: Button = $UI/Panel/VBoxContainer/PylonHealthUpgradeButton
+@onready var info_menu_button: Button = $UI/Panel/VBoxContainer/InfoMenuButton
 @onready var scrap_panel: PanelContainer = $UI/ScrapPanel
 @onready var scrap_value_label: Label = $UI/ScrapPanel/HBoxContainer/ScrapValueLabel
+@onready var run_panel: PanelContainer = $UI/RunPanel
 @onready var status_mode_label: Label = $UI/StatusPanel/VBoxContainer/ModeLabel
 @onready var core_health_label: Label = $UI/StatusPanel/VBoxContainer/CoreHealthLabel
 @onready var core_health_bar: ProgressBar = $UI/StatusPanel/VBoxContainer/CoreHealthBar
 @onready var player_health_label: Label = $UI/StatusPanel/VBoxContainer/PlayerHealthLabel
 @onready var player_health_bar: ProgressBar = $UI/StatusPanel/VBoxContainer/PlayerHealthBar
 @onready var status_label: Label = $UI/StatusPanel/VBoxContainer/StatusLabel
+@onready var status_panel: PanelContainer = $UI/StatusPanel
 @onready var run_info_label: Label = $UI/RunPanel/VBoxContainer/RunInfoLabel
 @onready var cave_panel: PanelContainer = $UI/CavePanel
 @onready var cave_state_value_label: Label = $UI/CavePanel/VBoxContainer/CaveStateValueLabel
@@ -49,28 +57,56 @@ extends Node3D
 @onready var controls_panel: PanelContainer = $UI/ControlsPanel
 @onready var controls_context_label: Label = $UI/ControlsPanel/VBoxContainer/ControlsContextLabel
 @onready var controls_body_label: Label = $UI/ControlsPanel/VBoxContainer/ControlsBodyLabel
+@onready var tooltip_modal: Control = $UI/TooltipModal
+@onready var tooltip_title_label: Label = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Content/TooltipTitleLabel
+@onready var tooltip_body_label: Label = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Content/TooltipBodyLabel
+@onready var tooltip_run_button: Button = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav/RunTooltipButton
+@onready var tooltip_pylon_button: Button = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav/PylonTooltipButton
+@onready var tooltip_status_button: Button = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav/StatusTooltipButton
+@onready var tooltip_controls_button: Button = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav/ControlsTooltipButton
+@onready var tooltip_close_button: Button = $UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav/CloseTooltipButton
+@onready var action_modal: Control = $UI/ActionModal
+@onready var action_title_label: Label = $UI/ActionModal/Card/MarginContainer/VBoxContainer/ActionTitleLabel
+@onready var action_body_label: Label = $UI/ActionModal/Card/MarginContainer/VBoxContainer/ActionBodyLabel
+@onready var action_buttons_container: VBoxContainer = $UI/ActionModal/Card/MarginContainer/VBoxContainer/ActionScroll/ActionsContainer
+@onready var action_close_button: Button = $UI/ActionModal/Card/MarginContainer/VBoxContainer/CloseActionButton
 
-var _latest_run_info_base: String = "Base | Scrap 0 | Iron 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
+var _latest_run_info_base: String = "Base | Scrap 0 | Stone 0 | Wood 0 | Herbs 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
+var _side_menu_open: bool = false
+var _tooltip_modal_open: bool = false
+var _selected_tooltip_id: String = "run"
+var _action_modal_open: bool = false
+var _action_modal_kind: String = ""
+var era_manager: Node
 
 
 func _ready() -> void:
+	add_to_group("main_root")
+	era_manager = ERA_MANAGER_SCRIPT.new()
+	era_manager.name = "EraManager"
+	add_child(era_manager)
 	network_manager.set_players_root($World/Players)
 	enemy_manager.set_roots($World/Enemies, $World/Players)
 	enemy_manager.set_objective(core_objective)
 	enemy_manager.bind_network_manager(network_manager)
+	enemy_manager.set_era_manager(era_manager)
 	world_generator.set_dependencies($World, $World/GateFloor)
 	world_generator.bind_network_manager(network_manager)
 	building_manager.set_roots($World/Walls, $World/Projectiles, $World/Players, core_objective)
 	building_manager.bind_network_manager(network_manager)
 	building_manager.set_gate_manager(gate_manager)
+	building_manager.set_research_manager(research_manager)
+	building_manager.set_era_manager(era_manager)
 	gate_manager.set_roots($World/GateContent, $World/Players, core_objective)
 	gate_manager.set_world_generator(world_generator)
 	gate_manager.set_research_manager(research_manager)
 	gate_manager.set_cave_manager(cave_manager)
 	gate_manager.set_enemy_manager(enemy_manager)
 	gate_manager.set_building_manager(building_manager)
+	gate_manager.set_era_manager(era_manager)
 	gate_manager.bind_network_manager(network_manager)
 	research_manager.bind_network_manager(network_manager)
+	research_manager.set_era_manager(era_manager)
 	raid_manager.set_dependencies(enemy_manager, gate_manager, core_objective)
 	raid_manager.bind_network_manager(network_manager)
 	core_objective.bind_network_manager(network_manager)
@@ -88,6 +124,13 @@ func _ready() -> void:
 	network_manager.session_changed.connect(_on_session_changed)
 	core_objective.destroyed.connect(_on_core_destroyed)
 	enemy_manager.wave_changed.connect(_on_wave_changed)
+	info_menu_button.pressed.connect(_on_info_menu_pressed)
+	tooltip_run_button.pressed.connect(func() -> void: _show_tooltip("run"))
+	tooltip_pylon_button.pressed.connect(func() -> void: _show_tooltip("pylon"))
+	tooltip_status_button.pressed.connect(func() -> void: _show_tooltip("status"))
+	tooltip_controls_button.pressed.connect(func() -> void: _show_tooltip("controls"))
+	tooltip_close_button.pressed.connect(_close_tooltip_modal)
+	action_close_button.pressed.connect(_close_action_modal)
 
 	address_input.text = "127.0.0.1"
 	port_input.text = str(network_manager.default_port)
@@ -102,6 +145,11 @@ func _ready() -> void:
 	_refresh_controls_panel()
 	_refresh_interaction_prompt()
 	_refresh_build_grid_overlay()
+	_configure_side_menu_buttons()
+	_hide_legacy_info_panels()
+	_set_side_menu_open(false)
+	_set_tooltip_modal_open(false)
+	_set_action_modal_open(false, "")
 
 
 func _process(_delta: float) -> void:
@@ -109,6 +157,26 @@ func _process(_delta: float) -> void:
 	_refresh_controls_panel()
 	_refresh_interaction_prompt()
 	_refresh_build_grid_overlay()
+	if _tooltip_modal_open:
+		_refresh_tooltip_modal()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+		if not _tooltip_modal_open and not _action_modal_open:
+			_set_side_menu_open(not _side_menu_open)
+			get_viewport().set_input_as_handled()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _tooltip_modal_open and not _action_modal_open:
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if _action_modal_open:
+			_close_action_modal()
+		else:
+			_close_tooltip_modal()
+		get_viewport().set_input_as_handled()
 
 
 func _on_host_pressed() -> void:
@@ -166,21 +234,27 @@ func _on_core_upgrade_pressed() -> void:
 func _on_research_basic_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	research_manager.purchase_node("field_tools")
+	var visible_nodes := _visible_research_node_ids()
+	if visible_nodes.size() > 0:
+		research_manager.purchase_node(visible_nodes[0])
 	_refresh_progression_ui()
 
 
 func _on_research_unlock_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	research_manager.purchase_node("augment_slot")
+	var visible_nodes := _visible_research_node_ids()
+	if visible_nodes.size() > 1:
+		research_manager.purchase_node(visible_nodes[1])
 	_refresh_progression_ui()
 
 
 func _on_branch_unlock_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	research_manager.purchase_node("augment_branch")
+	var visible_nodes := _visible_research_node_ids()
+	if visible_nodes.size() > 2:
+		research_manager.purchase_node(visible_nodes[2])
 	_refresh_progression_ui()
 
 
@@ -212,6 +286,11 @@ func _on_pylon_health_upgrade_pressed() -> void:
 	_refresh_progression_ui()
 
 
+func _on_info_menu_pressed() -> void:
+	_set_side_menu_open(false)
+	_show_tooltip(_selected_tooltip_id)
+
+
 func _on_status_changed(message: String) -> void:
 	status_label.text = message
 
@@ -227,6 +306,7 @@ func _on_run_info_changed(message: String) -> void:
 	_refresh_controls_panel()
 	_refresh_build_grid_overlay()
 	_refresh_interaction_prompt()
+	_refresh_tooltip_modal()
 
 
 func _on_session_changed(in_session: bool) -> void:
@@ -237,9 +317,12 @@ func _on_session_changed(in_session: bool) -> void:
 	address_input.editable = not in_session
 	port_input.editable = not in_session
 	if not in_session:
+		_set_action_modal_open(false, "")
+		_set_tooltip_modal_open(false)
+		_set_side_menu_open(false)
 		cave_manager.clear_all_runtime_state()
 		startup_camera.current = true
-		_latest_run_info_base = "Base | Scrap 0 | Iron 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
+		_latest_run_info_base = "Base | Scrap 0 | Stone 0 | Wood 0 | Herbs 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
 		run_info_label.text = _compose_run_info(_latest_run_info_base)
 	else:
 		status_label.text = "Base idle. Start a gate run or begin a town hall upgrade."
@@ -250,6 +333,7 @@ func _on_session_changed(in_session: bool) -> void:
 	_refresh_status_overview()
 	_refresh_controls_panel()
 	_refresh_build_grid_overlay()
+	_refresh_tooltip_modal()
 
 
 func _on_core_destroyed() -> void:
@@ -264,9 +348,9 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 		_refresh_cave_status_ui()
 		if enemy_manager.get_pressure_mode() == "gate":
 			if is_breather:
-				status_label.text = "Gate pressure wave %d cleared. Short breather while the cave state holds." % wave_index
+				status_label.text = "Stone Age wave %d cleared. Short breather before the next push." % wave_index
 				return
-			status_label.text = "Gate pressure wave %d live. Keep the pylon up or close the cave." % wave_index
+			status_label.text = "Stone Age wave %d live. Keep the pylon standing through the pressure." % wave_index
 			return
 	if gate_manager.is_gate_active():
 		return
@@ -285,7 +369,7 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 	if is_breather:
 		status_label.text = "Wave %d cleared. Breather before next push." % wave_index
 		return
-	status_label.text = "Wave %d live. Space attacks, Q toggles build, LMB places, R rotates." % wave_index
+	status_label.text = "Wave %d live. LMB attacks, SPACE jumps, Q toggles build, R rotates." % wave_index
 
 
 func _on_gate_state_changed(is_active: bool) -> void:
@@ -314,6 +398,7 @@ func _on_raid_state_changed(is_active: bool) -> void:
 	_refresh_progression_ui()
 	_refresh_status_overview()
 	_refresh_controls_panel()
+	_refresh_tooltip_modal()
 
 
 func _refresh_progression_ui() -> void:
@@ -337,20 +422,28 @@ func _refresh_progression_ui() -> void:
 	core_upgrade_button.disabled = not is_host or progression_locked or not gate_manager.can_purchase_core_upgrade()
 	_refresh_research_buttons(is_host, has_session, gate_active)
 	_refresh_pylon_upgrade_buttons(is_host)
+	_configure_side_menu_buttons()
 	run_info_label.text = _compose_run_info(_latest_run_info_base)
 	_refresh_scrap_display()
 
 
 func _refresh_research_buttons(is_host: bool, has_session: bool, gate_active: bool) -> void:
-	var field_tools = research_manager.get_node_state("field_tools")
-	var augment_slot = research_manager.get_node_state("augment_slot")
-	var augment_branch = research_manager.get_node_state("augment_branch")
-	research_basic_button.text = _research_button_text(field_tools, "Upgrade")
-	research_unlock_button.text = _research_button_text(augment_slot, "Unlock")
-	branch_unlock_button.text = _research_button_text(augment_branch, "Unlock")
-	research_basic_button.disabled = not has_session or not is_host or gate_active or not research_manager.can_purchase_node("field_tools")
-	research_unlock_button.disabled = not has_session or not is_host or gate_active or not research_manager.can_purchase_node("augment_slot")
-	branch_unlock_button.disabled = not has_session or not is_host or gate_active or not research_manager.can_purchase_node("augment_branch")
+	var visible_nodes := _visible_research_node_ids()
+	var node_a := visible_nodes[0] if visible_nodes.size() > 0 else ""
+	var node_b := visible_nodes[1] if visible_nodes.size() > 1 else ""
+	var node_c := visible_nodes[2] if visible_nodes.size() > 2 else ""
+	var state_a = research_manager.get_node_state(node_a) if node_a != "" else {}
+	var state_b = research_manager.get_node_state(node_b) if node_b != "" else {}
+	var state_c = research_manager.get_node_state(node_c) if node_c != "" else {}
+	research_basic_button.text = _research_button_text(state_a, _research_action_verb(state_a))
+	research_unlock_button.text = _research_button_text(state_b, _research_action_verb(state_b))
+	branch_unlock_button.text = _research_button_text(state_c, _research_action_verb(state_c))
+	research_basic_button.disabled = node_a == "" or not has_session or not is_host or gate_active or not research_manager.can_purchase_node(node_a)
+	research_unlock_button.disabled = node_b == "" or not has_session or not is_host or gate_active or not research_manager.can_purchase_node(node_b)
+	branch_unlock_button.disabled = node_c == "" or not has_session or not is_host or gate_active or not research_manager.can_purchase_node(node_c)
+	research_basic_button.visible = false
+	research_unlock_button.visible = false
+	branch_unlock_button.visible = false
 
 
 func _refresh_pylon_upgrade_buttons(is_host: bool) -> void:
@@ -362,6 +455,10 @@ func _refresh_pylon_upgrade_buttons(is_host: bool) -> void:
 	pylon_cap_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("max_radius")
 	pylon_efficiency_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("channel_efficiency")
 	pylon_health_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("health")
+	pylon_radius_upgrade_button.visible = false
+	pylon_cap_upgrade_button.visible = false
+	pylon_efficiency_upgrade_button.visible = false
+	pylon_health_upgrade_button.visible = false
 
 
 func _research_button_text(node_state: Dictionary, action_verb: String) -> String:
@@ -382,6 +479,19 @@ func _research_button_text(node_state: Dictionary, action_verb: String) -> Strin
 	if cost_parts.is_empty():
 		cost_parts.append("Free")
 	return "%s %s (%s)" % [action_verb, display_name, " + ".join(cost_parts)]
+
+
+func _visible_research_node_ids() -> Array[String]:
+	if research_manager == null or not research_manager.has_method("get_visible_node_ids"):
+		return []
+	return research_manager.get_visible_node_ids()
+
+
+func _research_action_verb(node_state: Dictionary) -> String:
+	var node_type := String(node_state.get("type", "research"))
+	if node_type == "structure" or node_type == "branch" or node_type == "core":
+		return "Unlock"
+	return "Upgrade"
 
 
 func _compose_run_info(base_message: String) -> String:
@@ -406,7 +516,7 @@ func _refresh_claim_progress_ui() -> void:
 	if claim_panel == null:
 		return
 	var snapshot = gate_manager.get_cave_status_snapshot()
-	var visible = gate_manager.is_gate_active() and bool(snapshot.get("channel_active", false))
+	var visible = gate_manager.is_gate_active() and bool(snapshot.get("channel_active", false)) and not _tooltip_modal_open
 	claim_panel.visible = visible
 	if not visible:
 		claim_progress_label.text = ""
@@ -424,7 +534,7 @@ func _refresh_cave_status_ui() -> void:
 		return
 	var snapshot = gate_manager.get_cave_status_snapshot()
 	var visible := bool(snapshot.get("visible", false))
-	cave_panel.visible = visible
+	cave_panel.visible = false
 	if not visible:
 		cave_state_value_label.text = ""
 		cave_pressure_value_label.text = ""
@@ -437,7 +547,8 @@ func _refresh_cave_status_ui() -> void:
 	var influence_radius := int(round(float(snapshot.get("influence_radius", 0.0))))
 	var max_radius := int(round(float(snapshot.get("max_radius", 0.0))))
 	var crystals_remaining := int(snapshot.get("crystals_remaining", 0))
-	var ore_revealed := int(snapshot.get("ore_revealed", 0))
+	var stone_revealed := int(snapshot.get("stone_revealed", snapshot.get("ore_revealed", 0)))
+	var wood_revealed := int(snapshot.get("wood_revealed", 0))
 	var herbs_revealed := int(snapshot.get("herbs_revealed", 0))
 	var caves_revealed := int(snapshot.get("caves_revealed", 0))
 	var treasure_revealed := int(snapshot.get("treasure_revealed", 0))
@@ -450,8 +561,9 @@ func _refresh_cave_status_ui() -> void:
 		timer_label = " | Extract %0.1fs" % float(snapshot.get("extraction_remaining", 0.0))
 	cave_state_value_label.text = "%s | Pylon Lv %d%s" % [state_label, int(snapshot.get("pylon_level", 1)), timer_label]
 	cave_pressure_value_label.text = "Influence %d/%d | Crystals in range %d" % [influence_radius, max_radius, crystals_remaining]
-	cave_reward_value_label.text = "Reveal Ore %d | Herbs %d | Caves %d | Treasure %d | +%0.1f/s | Pending %d" % [ore_revealed, herbs_revealed, caves_revealed, treasure_revealed, reward_rate, pending_essence]
+	cave_reward_value_label.text = "Reveal Stone %d | Wood %d | Herbs %d | Treasure %d | +%0.1f/s | Pending %d" % [stone_revealed, wood_revealed, herbs_revealed, treasure_revealed, reward_rate, pending_essence]
 	cave_detail_label.text = detail_label
+	_refresh_tooltip_modal()
 
 
 func _get_port() -> int:
@@ -464,6 +576,7 @@ func _get_port() -> int:
 
 func _refresh_status_overview() -> void:
 	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	status_panel.visible = false
 	if not has_session:
 		status_mode_label.text = "Offline"
 		core_health_label.text = "Core: 300 / 300"
@@ -498,7 +611,7 @@ func _refresh_controls_panel() -> void:
 	if controls_panel == null:
 		return
 	var has_session := network_manager.multiplayer.multiplayer_peer != null
-	controls_panel.visible = has_session
+	controls_panel.visible = false
 	if not has_session:
 		return
 	var player := _local_player_node()
@@ -544,6 +657,8 @@ func _controls_hint_text(player: Node) -> String:
 
 	var hints: Array[String] = []
 	hints.append("LMB attack")
+	hints.append("RMB heavy")
+	hints.append("SPACE jump")
 	hints.append("E interact")
 	hints.append("1 wall")
 	hints.append("2 turret")
@@ -560,8 +675,10 @@ func _controls_hint_text(player: Node) -> String:
 
 	if gate_manager.is_gate_active() and gate_manager.get_gate_pylon_state() == "unplaced":
 		hints.append("Place pylon with E")
-	if gate_manager.is_gate_active() and bool(gate_manager.get_pylon_status_snapshot().get("channel_active", false)):
-		hints.append("E stop channel")
+	if gate_manager.is_gate_active() and gate_manager.get_gate_pylon_state() != "unplaced":
+		hints.append("E open pylon menu")
+	if not gate_manager.is_gate_active():
+		hints.append("E town hall menu")
 	if build_active:
 		if wall_segment_active:
 			hints.append("Q cancel wall")
@@ -577,6 +694,7 @@ func _controls_hint_text(player: Node) -> String:
 		return " | ".join(hints) + " | LMB place"
 
 	hints.append("Q enter build")
+	hints.append("TAB menu")
 	return " | ".join(hints)
 
 
@@ -588,6 +706,8 @@ func _refresh_build_grid_overlay() -> void:
 	var show_overlay := false
 	if has_session and player != null and player.has_method("is_build_mode_active"):
 		show_overlay = player.is_build_mode_active()
+	if _is_any_overlay_open():
+		show_overlay = false
 	build_grid_overlay.visible = show_overlay
 	if not show_overlay:
 		return
@@ -616,7 +736,7 @@ func _refresh_interaction_prompt() -> void:
 	if interaction_prompt_panel == null:
 		return
 	var has_session := network_manager.multiplayer.multiplayer_peer != null
-	if not has_session:
+	if not has_session or _is_any_overlay_open():
 		interaction_prompt_panel.visible = false
 		return
 	var prompt: Dictionary = {"visible": false, "text": ""}
@@ -624,5 +744,329 @@ func _refresh_interaction_prompt() -> void:
 		prompt = building_manager.get_repair_prompt_for_peer(multiplayer.get_unique_id())
 	if not bool(prompt.get("visible", false)) and gate_manager != null and gate_manager.has_method("get_interaction_prompt_for_peer"):
 		prompt = gate_manager.get_interaction_prompt_for_peer(multiplayer.get_unique_id())
+	if not bool(prompt.get("visible", false)):
+		prompt = _get_base_interaction_prompt(multiplayer.get_unique_id())
 	interaction_prompt_panel.visible = bool(prompt.get("visible", false))
 	interaction_prompt_label.text = String(prompt.get("text", ""))
+
+
+func _configure_side_menu_buttons() -> void:
+	town_hall_upgrade_button.visible = false
+	core_upgrade_button.visible = false
+	research_basic_button.visible = false
+	research_unlock_button.visible = false
+	branch_unlock_button.visible = false
+	pylon_radius_upgrade_button.visible = false
+	pylon_cap_upgrade_button.visible = false
+	pylon_efficiency_upgrade_button.visible = false
+	pylon_health_upgrade_button.visible = false
+	info_menu_button.visible = true
+
+
+func _hide_legacy_info_panels() -> void:
+	run_panel.visible = false
+	cave_panel.visible = false
+	status_panel.visible = false
+	controls_panel.visible = false
+
+
+func _show_tooltip(tooltip_id: String) -> void:
+	_selected_tooltip_id = tooltip_id
+	_set_side_menu_open(false)
+	_set_action_modal_open(false, "")
+	_set_tooltip_modal_open(true)
+	_refresh_tooltip_modal()
+
+
+func _close_tooltip_modal() -> void:
+	_set_tooltip_modal_open(false)
+
+
+func _set_tooltip_modal_open(active: bool) -> void:
+	_tooltip_modal_open = active
+	tooltip_modal.visible = active
+	_hide_legacy_info_panels()
+	_refresh_overlay_input_state()
+	if active:
+		_refresh_tooltip_modal()
+
+
+func _set_local_player_ui_locked(active: bool) -> void:
+	var player := _local_player_node()
+	if player != null and player.has_method("set_ui_locked"):
+		player.set_ui_locked(active)
+
+
+func _set_side_menu_open(active: bool) -> void:
+	_side_menu_open = active
+	side_menu_panel.visible = active
+	side_menu_dimmer.visible = active
+	if not active:
+		get_viewport().gui_release_focus()
+	if active:
+		_set_tooltip_modal_open(false)
+		_set_action_modal_open(false, "")
+	_refresh_overlay_input_state()
+
+
+func _show_action_modal(kind: String) -> void:
+	_set_side_menu_open(false)
+	_set_tooltip_modal_open(false)
+	_set_action_modal_open(true, kind)
+
+
+func _close_action_modal() -> void:
+	_set_action_modal_open(false, "")
+
+
+func _set_action_modal_open(active: bool, kind: String) -> void:
+	_action_modal_open = active
+	_action_modal_kind = kind
+	action_modal.visible = active
+	_refresh_overlay_input_state()
+	if active:
+		_refresh_action_modal()
+
+
+func _is_any_overlay_open() -> bool:
+	return _side_menu_open or _tooltip_modal_open or _action_modal_open
+
+
+func _refresh_overlay_input_state() -> void:
+	_set_local_player_ui_locked(_is_any_overlay_open())
+	var has_session := network_manager.multiplayer.multiplayer_peer != null
+	if _is_any_overlay_open() or not has_session or _local_player_node() == null:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	_refresh_claim_progress_ui()
+	_refresh_interaction_prompt()
+	_refresh_build_grid_overlay()
+
+
+func handle_local_interaction(peer_id: int) -> bool:
+	if _is_any_overlay_open():
+		return false
+	if gate_manager != null and gate_manager.has_method("can_open_pylon_menu_for_peer") and gate_manager.can_open_pylon_menu_for_peer(peer_id):
+		_show_action_modal("pylon")
+		return true
+	if _can_open_town_hall_menu_for_peer(peer_id):
+		_show_action_modal("town_hall")
+		return true
+	return false
+
+
+func _can_open_town_hall_menu_for_peer(peer_id: int) -> bool:
+	if network_manager.multiplayer.multiplayer_peer == null:
+		return false
+	if gate_manager.is_gate_active():
+		return false
+	if core_objective == null:
+		return false
+	var player := _local_player_node()
+	if player == null or int(player.get("peer_id")) != peer_id:
+		return false
+	return player.global_position.distance_to(core_objective.global_position) <= BASE_OBJECTIVE_INTERACTION_RADIUS
+
+
+func _get_base_interaction_prompt(peer_id: int) -> Dictionary:
+	if _can_open_town_hall_menu_for_peer(peer_id):
+		return {"visible": true, "text": "Press E to manage Town Hall"}
+	return {"visible": false, "text": ""}
+
+
+func _refresh_tooltip_modal() -> void:
+	if tooltip_modal == null or not _tooltip_modal_open:
+		return
+	tooltip_run_button.disabled = _selected_tooltip_id == "run"
+	tooltip_pylon_button.disabled = _selected_tooltip_id == "pylon"
+	tooltip_status_button.disabled = _selected_tooltip_id == "status"
+	tooltip_controls_button.disabled = _selected_tooltip_id == "controls"
+	match _selected_tooltip_id:
+		"pylon":
+			tooltip_title_label.text = "Pylon Status"
+			tooltip_body_label.text = _tooltip_pylon_text()
+		"status":
+			tooltip_title_label.text = "Status"
+			tooltip_body_label.text = _tooltip_status_text()
+		"controls":
+			tooltip_title_label.text = "Controls"
+			tooltip_body_label.text = _tooltip_controls_text()
+		_:
+			tooltip_title_label.text = "Run Summary"
+			tooltip_body_label.text = _tooltip_run_text()
+
+
+func _tooltip_run_text() -> String:
+	return run_info_label.text
+
+
+func _tooltip_pylon_text() -> String:
+	var sections: Array[String] = []
+	if cave_state_value_label.text != "":
+		sections.append("State\n%s" % cave_state_value_label.text)
+	if cave_pressure_value_label.text != "":
+		sections.append("Influence\n%s" % cave_pressure_value_label.text)
+	if cave_reward_value_label.text != "":
+		sections.append("Tracking\n%s" % cave_reward_value_label.text)
+	if cave_detail_label.text != "":
+		sections.append("Detail\n%s" % cave_detail_label.text)
+	if sections.is_empty():
+		return "No active pylon information right now."
+	return "\n\n".join(sections)
+
+
+func _tooltip_status_text() -> String:
+	return "Mode\n%s\n\nCore\n%s\n\nPlayer\n%s\n\nState\n%s" % [status_mode_label.text, core_health_label.text, player_health_label.text, status_label.text]
+
+
+func _tooltip_controls_text() -> String:
+	return "%s\n\n%s" % [controls_context_label.text, controls_body_label.text]
+
+
+func _refresh_action_modal() -> void:
+	if not _action_modal_open or action_modal == null:
+		return
+	for child in action_buttons_container.get_children():
+		action_buttons_container.remove_child(child)
+		child.queue_free()
+	match _action_modal_kind:
+		"town_hall":
+			action_title_label.text = "Town Hall"
+			action_body_label.text = _town_hall_modal_text()
+			_add_action_button(
+				"Start Town Hall Upgrade (%d Scrap)" % raid_manager.get_next_town_hall_upgrade_cost(),
+				Callable(self, "_action_start_town_hall_upgrade"),
+				not (multiplayer.is_server() and raid_manager.can_start_town_hall_upgrade())
+			)
+		"pylon":
+			action_title_label.text = "Pylon Console"
+			action_body_label.text = _pylon_modal_text()
+			var pylon_snapshot = gate_manager.get_pylon_status_snapshot()
+			var pylon_action_text := "Stop Channel" if bool(pylon_snapshot.get("channel_active", false)) else "Start Channel"
+			_add_action_button(
+				pylon_action_text,
+				Callable(self, "_action_toggle_pylon_channel"),
+				gate_manager.get_gate_pylon_state() == "damaged"
+			)
+			_add_action_button(
+				pylon_radius_upgrade_button.text,
+				Callable(self, "_action_upgrade_pylon_radius"),
+				pylon_radius_upgrade_button.disabled
+			)
+			_add_action_button(
+				pylon_cap_upgrade_button.text,
+				Callable(self, "_action_upgrade_pylon_cap"),
+				pylon_cap_upgrade_button.disabled
+			)
+			_add_action_button(
+				pylon_efficiency_upgrade_button.text,
+				Callable(self, "_action_upgrade_pylon_efficiency"),
+				pylon_efficiency_upgrade_button.disabled
+			)
+			_add_action_button(
+				pylon_health_upgrade_button.text,
+				Callable(self, "_action_upgrade_pylon_health"),
+				pylon_health_upgrade_button.disabled
+			)
+			for node_id in _visible_research_node_ids():
+				var node_state = research_manager.get_node_state(node_id)
+				_add_action_button(
+					_research_button_text(node_state, _research_action_verb(node_state)),
+					Callable(self, "_action_purchase_research").bind(node_id),
+					not (multiplayer.is_server() and research_manager.can_purchase_node(node_id))
+				)
+		_:
+			action_title_label.text = "Actions"
+			action_body_label.text = "No actions available."
+	if action_buttons_container.get_child_count() == 0:
+		_add_action_button("No Actions Available", Callable(), true)
+
+
+func _town_hall_modal_text() -> String:
+	if raid_manager.is_upgrade_channeling():
+		return "Town Hall upgrade channeling is already active. A raid is about to begin."
+	if raid_manager.is_raid_active():
+		return "A raid is already in progress. Defend the Town Hall until it ends."
+	return "Town Hall Level %d\nNext upgrade cost: %d Scrap\n\nPress the button below to begin the upgrade and trigger the next raid." % [raid_manager.get_town_hall_level(), raid_manager.get_next_town_hall_upgrade_cost()]
+
+
+func _pylon_modal_text() -> String:
+	var snapshot = gate_manager.get_pylon_status_snapshot()
+	var lines: Array[String] = []
+	lines.append(String(snapshot.get("state_label", "Pylon")))
+	lines.append(String(snapshot.get("detail_label", "")))
+	lines.append("Radius %d / %d" % [int(round(float(snapshot.get("influence_radius", 0.0)))), int(round(float(snapshot.get("max_radius", 0.0))))])
+	lines.append("Pending Essence %d" % int(floor(float(snapshot.get("current_reward", 0.0)))))
+	return "\n".join(lines)
+
+
+func _add_action_button(text: String, action: Callable, disabled: bool) -> void:
+	var button := Button.new()
+	button.text = text
+	button.disabled = disabled
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if action.is_valid() and not disabled:
+		button.pressed.connect(action)
+	action_buttons_container.add_child(button)
+
+
+func _action_start_town_hall_upgrade() -> void:
+	if multiplayer.is_server():
+		raid_manager.start_town_hall_upgrade()
+	_close_action_modal()
+
+
+func _action_toggle_pylon_channel() -> void:
+	if gate_manager.has_method("request_local_objective_interaction"):
+		gate_manager.request_local_objective_interaction(multiplayer.get_unique_id())
+	_close_action_modal()
+
+
+func _action_upgrade_pylon_radius() -> void:
+	_on_pylon_radius_upgrade_pressed()
+	_refresh_action_modal()
+
+
+func _action_upgrade_pylon_cap() -> void:
+	_on_pylon_cap_upgrade_pressed()
+	_refresh_action_modal()
+
+
+func _action_upgrade_pylon_efficiency() -> void:
+	_on_pylon_efficiency_upgrade_pressed()
+	_refresh_action_modal()
+
+
+func _action_upgrade_pylon_health() -> void:
+	_on_pylon_health_upgrade_pressed()
+	_refresh_action_modal()
+
+
+func _action_purchase_field_tools() -> void:
+	var visible_nodes := _visible_research_node_ids()
+	if visible_nodes.size() > 0:
+		_action_purchase_research(visible_nodes[0])
+	_refresh_action_modal()
+
+
+func _action_purchase_augment_slot() -> void:
+	var visible_nodes := _visible_research_node_ids()
+	if visible_nodes.size() > 1:
+		_action_purchase_research(visible_nodes[1])
+	_refresh_action_modal()
+
+
+func _action_purchase_augment_branch() -> void:
+	var visible_nodes := _visible_research_node_ids()
+	if visible_nodes.size() > 2:
+		_action_purchase_research(visible_nodes[2])
+	_refresh_action_modal()
+
+
+func _action_purchase_research(node_id: String) -> void:
+	if node_id == "":
+		return
+	if multiplayer.is_server():
+		research_manager.purchase_node(node_id)
+	_refresh_action_modal()

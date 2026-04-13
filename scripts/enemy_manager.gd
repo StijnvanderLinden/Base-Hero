@@ -2,6 +2,7 @@ extends Node
 
 signal wave_changed(wave_index: int, is_breather: bool)
 signal raid_finished(success: bool)
+signal gate_pressure_finished(cleared: bool)
 
 @export var enemy_scene: PackedScene
 @export var raid_enemy_scene: PackedScene
@@ -47,6 +48,8 @@ var _raid_spawns_per_wave_runtime: int = 8
 var _raid_breather_duration_runtime: float = 5.0
 var _raid_wave_enemy_bonus_runtime: int = 2
 var _spawn_point_provider: Node
+var era_manager: Node
+var _gate_wave_definitions: Array[Dictionary] = []
 
 
 func set_roots(enemy_root: Node3D, player_root: Node3D) -> void:
@@ -69,6 +72,10 @@ func set_spawn_center(new_spawn_center: Vector3) -> void:
 
 func set_spawn_point_provider(provider: Node) -> void:
 	_spawn_point_provider = provider
+
+
+func set_era_manager(manager: Node) -> void:
+	era_manager = manager
 
 
 func get_current_objective() -> Node3D:
@@ -103,10 +110,16 @@ func _physics_process(delta: float) -> void:
 	if _breather_time_remaining > 0.0:
 		_breather_time_remaining = max(_breather_time_remaining - delta, 0.0)
 		if _breather_time_remaining <= 0.0:
+			if _should_wait_for_gate_completion():
+				_check_for_gate_completion()
+				return
 			if _should_wait_for_raid_completion():
 				_check_for_raid_completion()
 				return
 			_start_next_wave()
+		return
+	if _should_wait_for_gate_completion():
+		_check_for_gate_completion()
 		return
 	if _should_wait_for_raid_completion():
 		_check_for_raid_completion()
@@ -126,6 +139,9 @@ func _physics_process(delta: float) -> void:
 	_next_enemy_id += 1
 	_wave_spawned_count += 1
 	if _wave_spawned_count >= _current_spawns_per_wave():
+		if _should_wait_for_gate_completion():
+			_check_for_gate_completion()
+			return
 		if _should_wait_for_raid_completion():
 			_check_for_raid_completion()
 			return
@@ -239,7 +255,18 @@ func _enemy_name(enemy_id: int) -> String:
 func _enemy_kind_for_current_pressure() -> String:
 	if _pressure_mode == "raid":
 		return _raid_enemy_kind_for_current_spawn()
+	if _pressure_mode == "gate" and not _gate_wave_definitions.is_empty():
+		return _gate_enemy_kind_for_current_spawn()
 	return "exploration"
+
+
+func _gate_enemy_kind_for_current_spawn() -> String:
+	var definition := _current_gate_wave_definition()
+	var sequence: Array = definition.get("enemy_sequence", [])
+	if sequence.is_empty():
+		return "exploration"
+	var spawn_index = clamp(_wave_spawned_count, 0, sequence.size() - 1)
+	return String(sequence[spawn_index])
 
 
 func _raid_enemy_kind_for_current_spawn() -> String:
@@ -255,6 +282,10 @@ func _raid_enemy_kind_for_current_spawn() -> String:
 
 
 func _scene_for_enemy_kind(enemy_kind: String) -> PackedScene:
+	if era_manager != null and era_manager.has_method("get_enemy_scene"):
+		var era_scene = era_manager.get_enemy_scene(enemy_kind)
+		if era_scene != null:
+			return era_scene
 	if enemy_kind == "construct_breaker" and raid_breaker_enemy_scene != null:
 		return raid_breaker_enemy_scene
 	if enemy_kind == "construct" and raid_enemy_scene != null:
@@ -263,6 +294,12 @@ func _scene_for_enemy_kind(enemy_kind: String) -> PackedScene:
 
 
 func _current_enemy_start_health(enemy_kind: String) -> float:
+	if era_manager != null and era_manager.has_method("get_active_gate_era_data") and _pressure_mode == "gate":
+		var era_data = era_manager.get_active_gate_era_data()
+		if era_data != null:
+			var enemy_catalog: Dictionary = era_data.enemy_catalog
+			if enemy_catalog.has(enemy_kind):
+				return float((enemy_catalog[enemy_kind] as Dictionary).get("start_health", 1.0))
 	var base_health := exploration_enemy_base_health
 	if enemy_kind == "construct":
 		base_health = construct_enemy_base_health
@@ -314,6 +351,9 @@ func start_gate_pressure(target_objective: Node3D, spawn_center: Vector3, paused
 	set_objective(target_objective)
 	set_spawn_center(spawn_center)
 	_pressure_mode = "gate"
+	_gate_wave_definitions.clear()
+	if era_manager != null and era_manager.has_method("get_wave_definitions"):
+		_gate_wave_definitions = era_manager.get_wave_definitions()
 	_reset_pressure_state()
 	_spawning_paused = paused_for_prep
 	_clear_enemies_local()
@@ -345,6 +385,7 @@ func stop_pressure(clear_enemies: bool = true) -> void:
 		return
 	_pressure_mode = "idle"
 	_reset_pressure_state()
+	_gate_wave_definitions.clear()
 	_spawning_paused = true
 	if clear_enemies:
 		_clear_enemies_local()
@@ -361,6 +402,7 @@ func force_restart() -> void:
 	_pressure_mode = "idle"
 	_next_enemy_id = 1
 	_reset_pressure_state()
+	_gate_wave_definitions.clear()
 	_spawning_paused = true
 	_clear_enemies_local()
 	_clear_all_enemies_remote.rpc()
@@ -376,25 +418,34 @@ func _next_spawn_position(enemy_id: int) -> Vector3:
 func _current_max_enemies() -> int:
 	if _pressure_mode == "raid":
 		return _raid_max_enemies_runtime + max(_wave_index - 1, 0) * _raid_wave_enemy_bonus_runtime
+	if _pressure_mode == "gate" and not _gate_wave_definitions.is_empty():
+		return int(_current_gate_wave_definition().get("max_enemies", max_enemies))
 	return max_enemies + max(_wave_index - 1, 0) * wave_enemy_bonus
 
 
 func _current_spawn_interval() -> float:
 	if _pressure_mode == "raid":
 		return max(_raid_spawn_interval_runtime - float(max(_wave_index - 1, 0)) * spawn_interval_step, min_spawn_interval)
+	if _pressure_mode == "gate" and not _gate_wave_definitions.is_empty():
+		return max(float(_current_gate_wave_definition().get("spawn_interval", spawn_interval)), min_spawn_interval)
 	return max(spawn_interval - float(max(_wave_index - 1, 0)) * spawn_interval_step, min_spawn_interval)
 
 
 func _current_spawns_per_wave() -> int:
 	if _pressure_mode == "raid":
 		return _raid_spawns_per_wave_runtime
+	if _pressure_mode == "gate" and not _gate_wave_definitions.is_empty():
+		return int(_current_gate_wave_definition().get("spawns_per_wave", spawns_per_wave))
 	return spawns_per_wave
 
 
 func _begin_breather() -> void:
 	if _breather_time_remaining > 0.0:
 		return
-	_breather_time_remaining = _raid_breather_duration_runtime if _pressure_mode == "raid" else breather_duration
+	if _pressure_mode == "gate" and not _gate_wave_definitions.is_empty():
+		_breather_time_remaining = float(_current_gate_wave_definition().get("breather_duration", breather_duration))
+	else:
+		_breather_time_remaining = _raid_breather_duration_runtime if _pressure_mode == "raid" else breather_duration
 	_spawn_timer = 0.0
 	wave_changed.emit(_wave_index, true)
 
@@ -408,6 +459,7 @@ func _start_next_wave() -> void:
 
 func _update_pending_despawns(delta: float) -> void:
 	if _pending_despawns.is_empty():
+		_check_for_gate_completion()
 		_check_for_raid_completion()
 		return
 
@@ -422,6 +474,7 @@ func _update_pending_despawns(delta: float) -> void:
 	for enemy_id in to_remove:
 		despawn_enemy_for_all(enemy_id)
 
+	_check_for_gate_completion()
 	_check_for_raid_completion()
 
 
@@ -432,6 +485,28 @@ func _reset_pressure_state() -> void:
 	_wave_index = 1
 	_wave_spawned_count = 0
 	_breather_time_remaining = 0.0
+
+
+func _current_gate_wave_definition() -> Dictionary:
+	if _gate_wave_definitions.is_empty():
+		return {}
+	var wave_index = clamp(_wave_index - 1, 0, _gate_wave_definitions.size() - 1)
+	return (_gate_wave_definitions[wave_index] as Dictionary).duplicate(true)
+
+
+func _should_wait_for_gate_completion() -> bool:
+	return _pressure_mode == "gate" and not _gate_wave_definitions.is_empty() and _wave_index >= _gate_wave_definitions.size() and _wave_spawned_count >= _current_spawns_per_wave()
+
+
+func _check_for_gate_completion() -> void:
+	if not multiplayer.is_server():
+		return
+	if not _should_wait_for_gate_completion():
+		return
+	if enemies_root != null and enemies_root.get_child_count() > 0:
+		return
+	stop_pressure(false)
+	gate_pressure_finished.emit(true)
 
 
 func _should_wait_for_raid_completion() -> bool:

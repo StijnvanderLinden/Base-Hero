@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Second Construct Role Implemented
+Stone Age Enemy Family Implemented For The First Era Slice
 
 ---
 
@@ -37,21 +37,28 @@ Construct role direction:
 - Enemies can target objectives and nearby structures in the current prototype
 - Readable overhead enemy health bars exist
 - Basic wave pressure foundation exists
-- Raids now use a first dedicated construct swarm unit instead of the generic exploration enemy
-- Raids now mix in a first heavy construct breaker role with stronger structure and objective pressure
+- Era-driven gate wave definitions now exist
+- Stone Age now has a full first exploration enemy family:
+	- Caveman
+	- Brute
+	- Beast
+	- Stone Mech mini boss
+- Beast now uses a simple charge behavior for pressure spikes
+- Final Stone Age pylon wave now resolves through a defined boss finish instead of endless generic pressure
+- Raids still keep their existing construct swarm and breaker roles
 
 ---
 
 ## In Progress
-- Splitting the runtime enemy design into exploration enemies versus constructs
-- Defining the first biome exploration enemy family
+- Tuning Stone Age wave cadence, health values, and boss pressure
+- Keeping the split between era exploration enemies and raid constructs readable in mixed project state
 
 ---
 
 ## Blockers / Problems
-- No biome exploration family exists yet
 - No shield, siege, or elite construct role is implemented yet
-- No performance strategy tested for larger raid armies yet
+- Stone Age enemy visuals still use simple prototype scene geometry
+- No performance strategy tested for larger mixed armies yet
 
 ---
 
@@ -92,7 +99,6 @@ Construct role direction:
 ---
 
 ## Open Questions
-- What is the first biome exploration enemy family?
 - What is the first construct role after the current basic attacker?
 - When should shield and siege roles enter the raid loop?
 - How much enemy scaling should come from count versus role mix?
@@ -105,14 +111,14 @@ Construct role direction:
 - Construct enemies are used for pylon defense events and raids
 - Exploration enemies should feel biome-driven rather than army-like
 - Readability matters more than maximum complexity early on
-- The first construct implementation should be a small swarm unit before adding shield, heavy, or siege roles
-- The second construct implementation is now a heavy breaker that targets structures and the objective more aggressively than the swarm unit
+- The first era uses a self-contained Stone Age enemy family instead of generic exploration placeholders
+- Stone Age gate pressure is wave-defined and boss-capped rather than open-ended in the first slice
 
 ---
 
 ## Next Recommended Task
-Implement the first enemy split:
-- define one first-biome exploration enemy family
-- validate the heavy breaker in multiplayer raids and pylon events
-- keep behavior readable and strongly role-driven
-- validate both types in multiplayer
+Validate the Stone Age family in multiplayer:
+- tune Caveman, Brute, Beast, and Stone Mech pacing
+- confirm the final-wave completion feel during pylon channeling
+- keep raid constructs separate from era exploration pressure
+- use that validation to define the next construct role after the current breaker

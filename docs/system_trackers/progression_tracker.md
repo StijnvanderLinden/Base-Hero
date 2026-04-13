@@ -6,7 +6,7 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Design Refactor Confirmed, Material Progression Refactor Needed
+Stone Age Progression Slice Implemented On Top Of The Pylon Loop
 
 ---
 
@@ -31,36 +31,39 @@ Current confirmed direction:
 - Core upgrade progression already exists in the live prototype
 - Augment and weapon progression direction is already documented at a high level
 - Modifier-scaled pylon reward progression is now documented as confirmed design truth
-- Material-based channeling and core research direction are now documented as confirmed design truth
+- Era-driven research definitions now exist at runtime
+- Stone Age now has a live first progression slice:
+	- Reinforced Wall unlock
+	- Improved Thrower unlock
+	- first augment slot unlock
+	- first branch unlock
+	- simple damage, attack-speed, range, and optional AoE augment nodes
+- Stone Age crystal spending is now intentionally small and focused
 
 ---
 
 ## In Progress
-- Replacing the old cave-oriented reward framing with milestone-based pylon channeling rewards
-- Defining the first per-material essence capacity rules for the multiplayer-safe prototype
-- Defining how material essence and special materials feed the existing player and base progression paths
-- Defining how modifier count changes full-completion reward quality without replacing milestone payouts
-- Defining the first unified material research trees on the player core
+- Tuning Stone Age essence and crystal costs for fast unlock pacing
+- Aligning the live Stone Age slice with the broader long-term material-specific progression plan
+- Defining how later eras should widen the research set without overloading the early UI
 
 ---
 
 ## Blockers / Problems
-- Runtime still uses older gate reward language and does not yet expose dedicated material essence, special material, or per-material capacity systems
-- The split between immediately banked milestone rewards and vulnerable generated material essence is not implemented yet
-- Exploration materials are not yet linked to pylon ritual costs
-- Runtime reward tables do not yet account for modifier-count-based completion tiers
-- The core does not yet expose unified material research trees
+- Runtime still uses one shared essence pool rather than per-material stored essence
+- The split between safe milestone rewards and vulnerable generated essence is still simplified in runtime
+- full modifier-count reward scaling is not implemented yet
+- the Stone Age slice is intentionally narrower than the long-term progression specification
 
 ---
 
 ## Must Have
 - Gold as a tactical resource for building structures only
 - Material gathering as the primary progression input
-- Per-material essence capacity that caps only generated matching essence
-- Safe milestone banking at 1/3, 2/3, and 3/3
-- Unified core research trees per material
-- Special materials for advanced research nodes
-- Modifier-count-based completion reward tiers for repeated pylon mastery
+- Fast first-era progression pacing
+- first augment slot and branch unlock path
+- first simple combat augment set
+- first structure upgrade unlocks
 
 ---
 
@@ -102,19 +105,12 @@ Current confirmed direction:
 
 ## Recent Decisions
 - Progression is now fed primarily by pylon channeling rather than cave expeditions
-- Generic essence is removed in favor of material-based essence conversion
-- Gold remains a tactical structure resource and no longer starts pylon channels
-- Milestone rewards are always safe and bypass per-material capacity limits
-- Generated material essence is capped and remains at risk until banked or extracted safely
-- Repeated pylon clears now function as a structured mastery ladder
-- Full completion rewards scale with active modifier count rather than player-selected challenge settings
-- Core research is unified per material tree
+- Stone Age uses a deliberately small, fast unlock set instead of a broad tree
+- structure upgrades and first augments are available inside Era 1
+- complex augment interactions are deferred until later eras
+- the first era keeps crystal spending minimal and focused
 
 ---
 
 ## Next Recommended Task
-Define the first material-aware progression contract:
-- choose the first two or three material trees for the prototype
-- map matching material input to matching material essence output per pylon phase
-- keep milestone payouts stable across modifier tiers
-- expose modifier count and material type to reward generation on the authoritative side
+Playtest the Stone Age unlock cadence and then decide how much of the broader per-material essence plan should move from documentation into runtime for the next progression pass.

@@ -6,6 +6,7 @@ const PLAYER_PROJECTILE_SCENE := preload("res://scenes/player_projectile.tscn")
 @export var speed: float = 6.0
 # The downward acceleration when in the air, in meters per second squared.
 @export var fall_acceleration: float = 24.0
+@export var jump_velocity: float = 9.5
 @export var mouse_sensitivity: float = 0.0035
 @export var min_camera_pitch_degrees: float = -70.0
 @export var max_camera_pitch_degrees: float = 50.0
@@ -35,8 +36,11 @@ var _input_vector: Vector2 = Vector2.ZERO
 var target_velocity: Vector3 = Vector3.ZERO
 var current_health: float = 100.0
 var _attack_cooldown_remaining: float = 0.0
+var _heavy_attack_cooldown_remaining: float = 0.0
 var _attack_visual_time_remaining: float = 0.0
 var _attack_was_pressed: bool = false
+var _heavy_attack_was_pressed: bool = false
+var _jump_was_pressed: bool = false
 var _build_was_pressed: bool = false
 var _interact_was_pressed: bool = false
 var _select_wall_was_pressed: bool = false
@@ -52,7 +56,7 @@ var _preview_invalid_text_color: Color = Color(1.0, 0.76, 0.76, 1.0)
 var _preview_reticle_valid_color: Color = Color(0.52, 1.0, 0.68, 0.72)
 var _preview_reticle_invalid_color: Color = Color(1.0, 0.48, 0.44, 0.72)
 var _current_build_type: String = "wall"
-var _build_mode_active: bool = true
+var _build_mode_active: bool = false
 var _build_hold_active: bool = false
 var _build_hold_type: String = "wall"
 var _build_hold_anchor_position: Vector3 = Vector3.ZERO
@@ -64,6 +68,7 @@ var _wall_preview_mesh: BoxMesh
 var _turret_preview_mesh: CylinderMesh
 var _build_preview_extra_meshes: Array = []
 var _channel_locked: bool = false
+var _ui_locked: bool = false
 var _camera_pitch: float = 0.0
 var _build_reticle_root: Node3D
 var _build_reticle_mesh: MeshInstance3D
@@ -88,6 +93,7 @@ var _network_target_position: Vector3 = Vector3.ZERO
 var _network_target_velocity: Vector3 = Vector3.ZERO
 var _network_target_facing_y: float = 0.0
 var _has_network_target: bool = false
+var _jump_requested: bool = false
 var _next_projectile_id: int = 1
 var _attack_visual_root: Node3D
 var _attack_visual_mesh: MeshInstance3D
@@ -161,11 +167,16 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _is_local_player():
+	var movement_locked := _channel_locked
+	var action_locked := _channel_locked or _ui_locked
+	if _is_local_player() and not _ui_locked:
 		_update_build_selection()
 
 	_attack_cooldown_remaining = max(_attack_cooldown_remaining - delta, 0.0)
+	_heavy_attack_cooldown_remaining = max(_heavy_attack_cooldown_remaining - delta, 0.0)
 	var attack_pressed := _consume_attack_pressed()
+	var heavy_attack_pressed := _consume_heavy_attack_pressed()
+	var jump_pressed := _consume_jump_pressed()
 	var build_held := _is_build_input_held()
 	var build_pressed := build_held and not _build_was_pressed
 	var build_released := not build_held and _build_was_pressed
@@ -174,35 +185,49 @@ func _physics_process(delta: float) -> void:
 
 	if multiplayer.is_server():
 		if _is_local_player():
-			_input_vector = Vector2.ZERO if _channel_locked else _read_input_vector()
-			if attack_pressed and not _channel_locked:
+			_input_vector = Vector2.ZERO if movement_locked else _read_input_vector()
+			if jump_pressed and not movement_locked:
+				_request_server_jump()
+			if attack_pressed and not action_locked:
 				_perform_server_attack()
-			if build_pressed and not _channel_locked and _build_mode_active:
+			if heavy_attack_pressed and not action_locked:
+				_perform_server_heavy_attack()
+			if build_pressed and not action_locked and _build_mode_active:
 				if _current_build_type == "wall":
 					_handle_wall_segment_click_server()
 				else:
 					_begin_build_hold()
 			if build_released and _build_hold_active:
 				_confirm_build_hold_server()
-			if interact_pressed and not _channel_locked:
+			if interact_pressed and not action_locked:
+				if _handle_local_ui_interaction():
+					_simulate_movement(delta)
+					_sync_state.rpc(global_position, velocity, look_pivot.rotation.y)
+					return
 				_perform_server_interact()
 		_simulate_movement(delta)
 		_sync_state.rpc(global_position, velocity, look_pivot.rotation.y)
 		return
 
 	if _is_local_player():
-		var submitted_input := Vector2.ZERO if _channel_locked else _read_input_vector()
+		var submitted_input := Vector2.ZERO if movement_locked else _read_input_vector()
 		_submit_input.rpc_id(1, submitted_input, look_pivot.rotation.y)
-		if attack_pressed and not _channel_locked:
+		if jump_pressed and not movement_locked:
+			_request_jump.rpc_id(1)
+		if attack_pressed and not action_locked:
 			_request_attack.rpc_id(1)
-		if build_pressed and not _channel_locked and _build_mode_active:
+		if heavy_attack_pressed and not action_locked:
+			_request_heavy_attack.rpc_id(1)
+		if build_pressed and not action_locked and _build_mode_active:
 			if _current_build_type == "wall":
 				_handle_wall_segment_click_remote()
 			else:
 				_begin_build_hold()
 		if build_released and _build_hold_active:
 			_confirm_build_hold_remote()
-		if interact_pressed and not _channel_locked:
+		if interact_pressed and not action_locked:
+			if _handle_local_ui_interaction():
+				return
 			_request_interact.rpc_id(1)
 
 
@@ -217,11 +242,13 @@ func _simulate_movement(delta: float) -> void:
 
 	target_velocity.x = direction.x * speed
 	target_velocity.z = direction.z * speed
+	var should_jump := _jump_requested and not _channel_locked
+	_jump_requested = false
 
 	if not is_on_floor():
 		target_velocity.y -= fall_acceleration * delta
 	else:
-		target_velocity.y = 0.0
+		target_velocity.y = jump_velocity if should_jump else 0.0
 
 	velocity = target_velocity
 	move_and_slide()
@@ -235,6 +262,8 @@ func _read_input_vector() -> Vector2:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_local_player():
+		return
+	if _ui_locked:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -378,9 +407,35 @@ func _sync_visual_orientation() -> void:
 
 
 func _consume_attack_pressed() -> bool:
-	var is_pressed := Input.is_key_pressed(KEY_SPACE)
+	if _build_mode_active:
+		_attack_was_pressed = false
+		return false
+	if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		_attack_was_pressed = false
+		return false
+	var is_pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	var just_pressed := is_pressed and not _attack_was_pressed
 	_attack_was_pressed = is_pressed
+	return just_pressed
+
+
+func _consume_heavy_attack_pressed() -> bool:
+	if _build_mode_active:
+		_heavy_attack_was_pressed = false
+		return false
+	if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		_heavy_attack_was_pressed = false
+		return false
+	var is_pressed := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	var just_pressed := is_pressed and not _heavy_attack_was_pressed
+	_heavy_attack_was_pressed = is_pressed
+	return just_pressed
+
+
+func _consume_jump_pressed() -> bool:
+	var is_pressed := Input.is_key_pressed(KEY_SPACE)
+	var just_pressed := is_pressed and not _jump_was_pressed
+	_jump_was_pressed = is_pressed
 	return just_pressed
 
 
@@ -454,6 +509,10 @@ func is_channel_locked() -> bool:
 	return _channel_locked
 
 
+func is_ui_locked() -> bool:
+	return _ui_locked
+
+
 func get_build_forward_vector() -> Vector3:
 	var forward := -look_pivot.global_basis.z
 	forward.y = 0.0
@@ -503,6 +562,7 @@ func _server_respawn() -> void:
 	global_position = spawn_position
 	velocity = Vector3.ZERO
 	target_velocity = Vector3.ZERO
+	_jump_requested = false
 	look_pivot.rotation = Vector3.ZERO
 	visual_pivot.rotation = Vector3.ZERO
 	_build_rotation_steps = 0
@@ -524,7 +584,9 @@ func reset_for_match() -> void:
 		return
 	_input_vector = Vector2.ZERO
 	target_velocity = Vector3.ZERO
+	_jump_requested = false
 	_attack_cooldown_remaining = 0.0
+	_heavy_attack_cooldown_remaining = 0.0
 	_server_respawn()
 
 
@@ -550,11 +612,11 @@ func _projectiles_root() -> Node3D:
 	return null
 
 
-func _projectile_lifetime() -> float:
-	return attack_range / max(projectile_speed, 0.001)
+func _projectile_lifetime(projectile_range: float, runtime_speed: float) -> float:
+	return projectile_range / max(runtime_speed, 0.001)
 
 
-func _spawn_projectile_local(projectile_id: int, start_position: Vector3, direction: Vector3, is_authoritative: bool) -> void:
+func _spawn_projectile_local(projectile_id: int, start_position: Vector3, direction: Vector3, runtime_damage: float, runtime_speed: float, lifetime: float, runtime_hit_radius: float, aoe_radius: float, visual_scale: float, is_authoritative: bool) -> void:
 	var projectiles_root := _projectiles_root()
 	if projectiles_root == null or PLAYER_PROJECTILE_SCENE == null:
 		return
@@ -568,10 +630,12 @@ func _spawn_projectile_local(projectile_id: int, start_position: Vector3, direct
 			projectile_id,
 			start_position,
 			direction,
-			attack_damage,
-			projectile_speed,
-			_projectile_lifetime(),
-			projectile_hit_radius,
+			runtime_damage,
+			runtime_speed,
+			lifetime,
+			runtime_hit_radius,
+			aoe_radius,
+			visual_scale,
 			is_authoritative,
 			self
 		)
@@ -598,6 +662,7 @@ func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refil
 	global_position = target_position
 	velocity = Vector3.ZERO
 	target_velocity = Vector3.ZERO
+	_jump_requested = false
 	look_pivot.rotation.y = facing_y
 	_sync_visual_orientation()
 	if refill_health:
@@ -614,13 +679,30 @@ func set_channel_locked(active: bool) -> void:
 	_sync_channel_lock.rpc(active)
 
 
+func set_ui_locked(active: bool) -> void:
+	_apply_ui_lock(active)
+
+
 func _apply_channel_lock(active: bool) -> void:
 	_channel_locked = active
 	if active:
 		_input_vector = Vector2.ZERO
+		_jump_requested = false
 		target_velocity = Vector3.ZERO
 		velocity.x = 0.0
 		velocity.z = 0.0
+
+
+func _apply_ui_lock(active: bool) -> void:
+	_ui_locked = active
+	if active:
+		_jump_requested = false
+
+
+func _request_server_jump() -> void:
+	if not multiplayer.is_server():
+		return
+	_jump_requested = true
 
 
 func _update_label() -> void:
@@ -997,21 +1079,52 @@ func _perform_server_attack() -> void:
 		return
 	if _attack_cooldown_remaining > 0.0:
 		return
+	var combat_profile := _current_combat_profile()
+	var basic_attack: Dictionary = combat_profile.get("basic_attack", {})
+	_attack_cooldown_remaining = float(basic_attack.get("cooldown", attack_cooldown))
+	_spawn_attack_projectile(
+		float(basic_attack.get("damage", attack_damage)),
+		float(basic_attack.get("speed", projectile_speed)),
+		float(basic_attack.get("range", attack_range)),
+		projectile_hit_radius,
+		float(combat_profile.get("aoe_radius", 0.0)),
+		float(basic_attack.get("projectile_scale", 1.0))
+	)
+
+
+func _perform_server_heavy_attack() -> void:
+	if not multiplayer.is_server():
+		return
+	if _heavy_attack_cooldown_remaining > 0.0:
+		return
+	var combat_profile := _current_combat_profile()
+	var heavy_attack: Dictionary = combat_profile.get("heavy_attack", {})
+	_heavy_attack_cooldown_remaining = float(heavy_attack.get("cooldown", max(attack_cooldown * 3.0, 0.6)))
+	_spawn_attack_projectile(
+		float(heavy_attack.get("damage", attack_damage * 1.75)),
+		float(heavy_attack.get("speed", projectile_speed * 0.9)),
+		float(heavy_attack.get("range", attack_range * 1.1)),
+		projectile_hit_radius * 1.35,
+		float(combat_profile.get("aoe_radius", 0.0)) * 1.25,
+		float(heavy_attack.get("projectile_scale", 1.2))
+	)
+
+
+func _spawn_attack_projectile(runtime_damage: float, runtime_speed: float, runtime_range: float, runtime_hit_radius: float, aoe_radius: float, visual_scale: float) -> void:
 	var projectiles_root := _projectiles_root()
 	if projectiles_root == null:
 		return
 	var direction := _attack_direction()
 	if direction.length_squared() <= 0.001:
 		return
-
-	_attack_cooldown_remaining = attack_cooldown
 	_start_attack_feedback()
 	_play_attack_feedback.rpc()
 	var spawn_position := global_position + Vector3(0.0, projectile_spawn_height, 0.0) + direction * projectile_spawn_forward_offset
 	var projectile_id := _next_projectile_id
 	_next_projectile_id += 1
-	_spawn_projectile_local(projectile_id, spawn_position, direction, true)
-	_spawn_projectile_remote.rpc(projectile_id, spawn_position, direction)
+	var lifetime := _projectile_lifetime(runtime_range, runtime_speed)
+	_spawn_projectile_local(projectile_id, spawn_position, direction, runtime_damage, runtime_speed, lifetime, runtime_hit_radius, aoe_radius, visual_scale, true)
+	_spawn_projectile_remote.rpc(projectile_id, spawn_position, direction, runtime_damage, runtime_speed, lifetime, runtime_hit_radius, aoe_radius, visual_scale)
 
 
 func _perform_server_wall_build() -> void:
@@ -1139,11 +1252,89 @@ func _building_manager() -> Node:
 	return managers[0]
 
 
+func _main_root() -> Node:
+	var roots = get_tree().get_nodes_in_group("main_root")
+	if roots.is_empty():
+		return null
+	return roots[0]
+
+
 func _gate_manager() -> Node:
 	var managers = get_tree().get_nodes_in_group("gate_manager")
 	if managers.is_empty():
 		return null
 	return managers[0]
+
+
+func _research_manager() -> Node:
+	var managers = get_tree().get_nodes_in_group("ResearchManager")
+	if managers.is_empty():
+		managers = get_tree().get_nodes_in_group("research_manager")
+	if managers.is_empty():
+		return get_node_or_null("/root/Main/ResearchManager")
+	return managers[0]
+
+
+func _era_manager() -> Node:
+	var managers = get_tree().get_nodes_in_group("era_manager")
+	if managers.is_empty():
+		return null
+	return managers[0]
+
+
+func _current_combat_profile() -> Dictionary:
+	var basic_attack := {
+		"damage": attack_damage,
+		"cooldown": attack_cooldown,
+		"speed": projectile_speed,
+		"range": attack_range,
+		"projectile_scale": 1.0,
+	}
+	var heavy_attack := {
+		"damage": attack_damage * 1.75,
+		"cooldown": max(attack_cooldown * 3.0, 0.6),
+		"speed": projectile_speed * 0.9,
+		"range": attack_range * 1.1,
+		"projectile_scale": 1.2,
+	}
+	var profile := {
+		"basic_attack": basic_attack,
+		"heavy_attack": heavy_attack,
+		"aoe_radius": 0.0,
+	}
+	var runtime_era_manager := _era_manager()
+	if runtime_era_manager != null and runtime_era_manager.has_method("get_combat_data"):
+		var combat_data: Dictionary = runtime_era_manager.get_combat_data()
+		profile["basic_attack"] = (combat_data.get("basic_attack", basic_attack) as Dictionary).duplicate(true)
+		profile["heavy_attack"] = (combat_data.get("heavy_attack", heavy_attack) as Dictionary).duplicate(true)
+		profile["aoe_radius"] = float(combat_data.get("aoe_radius", 0.0))
+	var runtime_research_manager := _research_manager()
+	if runtime_research_manager == null:
+		return profile
+	var damage_bonus := 1.0 + float(runtime_research_manager.get_stat_total("damage_multiplier"))
+	var speed_bonus := 1.0 + float(runtime_research_manager.get_stat_total("attack_speed_multiplier"))
+	var range_bonus := float(runtime_research_manager.get_stat_total("range_bonus"))
+	profile["aoe_radius"] = float(profile.get("aoe_radius", 0.0)) + float(runtime_research_manager.get_stat_total("aoe_radius"))
+	var runtime_basic: Dictionary = profile.get("basic_attack", {}).duplicate(true)
+	runtime_basic["damage"] = float(runtime_basic.get("damage", attack_damage)) * damage_bonus
+	runtime_basic["cooldown"] = max(float(runtime_basic.get("cooldown", attack_cooldown)) / max(speed_bonus, 0.1), 0.08)
+	runtime_basic["range"] = float(runtime_basic.get("range", attack_range)) + range_bonus
+	profile["basic_attack"] = runtime_basic
+	var runtime_heavy: Dictionary = profile.get("heavy_attack", {}).duplicate(true)
+	runtime_heavy["damage"] = float(runtime_heavy.get("damage", attack_damage * 1.75)) * damage_bonus
+	runtime_heavy["cooldown"] = max(float(runtime_heavy.get("cooldown", attack_cooldown * 3.0)) / max(speed_bonus, 0.1), 0.18)
+	runtime_heavy["range"] = float(runtime_heavy.get("range", attack_range * 1.1)) + range_bonus
+	profile["heavy_attack"] = runtime_heavy
+	return profile
+
+
+func _handle_local_ui_interaction() -> bool:
+	if not _is_local_player():
+		return false
+	var root = _main_root()
+	if root != null and root.has_method("handle_local_interaction"):
+		return bool(root.handle_local_interaction(peer_id))
+	return false
 
 
 func _local_build_request() -> Dictionary:
@@ -1255,6 +1446,24 @@ func _request_attack() -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
+func _request_heavy_attack() -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_perform_server_heavy_attack()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_jump() -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_request_server_jump()
+
+
+@rpc("any_peer", "call_remote", "reliable")
 func _request_build(structure_type: String, desired_position: Vector3, desired_rotation_y: float) -> void:
 	if not multiplayer.is_server():
 		return
@@ -1357,10 +1566,10 @@ func _play_attack_feedback() -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _spawn_projectile_remote(projectile_id: int, start_position: Vector3, direction: Vector3) -> void:
+func _spawn_projectile_remote(projectile_id: int, start_position: Vector3, direction: Vector3, runtime_damage: float, runtime_speed: float, lifetime: float, runtime_hit_radius: float, aoe_radius: float, visual_scale: float) -> void:
 	if multiplayer.is_server():
 		return
-	_spawn_projectile_local(projectile_id, start_position, direction, false)
+	_spawn_projectile_local(projectile_id, start_position, direction, runtime_damage, runtime_speed, lifetime, runtime_hit_radius, aoe_radius, visual_scale, false)
 
 
 @rpc("authority", "call_remote", "reliable")

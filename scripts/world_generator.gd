@@ -19,6 +19,8 @@ signal build_zone_changed()
 @export var edge_wall_thickness: float = 4.0
 @export var pylon_max_placement_slope: float = 1.4
 @export var build_zone_surface_thickness: float = 0.3
+@export var build_zone_platform_height_offset: float = 0.45
+@export var build_zone_visual_offset: float = 0.08
 
 var world_root: Node3D
 var gate_floor: StaticBody3D
@@ -31,6 +33,7 @@ var _build_zone_root: Node3D
 
 var _world_active: bool = false
 var _current_seed: int = 0
+var _base_sample_rows: Array = []
 var _sample_rows: Array = []
 var _sample_count_x: int = 0
 var _sample_count_z: int = 0
@@ -87,7 +90,11 @@ func is_within_world_bounds(world_position: Vector3, margin: float = 0.0) -> boo
 
 
 func sample_height(world_position: Vector3) -> float:
-	if _sample_rows.is_empty():
+	return _sample_height_from_rows(_sample_rows, world_position)
+
+
+func _sample_height_from_rows(rows: Array, world_position: Vector3) -> float:
+	if rows.is_empty():
 		return world_center.y
 	var local_x = clamp(world_position.x - (world_center.x - world_width * 0.5), 0.0, world_width)
 	var local_z = clamp(world_position.z - (world_center.z - world_length * 0.5), 0.0, world_length)
@@ -99,10 +106,10 @@ func sample_height(world_position: Vector3) -> float:
 	var z1 = min(z0 + 1, _sample_count_z - 1)
 	var tx = grid_x - float(x0)
 	var tz = grid_z - float(z0)
-	var h00 := _height_from_grid(x0, z0)
-	var h10 := _height_from_grid(x1, z0)
-	var h01 := _height_from_grid(x0, z1)
-	var h11 := _height_from_grid(x1, z1)
+	var h00 := _height_from_rows(rows, x0, z0)
+	var h10 := _height_from_rows(rows, x1, z0)
+	var h01 := _height_from_rows(rows, x0, z1)
+	var h11 := _height_from_rows(rows, x1, z1)
 	var hx0 := lerpf(h00, h10, tx)
 	var hx1 := lerpf(h01, h11, tx)
 	return lerpf(hx0, hx1, tz)
@@ -125,25 +132,38 @@ func is_valid_pylon_position(world_position: Vector3, clearance_radius: float) -
 	if not is_within_world_bounds(world_position, clearance_radius + 2.0):
 		return false
 	var center_height := sample_height(world_position)
-	for step in range(8):
-		var angle := float(step) * TAU / 8.0
-		var sample_position := world_position + Vector3(cos(angle), 0.0, sin(angle)) * clearance_radius
-		if not is_within_world_bounds(sample_position, 1.0):
-			return false
-		if absf(sample_height(sample_position) - center_height) > pylon_max_placement_slope:
-			return false
+	var sample_factors := [-1.0, -0.5, 0.0, 0.5, 1.0]
+	for x_factor in sample_factors:
+		for z_factor in sample_factors:
+			if is_zero_approx(x_factor) and is_zero_approx(z_factor):
+				continue
+			var sample_position := world_position + Vector3(clearance_radius * x_factor, 0.0, clearance_radius * z_factor)
+			if not is_within_world_bounds(sample_position, 1.0):
+				return false
+			if absf(sample_height(sample_position) - center_height) > pylon_max_placement_slope:
+				return false
 	return true
 
 
 func create_or_update_build_zone(center: Vector3, build_radius: float, flatten_radius: float, spawn_min_radius: float, spawn_max_radius: float) -> Dictionary:
+	var safe_build_radius = max(build_radius, 1.0)
+	var safe_spawn_min_radius = max(spawn_min_radius, safe_build_radius + 1.0)
+	var safe_spawn_max_radius = max(spawn_max_radius, safe_spawn_min_radius + 1.0)
+	var slope_width = max(flatten_radius - safe_build_radius, 2.0)
+	var safe_slope_half_extent = safe_spawn_max_radius + slope_width
+	var foundation_height = _average_height_for_rows(_base_sample_rows, center, safe_build_radius) + build_zone_platform_height_offset
 	_build_zone = {
 		"center": Vector3(center.x, 0.0, center.z),
-		"build_radius": max(build_radius, 1.0),
-		"flatten_radius": max(flatten_radius, build_radius),
-		"spawn_min_radius": max(spawn_min_radius, build_radius + 1.0),
-		"spawn_max_radius": max(spawn_max_radius, spawn_min_radius + 1.0),
-		"foundation_height": _average_height_around(center, flatten_radius),
+		"build_radius": safe_build_radius,
+		"platform_half_extent": safe_spawn_max_radius,
+		"flatten_radius": safe_slope_half_extent,
+		"slope_half_extent": safe_slope_half_extent,
+		"spawn_min_radius": safe_spawn_min_radius,
+		"spawn_max_radius": safe_spawn_max_radius,
+		"foundation_height": foundation_height,
 	}
+	_apply_build_zone_to_heightmap()
+	_rebuild_terrain_local()
 	_rebuild_build_zone_local()
 	if multiplayer.is_server():
 		_sync_build_zone_state.rpc(true, _build_zone.duplicate(true))
@@ -153,6 +173,8 @@ func create_or_update_build_zone(center: Vector3, build_radius: float, flatten_r
 
 func clear_build_zone() -> void:
 	_build_zone = {}
+	_restore_base_heightmap()
+	_rebuild_terrain_local()
 	_clear_build_zone_local()
 	if multiplayer.is_server():
 		_sync_build_zone_state.rpc(false, {})
@@ -182,8 +204,8 @@ func is_position_in_build_zone(world_position: Vector3, margin: float = 0.0) -> 
 	if _build_zone.is_empty():
 		return false
 	var center: Vector3 = _build_zone.get("center", world_center)
-	var planar := Vector2(world_position.x - center.x, world_position.z - center.z)
-	return planar.length() <= max(float(_build_zone.get("build_radius", 0.0)) - margin, 0.0)
+	var build_half_extent = max(float(_build_zone.get("build_radius", 0.0)) - margin, 0.0)
+	return _is_inside_square_extent(center, world_position, build_half_extent)
 
 
 func project_to_build_surface(world_position: Vector3, vertical_offset: float = 0.0) -> Vector3:
@@ -197,10 +219,10 @@ func get_enemy_spawn_position(target_center: Vector3, enemy_id: int) -> Vector3:
 	var max_radius := float(_build_zone.get("spawn_max_radius", 22.0))
 	var rng_seed = max(_current_seed + enemy_id * 31, 1)
 	for attempt in range(18):
-		var ratio := fmod(float(rng_seed + attempt * 53), 997.0) / 997.0
-		var distance := lerpf(min_radius, max_radius, ratio)
-		var angle := fmod(float(rng_seed * 13 + attempt * 71), 2048.0) / 2048.0 * TAU
-		var candidate := target_center + Vector3(cos(angle), 0.0, sin(angle)) * distance
+		var side_index := int(posmod(rng_seed + attempt * 17, 4))
+		var depth_ratio := fmod(float(rng_seed + attempt * 53), 997.0) / 997.0
+		var edge_ratio := fmod(float(rng_seed * 13 + attempt * 71), 2048.0) / 2048.0
+		var candidate := target_center + _square_ring_local_position(min_radius, max_radius, side_index, depth_ratio, edge_ratio)
 		if not is_within_world_bounds(candidate, 1.0):
 			continue
 		if is_position_in_build_zone(candidate, -0.5):
@@ -253,6 +275,7 @@ func _rebuild_world_local() -> void:
 
 
 func _clear_world_local() -> void:
+	_base_sample_rows.clear()
 	_sample_rows.clear()
 	if _terrain_root != null:
 		for child in _terrain_root.get_children():
@@ -264,6 +287,7 @@ func _clear_world_local() -> void:
 
 
 func _build_heightmap() -> void:
+	_base_sample_rows.clear()
 	var broad_noise := FastNoiseLite.new()
 	broad_noise.seed = _current_seed
 	broad_noise.frequency = broad_noise_frequency
@@ -276,7 +300,6 @@ func _build_heightmap() -> void:
 	mountain_noise.seed = _current_seed + 207
 	mountain_noise.frequency = mountain_noise_frequency
 	mountain_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_sample_rows.clear()
 	for z_index in range(_sample_count_z):
 		var row := PackedFloat32Array()
 		row.resize(_sample_count_x)
@@ -292,7 +315,9 @@ func _build_heightmap() -> void:
 				var normalized = (mountain_mask - mountain_threshold) / max(1.0 - mountain_threshold, 0.001)
 				mountains = pow(normalized, 2.2) * mountain_height_scale
 			row[x_index] = world_center.y + broad * 0.45 + hills * 0.55 + mountains
-		_sample_rows.append(row)
+		_base_sample_rows.append(row)
+	_sample_rows = _duplicate_height_rows(_base_sample_rows)
+	_apply_build_zone_to_heightmap()
 
 
 func _build_terrain_mesh() -> void:
@@ -373,50 +398,45 @@ func _create_boundary_wall(node_name: String, wall_position: Vector3, wall_size:
 	_boundary_root.add_child(wall_body)
 
 
+func _rebuild_terrain_local() -> void:
+	if _terrain_root == null:
+		return
+	for child in _terrain_root.get_children():
+		child.queue_free()
+	_terrain_body = null
+	if _sample_rows.is_empty():
+		return
+	_build_terrain_mesh()
+
+
 func _rebuild_build_zone_local() -> void:
 	_clear_build_zone_local()
 	if _build_zone.is_empty() or _build_zone_root == null:
 		return
 	var center: Vector3 = _build_zone.get("center", world_center)
 	var build_radius := float(_build_zone.get("build_radius", 8.0))
+	var spawn_min_radius := float(_build_zone.get("spawn_min_radius", build_radius + 2.0))
+	var spawn_max_radius := float(_build_zone.get("spawn_max_radius", spawn_min_radius + 2.0))
 	var foundation_height := float(_build_zone.get("foundation_height", world_center.y))
-	var zone_body := StaticBody3D.new()
-	zone_body.name = "BuildZoneFoundation"
-	zone_body.position = Vector3(center.x, foundation_height - build_zone_surface_thickness * 0.5, center.z)
-	var collision := CollisionShape3D.new()
-	var shape := CylinderShape3D.new()
-	shape.height = build_zone_surface_thickness
-	shape.radius = build_radius
-	collision.shape = shape
-	zone_body.add_child(collision)
-	var zone_mesh := MeshInstance3D.new()
-	var cylinder_mesh := CylinderMesh.new()
-	cylinder_mesh.height = build_zone_surface_thickness
-	cylinder_mesh.top_radius = build_radius
-	cylinder_mesh.bottom_radius = build_radius
-	zone_mesh.mesh = cylinder_mesh
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.72, 0.78, 0.62, 0.7)
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	zone_mesh.material_override = material
-	zone_body.add_child(zone_mesh)
-	_build_zone_root.add_child(zone_body)
-	var ring_mesh_instance := MeshInstance3D.new()
-	ring_mesh_instance.name = "BuildZoneRing"
-	ring_mesh_instance.position = Vector3(center.x, foundation_height + 0.04, center.z)
-	var ring_mesh := CylinderMesh.new()
-	ring_mesh.height = 0.08
-	ring_mesh.top_radius = build_radius + 0.2
-	ring_mesh.bottom_radius = build_radius + 0.2
-	ring_mesh_instance.mesh = ring_mesh
-	var ring_material := StandardMaterial3D.new()
-	ring_material.albedo_color = Color(0.2, 0.86, 0.94, 0.24)
-	ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ring_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	ring_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	ring_mesh_instance.material_override = ring_material
-	_build_zone_root.add_child(ring_mesh_instance)
+	var platform_body := StaticBody3D.new()
+	platform_body.name = "BuildZonePlatformBody"
+	platform_body.position = Vector3(center.x, foundation_height - build_zone_surface_thickness * 0.5, center.z)
+	var platform_collision := CollisionShape3D.new()
+	platform_collision.name = "PlatformCollision"
+	var platform_shape := BoxShape3D.new()
+	platform_shape.size = Vector3(spawn_max_radius * 2.0, build_zone_surface_thickness, spawn_max_radius * 2.0)
+	platform_collision.shape = platform_shape
+	platform_body.add_child(platform_collision)
+	_build_zone_root.add_child(platform_body)
+	var platform_root := Node3D.new()
+	platform_root.name = "BuildZonePlatform"
+	platform_root.position = Vector3(center.x, foundation_height + build_zone_visual_offset, center.z)
+	_build_zone_root.add_child(platform_root)
+	_create_square_panel(platform_root, "PlatformTop", Vector2(spawn_max_radius * 2.0, spawn_max_radius * 2.0), 0.0, Color(0.42, 0.48, 0.38, 0.84))
+	_create_square_ring(platform_root, "SpawnRing", spawn_min_radius, spawn_max_radius, build_zone_surface_thickness * 0.18, Color(0.74, 0.38, 0.28, 0.28))
+	_create_square_panel(platform_root, "BuildArea", Vector2(build_radius * 2.0, build_radius * 2.0), build_zone_surface_thickness * 0.3, Color(0.22, 0.74, 0.84, 0.2))
+	_create_square_outline(platform_root, "BuildOutline", build_radius, 0.22, build_zone_surface_thickness * 0.42, Color(0.2, 0.9, 0.98, 0.78))
+	_create_square_outline(platform_root, "SpawnOutline", spawn_max_radius, 0.16, build_zone_surface_thickness * 0.48, Color(0.92, 0.54, 0.34, 0.44))
 
 
 func _clear_build_zone_local() -> void:
@@ -437,12 +457,16 @@ func _set_gate_floor_active(active: bool) -> void:
 
 
 func _average_height_around(center: Vector3, sample_radius: float) -> float:
-	var total := sample_height(center)
+	return _average_height_for_rows(_sample_rows, center, sample_radius)
+
+
+func _average_height_for_rows(rows: Array, center: Vector3, sample_radius: float) -> float:
+	var total := _sample_height_from_rows(rows, center)
 	var count := 1.0
 	for step in range(8):
 		var angle := float(step) * TAU / 8.0
 		var position := center + Vector3(cos(angle), 0.0, sin(angle)) * sample_radius * 0.7
-		total += sample_height(position)
+		total += _sample_height_from_rows(rows, position)
 		count += 1.0
 	return total / count
 
@@ -454,8 +478,121 @@ func _vertex_at(x_index: int, z_index: int) -> Vector3:
 
 
 func _height_from_grid(x_index: int, z_index: int) -> float:
-	var row: PackedFloat32Array = _sample_rows[z_index]
+	return _height_from_rows(_sample_rows, x_index, z_index)
+
+
+func _height_from_rows(rows: Array, x_index: int, z_index: int) -> float:
+	if rows.is_empty():
+		return world_center.y
+	var row: PackedFloat32Array = rows[z_index]
 	return row[x_index]
+
+
+func _duplicate_height_rows(source_rows: Array) -> Array:
+	var duplicate_rows: Array = []
+	for row_variant in source_rows:
+		var source_row: PackedFloat32Array = row_variant
+		duplicate_rows.append(source_row.duplicate())
+	return duplicate_rows
+
+
+func _restore_base_heightmap() -> void:
+	if _base_sample_rows.is_empty():
+		_sample_rows.clear()
+		return
+	_sample_rows = _duplicate_height_rows(_base_sample_rows)
+
+
+func _apply_build_zone_to_heightmap() -> void:
+	if _base_sample_rows.is_empty():
+		return
+	_restore_base_heightmap()
+	if _build_zone.is_empty():
+		return
+	var center: Vector3 = _build_zone.get("center", world_center)
+	var build_radius := float(_build_zone.get("build_radius", 0.0))
+	var platform_half_extent := float(_build_zone.get("platform_half_extent", float(_build_zone.get("spawn_max_radius", build_radius))))
+	var flatten_radius = max(float(_build_zone.get("slope_half_extent", _build_zone.get("flatten_radius", platform_half_extent))), platform_half_extent)
+	var foundation_height := float(_build_zone.get("foundation_height", world_center.y))
+	var transition_width = max(flatten_radius - platform_half_extent, 0.001)
+	for z_index in range(_sample_count_z):
+		var row: PackedFloat32Array = _sample_rows[z_index]
+		for x_index in range(_sample_count_x):
+			var world_x := world_center.x - world_width * 0.5 + float(x_index) * _cell_size_x
+			var world_z := world_center.z - world_length * 0.5 + float(z_index) * _cell_size_z
+			var distance = max(absf(world_x - center.x), absf(world_z - center.z))
+			if distance > flatten_radius:
+				continue
+			if distance <= platform_half_extent:
+				row[x_index] = foundation_height
+				continue
+			var base_height := _height_from_rows(_base_sample_rows, x_index, z_index)
+			var ratio = clamp((distance - platform_half_extent) / transition_width, 0.0, 1.0)
+			var eased_ratio = ratio * ratio * (3.0 - 2.0 * ratio)
+			row[x_index] = lerpf(foundation_height, base_height, eased_ratio)
+
+
+func _is_inside_square_extent(center: Vector3, world_position: Vector3, half_extent: float) -> bool:
+	return absf(world_position.x - center.x) <= half_extent and absf(world_position.z - center.z) <= half_extent
+
+
+func _square_ring_local_position(min_half_extent: float, max_half_extent: float, side_index: int, depth_ratio: float, edge_ratio: float) -> Vector3:
+	var depth = lerpf(min_half_extent, max_half_extent, clamp(depth_ratio, 0.0, 1.0))
+	var edge = lerpf(-max_half_extent, max_half_extent, clamp(edge_ratio, 0.0, 1.0))
+	match posmod(side_index, 4):
+		0:
+			return Vector3(edge, 0.0, -depth)
+		1:
+			return Vector3(depth, 0.0, edge)
+		2:
+			return Vector3(edge, 0.0, depth)
+		_:
+			return Vector3(-depth, 0.0, edge)
+
+
+func _create_square_panel(parent: Node3D, node_name: String, panel_size: Vector2, y_offset: float, color: Color) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = node_name
+	mesh_instance.position = Vector3(0.0, y_offset, 0.0)
+	var panel_mesh := BoxMesh.new()
+	panel_mesh.size = Vector3(panel_size.x, max(build_zone_surface_thickness * 0.18, 0.04), panel_size.y)
+	mesh_instance.mesh = panel_mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh_instance.material_override = material
+	parent.add_child(mesh_instance)
+
+
+func _create_square_ring(parent: Node3D, node_name: String, inner_half_extent: float, outer_half_extent: float, y_offset: float, color: Color) -> void:
+	var ring_root := Node3D.new()
+	ring_root.name = node_name
+	parent.add_child(ring_root)
+	var band_width = max(outer_half_extent - inner_half_extent, 0.2)
+	_create_square_panel(ring_root, "North", Vector2(outer_half_extent * 2.0, band_width), y_offset, color)
+	ring_root.get_node("North").position.z = -(inner_half_extent + outer_half_extent) * 0.5
+	_create_square_panel(ring_root, "South", Vector2(outer_half_extent * 2.0, band_width), y_offset, color)
+	ring_root.get_node("South").position.z = (inner_half_extent + outer_half_extent) * 0.5
+	_create_square_panel(ring_root, "East", Vector2(band_width, inner_half_extent * 2.0), y_offset, color)
+	ring_root.get_node("East").position.x = (inner_half_extent + outer_half_extent) * 0.5
+	_create_square_panel(ring_root, "West", Vector2(band_width, inner_half_extent * 2.0), y_offset, color)
+	ring_root.get_node("West").position.x = -(inner_half_extent + outer_half_extent) * 0.5
+
+
+func _create_square_outline(parent: Node3D, node_name: String, half_extent: float, line_width: float, y_offset: float, color: Color) -> void:
+	var outline_root := Node3D.new()
+	outline_root.name = node_name
+	parent.add_child(outline_root)
+	_create_square_panel(outline_root, "North", Vector2(half_extent * 2.0 + line_width * 2.0, line_width), y_offset, color)
+	outline_root.get_node("North").position.z = -half_extent
+	_create_square_panel(outline_root, "South", Vector2(half_extent * 2.0 + line_width * 2.0, line_width), y_offset, color)
+	outline_root.get_node("South").position.z = half_extent
+	_create_square_panel(outline_root, "East", Vector2(line_width, half_extent * 2.0), y_offset, color)
+	outline_root.get_node("East").position.x = half_extent
+	_create_square_panel(outline_root, "West", Vector2(line_width, half_extent * 2.0), y_offset, color)
+	outline_root.get_node("West").position.x = -half_extent
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -482,9 +619,13 @@ func _sync_build_zone_state(active: bool, build_zone_state: Dictionary) -> void:
 		return
 	if not active:
 		_build_zone = {}
+		_restore_base_heightmap()
+		_rebuild_terrain_local()
 		_clear_build_zone_local()
 		build_zone_changed.emit()
 		return
 	_build_zone = build_zone_state.duplicate(true)
+	_apply_build_zone_to_heightmap()
+	_rebuild_terrain_local()
 	_rebuild_build_zone_local()
 	build_zone_changed.emit()

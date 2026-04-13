@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/stone_age_enemy.gd" id="1"]
+
+[sub_resource type="CapsuleShape3D" id="1"]
+radius = 0.42
+height = 1.05
+
+[sub_resource type="CapsuleMesh" id="2"]
+radius = 0.42
+
+[node name="StoneAgeCaveman" type="CharacterBody3D"]
+script = ExtResource("1")
+move_speed = 3.9
+attack_range = 1.25
+damage_per_second = 20.0
+max_health = 80.0
+body_radius = 0.42
+enemy_kind_id = "stone_caveman"
+label_prefix = "CV"
+display_name = "Caveman"
+enemy_color = Color(0.666667, 0.545098, 0.356863, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82, 0)
+shape = SubResource("1")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82, 0)
+mesh = SubResource("2")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.12, 0)
+billboard = 1
+text = "CV"
+font_size = 28

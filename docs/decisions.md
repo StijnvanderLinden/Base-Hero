@@ -261,6 +261,51 @@ This prevents dominant player-selected challenge setups, keeps balancing under t
 
 ---
 
+### Gates use era-based progression slices
+Decision:
+Gate content is now organized around eras, with each gate run loading an era-owned content package.
+
+Reason:
+This keeps gate content modular, makes expansion cleaner, and lets one era define a full playable slice without hardcoding per-era behavior through every manager.
+
+---
+
+### Each era defines its own full gameplay bundle
+Decision:
+Each era defines its own enemies, structures, materials, augments, research nodes, and visual theme data.
+
+Reason:
+This preserves strong thematic cohesion inside a gate run and makes later eras easier to add as self-contained content expansions.
+
+---
+
+### Stone Age is intentionally narrow and fast
+Decision:
+Era 1: Stone Age is intentionally simple, with a small structure set, a short wave plan, one weapon profile, and a small research list.
+
+Reason:
+The first era should teach the gate loop quickly, avoid overload, and establish the modular era structure before later eras add complexity.
+
+---
+
+### Later era complexity should increase gradually
+Decision:
+The first era avoids advanced combat complexity, large augment catalogs, and broad build menus, leaving that growth for later eras.
+
+Reason:
+This keeps the first content slice readable and helps later eras feel like meaningful escalation rather than immediate front-loaded system bloat.
+
+---
+
+### Magic and complex augments are deferred beyond Era 1
+Decision:
+Stone Age does not introduce advanced magic systems or complex augment interactions.
+
+Reason:
+The first era uses primitive tools and simple combat upgrades so players learn the base loop before the project expands into more complex later-era identities.
+
+---
+
 ### Pylon modifier escalation is tracked per pylon
 Decision:
 Repeated successful full clears increase modifier difficulty only for that specific pylon, not for all pylons globally.

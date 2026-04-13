@@ -80,12 +80,6 @@ script = ExtResource("15")
 [node name="GateManager" type="Node" parent="." unique_id=889331205]
 script = ExtResource("11")
 gate_objective_scene = ExtResource("14")
-extraction_countdown = null
-objective_interaction_radius = null
-player_spawn_spacing = null
-core_upgrade_base_cost = null
-core_upgrade_cost_step = null
-core_upgrade_health_bonus = null
 
 [node name="WorldGenerator" type="Node3D" parent="." unique_id=889331209]
 script = ExtResource("28")
@@ -156,7 +150,18 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("16")
 
+[node name="SideMenuDimmer" type="ColorRect" parent="UI" unique_id=1506509464]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.22)
+
 [node name="Panel" type="PanelContainer" parent="UI" unique_id=636919107]
+visible = false
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 336.0
@@ -210,53 +215,67 @@ text = "Restart Session"
 icon = ExtResource("21")
 
 [node name="TownHallUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649420]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Start Town Hall Upgrade"
 icon = ExtResource("22")
 
 [node name="CoreUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649419]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Upgrade Core to Lv 1 (25 Scrap)"
 icon = ExtResource("23")
 
 [node name="ResearchBasicButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=369366509]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Upgrade Field Tools"
 
 [node name="ResearchUnlockButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=297191973]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Unlock Augment Slot"
 
 [node name="BranchUnlockButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=147298333]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Unlock Augment Branch"
 
 [node name="PylonRadiusUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=851394221]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Upgrade Base Radius"
 
 [node name="PylonCapUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=897106392]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Upgrade Radius Cap"
 
 [node name="PylonEfficiencyUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=153280956]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Upgrade Channel Efficiency"
 
 [node name="PylonHealthUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1479700306]
+visible = false
 layout_mode = 2
 disabled = true
 text = "Upgrade Pylon Integrity"
 
+[node name="InfoMenuButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1479700307]
+layout_mode = 2
+text = "Open Info"
+
 [node name="RunPanel" type="PanelContainer" parent="UI" unique_id=636919108]
+visible = false
 anchors_preset = 6
 anchor_left = 1.0
 anchor_top = 0.5
@@ -420,6 +439,7 @@ horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="StatusPanel" type="PanelContainer" parent="UI" unique_id=636919110]
+visible = false
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
@@ -467,6 +487,7 @@ text = "Offline. Host or join to begin."
 autowrap_mode = 3
 
 [node name="ControlsPanel" type="PanelContainer" parent="UI" unique_id=1683095974]
+visible = false
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -493,6 +514,171 @@ autowrap_mode = 3
 layout_mode = 2
 text = "LMB attack | E interact | 1 wall | 2 turret | Q enter build"
 autowrap_mode = 3
+
+[node name="TooltipModal" type="Control" parent="UI" unique_id=1683095975]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dimmer" type="ColorRect" parent="UI/TooltipModal" unique_id=1683095976]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="Card" type="PanelContainer" parent="UI/TooltipModal" unique_id=1683095977]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -370.0
+offset_top = -220.0
+offset_right = 370.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/TooltipModal/Card" unique_id=1683095978]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/TooltipModal/Card/MarginContainer" unique_id=1683095979]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Nav" type="VBoxContainer" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer" unique_id=1683095980]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095981]
+layout_mode = 2
+text = "Info"
+horizontal_alignment = 1
+
+[node name="RunTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095982]
+layout_mode = 2
+text = "Run Summary"
+
+[node name="PylonTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095983]
+layout_mode = 2
+text = "Pylon Status"
+
+[node name="StatusTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095984]
+layout_mode = 2
+text = "Status"
+
+[node name="ControlsTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095985]
+layout_mode = 2
+text = "Controls"
+
+[node name="Spacer" type="Control" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095986]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CloseTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095987]
+layout_mode = 2
+text = "Close"
+
+[node name="Content" type="VBoxContainer" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer" unique_id=1683095988]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="TooltipTitleLabel" type="Label" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Content" unique_id=1683095989]
+layout_mode = 2
+text = "Run Summary"
+horizontal_alignment = 1
+
+[node name="TooltipBodyLabel" type="Label" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Content" unique_id=1683095990]
+layout_mode = 2
+size_flags_vertical = 3
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ActionModal" type="Control" parent="UI" unique_id=1683095991]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dimmer" type="ColorRect" parent="UI/ActionModal" unique_id=1683095992]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="Card" type="PanelContainer" parent="UI/ActionModal" unique_id=1683095993]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -220.0
+offset_right = 260.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/ActionModal/Card" unique_id=1683095994]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/ActionModal/Card/MarginContainer" unique_id=1683095995]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ActionTitleLabel" type="Label" parent="UI/ActionModal/Card/MarginContainer/VBoxContainer" unique_id=1683095996]
+layout_mode = 2
+text = "Actions"
+horizontal_alignment = 1
+
+[node name="ActionBodyLabel" type="Label" parent="UI/ActionModal/Card/MarginContainer/VBoxContainer" unique_id=1683095997]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="ActionScroll" type="ScrollContainer" parent="UI/ActionModal/Card/MarginContainer/VBoxContainer" unique_id=1683095998]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ActionsContainer" type="VBoxContainer" parent="UI/ActionModal/Card/MarginContainer/VBoxContainer/ActionScroll" unique_id=1683095999]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CloseActionButton" type="Button" parent="UI/ActionModal/Card/MarginContainer/VBoxContainer" unique_id=1683096000]
+layout_mode = 2
+text = "Close"
 
 [connection signal="pressed" from="UI/Panel/VBoxContainer/HostButton" to="." method="_on_host_pressed"]
 [connection signal="pressed" from="UI/Panel/VBoxContainer/JoinButton" to="." method="_on_join_pressed"]

@@ -32,7 +32,7 @@ func _ready() -> void:
 func can_interact() -> bool:
 	if collected:
 		return false
-	return resource_type == "iron_ore" or resource_type == "crystal"
+	return resource_type == "stone_node" or resource_type == "wood_node" or resource_type == "herb_patch" or resource_type == "crystal"
 
 
 func collect() -> Dictionary:
@@ -76,8 +76,12 @@ func get_interaction_text() -> String:
 	if collected:
 		return ""
 	match resource_type:
-		"iron_ore":
-			return "Press E to collect Iron +%d" % resource_amount
+		"stone_node":
+			return "Press E to collect Stone +%d" % resource_amount
+		"wood_node":
+			return "Press E to collect Wood +%d" % resource_amount
+		"herb_patch":
+			return "Press E to gather Herbs"
 		"crystal":
 			return "Press E to secure Crystal"
 		_:
@@ -97,10 +101,14 @@ func _apply_visual_state() -> void:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		body_mesh.material_override = material
 	match resource_type:
-		"iron_ore":
+		"stone_node":
 			body_mesh.scale = Vector3(1.15, 0.8, 1.15)
 			material.albedo_color = Color(0.72, 0.74, 0.78, 0.95 if revealed else 0.7)
-			label.text = "Iron Vein" if revealed else ""
+			label.text = "Stone Cache" if revealed else ""
+		"wood_node":
+			body_mesh.scale = Vector3(0.9, 1.15, 0.9)
+			material.albedo_color = Color(0.52, 0.34, 0.2, 0.92 if revealed else 0.55)
+			label.text = "Wood Bundle" if revealed else ""
 		"herb_patch":
 			body_mesh.scale = Vector3(0.75, 0.35, 0.75)
 			material.albedo_color = Color(0.22, 0.72, 0.36, 0.85 if revealed else 0.4)
