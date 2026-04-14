@@ -15,6 +15,7 @@ signal progression_changed()
 @export var resource_interaction_radius: float = 2.5
 @export var player_spawn_spacing: float = 3.0
 @export var starting_scrap: int = 100
+@export var starter_material_amount: int = 300
 @export var core_upgrade_base_cost: int = 25
 @export var core_upgrade_cost_step: int = 15
 @export var core_upgrade_health_bonus: float = 100.0
@@ -33,8 +34,15 @@ signal progression_changed()
 @export var pylon_efficiency_upgrade_step: float = 0.2
 @export var pylon_build_radius: float = 12.0
 @export var pylon_flatten_radius: float = 14.0
+@export var pylon_resource_clearance_radius: float = 14.0
 @export var enemy_spawn_min_radius: float = 18.0
 @export var enemy_spawn_max_radius: float = 26.0
+@export var scattered_stone_node_count: int = 18
+@export var scattered_wood_node_count: int = 18
+@export var scattered_herb_patch_count: int = 24
+@export var resource_scatter_min_radius: float = 20.0
+@export var resource_scatter_max_radius: float = 96.0
+@export var resource_scatter_jitter: float = 7.5
 
 var gate_root: Node3D
 var players_root: Node3D
@@ -455,6 +463,8 @@ func get_interaction_prompt_for_peer(peer_id: int) -> Dictionary:
 		return {"visible": true, "text": resource_node.get_interaction_text()}
 	if _gate_objective == null:
 		var placement := _placement_position_for_player(player)
+		if _has_blocking_resources_near_pylon(placement):
+			return {"visible": true, "text": "Clear stone, wood, and herbs from the pylon area"}
 		if _is_valid_pylon_position(placement):
 			return {"visible": true, "text": "Press E to place pylon"}
 		return {"visible": true, "text": "Move to open ground to place the pylon"}
@@ -828,7 +838,7 @@ func spawn_resource_nodes_local() -> void:
 		var resource_id := String(descriptor.get("id", ""))
 		var resource_node = RESOURCE_NODE_SCENE.instantiate()
 		resource_node.name = "Resource_%s" % resource_id
-		var resource_position: Vector3 = descriptor.get("position", gate_center)
+		var resource_position := _resource_descriptor_world_position(descriptor)
 		resource_position = _project_to_terrain(resource_position, 0.35)
 		resource_node.setup(resource_id, String(descriptor.get("type", "iron_ore")), resource_position, int(descriptor.get("amount", 0)), _collected_crystal_ids.has(resource_id) if String(descriptor.get("type", "")) == "crystal" else _collected_resource_ids.has(resource_id))
 		gate_root.add_child(resource_node)
@@ -876,7 +886,10 @@ func _try_place_pylon(peer_id: int, player: Node3D) -> bool:
 		return false
 	var placement_position := _placement_position_for_player(player)
 	if not _is_valid_pylon_position(placement_position):
-		status_changed.emit("Find stable terrain with enough open space before placing the pylon.")
+		if _has_blocking_resources_near_pylon(placement_position):
+			status_changed.emit("Clear nearby stone, wood, and herbs before placing the pylon.")
+		else:
+			status_changed.emit("Find stable terrain with enough open space before placing the pylon.")
 		return false
 	_spawn_gate_content_local()
 	var final_pylon_position := placement_position
@@ -915,7 +928,24 @@ func _is_valid_pylon_position(position: Vector3) -> bool:
 	for existing_position in _placed_pylon_positions:
 		if position.distance_to(existing_position) < pylon_min_spacing:
 			return false
+	if _has_blocking_resources_near_pylon(position):
+		return false
 	return true
+
+
+func _has_blocking_resources_near_pylon(position: Vector3) -> bool:
+	var clearance_radius = max(pylon_resource_clearance_radius, pylon_build_radius)
+	for resource_node in _resource_nodes.values():
+		if resource_node == null or not resource_node.has_method("is_collected") or resource_node.is_collected():
+			continue
+		var resource_type := String(resource_node.get_resource_type())
+		if resource_type != "stone_node" and resource_type != "wood_node" and resource_type != "herb_patch":
+			continue
+		var planar_offset = resource_node.global_position - position
+		planar_offset.y = 0.0
+		if planar_offset.length() <= clearance_radius:
+			return true
+	return false
 
 
 func _pylon_spawn_platform_half_extent() -> float:
@@ -1174,17 +1204,124 @@ func _upgrade_display_name(upgrade_type: String) -> String:
 
 func _build_resource_definitions() -> Array[Dictionary]:
 	return [
-		{"id": "stone_1", "type": "stone_node", "position": gate_center + Vector3(-10.0, 0.0, 8.0), "amount": 18},
-		{"id": "stone_2", "type": "stone_node", "position": gate_center + Vector3(9.0, 0.0, -7.0), "amount": 16},
-		{"id": "stone_3", "type": "stone_node", "position": gate_center + Vector3(-12.0, 0.0, -11.0), "amount": 14},
-		{"id": "wood_1", "type": "wood_node", "position": gate_center + Vector3(11.0, 0.0, 10.0), "amount": 10},
-		{"id": "wood_2", "type": "wood_node", "position": gate_center + Vector3(-15.0, 0.0, 2.0), "amount": 10},
-		{"id": "herb_1", "type": "herb_patch", "position": gate_center + Vector3(13.0, 0.0, 12.0), "amount": 1},
-		{"id": "treasure_1", "type": "treasure_spot", "position": gate_center + Vector3(15.0, 0.0, -12.0), "amount": 0},
-		{"id": "crystal_1", "type": "crystal", "position": gate_center + Vector3(17.0, 0.0, 4.0), "amount": 1},
-		{"id": "crystal_2", "type": "crystal", "position": gate_center + Vector3(-16.0, 0.0, -5.0), "amount": 1},
-		{"id": "crystal_3", "type": "crystal", "position": gate_center + Vector3(4.0, 0.0, 15.0), "amount": 1},
+		{"id": "stone_1", "type": "stone_node", "position": Vector3(-10.0, 0.0, 8.0), "amount": 18},
+		{"id": "stone_2", "type": "stone_node", "position": Vector3(9.0, 0.0, -7.0), "amount": 16},
+		{"id": "stone_3", "type": "stone_node", "position": Vector3(-12.0, 0.0, -11.0), "amount": 14},
+		{"id": "wood_1", "type": "wood_node", "position": Vector3(11.0, 0.0, 10.0), "amount": 10},
+		{"id": "wood_2", "type": "wood_node", "position": Vector3(-15.0, 0.0, 2.0), "amount": 10},
+		{"id": "herb_1", "type": "herb_patch", "position": Vector3(13.0, 0.0, 12.0), "amount": 1},
+		{"id": "treasure_1", "type": "treasure_spot", "position": Vector3(15.0, 0.0, -12.0), "amount": 0},
+		{"id": "crystal_1", "type": "crystal", "position": Vector3(17.0, 0.0, 4.0), "amount": 1},
+		{"id": "crystal_2", "type": "crystal", "position": Vector3(-16.0, 0.0, -5.0), "amount": 1},
+		{"id": "crystal_3", "type": "crystal", "position": Vector3(4.0, 0.0, 15.0), "amount": 1},
 	]
+
+
+func _build_scattered_resource_definitions(base_descriptors: Array[Dictionary]) -> Array[Dictionary]:
+	var scattered: Array[Dictionary] = []
+	var grouped_templates := {
+		"stone_node": [],
+		"wood_node": [],
+		"herb_patch": [],
+	}
+	for descriptor in base_descriptors:
+		var descriptor_copy: Dictionary = descriptor.duplicate(true)
+		var resource_type := String(descriptor_copy.get("type", ""))
+		descriptor_copy["world_position"] = _resource_descriptor_world_position(descriptor_copy)
+		if grouped_templates.has(resource_type):
+			grouped_templates[resource_type].append(descriptor_copy)
+			continue
+		scattered.append(descriptor_copy)
+	scattered.append_array(_build_scattered_descriptors_for_type("stone_node", grouped_templates.get("stone_node", []), max(scattered_stone_node_count, 0), 0.25))
+	scattered.append_array(_build_scattered_descriptors_for_type("wood_node", grouped_templates.get("wood_node", []), max(scattered_wood_node_count, 0), 2.1))
+	scattered.append_array(_build_scattered_descriptors_for_type("herb_patch", grouped_templates.get("herb_patch", []), max(scattered_herb_patch_count, 0), 4.2))
+	return scattered
+
+
+func _build_scattered_descriptors_for_type(resource_type: String, templates: Array, total_count: int, angle_offset: float) -> Array[Dictionary]:
+	var descriptors: Array[Dictionary] = []
+	if templates.is_empty() or total_count <= 0:
+		return descriptors
+	for index in range(total_count):
+		var template: Dictionary = (templates[index % templates.size()] as Dictionary).duplicate(true)
+		template["id"] = "%s_%d" % [_resource_type_id_prefix(resource_type), index + 1]
+		template["world_position"] = _scatter_resource_world_position(resource_type, index, total_count, angle_offset)
+		template["amount"] = _scattered_resource_amount(resource_type, int(template.get("amount", 0)), index)
+		descriptors.append(template)
+	return descriptors
+
+
+func _resource_type_id_prefix(resource_type: String) -> String:
+	match resource_type:
+		"stone_node":
+			return "stone"
+		"wood_node":
+			return "wood"
+		"herb_patch":
+			return "herb"
+		_:
+			return resource_type.to_lower()
+
+
+func _scattered_resource_amount(resource_type: String, template_amount: int, index: int) -> int:
+	match resource_type:
+		"stone_node":
+			return max(template_amount + ((index % 4) - 1) * 2, 10)
+		"wood_node":
+			return max(template_amount + ((index % 3) - 1) * 2, 8)
+		"herb_patch":
+			return max(template_amount, 1)
+		_:
+			return max(template_amount, 0)
+
+
+func _scatter_resource_world_position(resource_type: String, index: int, total_count: int, angle_offset: float) -> Vector3:
+	var safe_total = max(total_count - 1, 1)
+	var ratio := pow(float(index) / float(safe_total), 0.85)
+	var min_radius = max(resource_scatter_min_radius, max(pylon_resource_clearance_radius, pylon_build_radius) + 6.0)
+	var max_radius = max(min(resource_scatter_max_radius, _resource_world_max_radius()), min_radius + 4.0)
+	var radius := lerpf(min_radius, max_radius, ratio)
+	var jitter_phase := float(index + 1)
+	if resource_type == "wood_node":
+		jitter_phase *= 1.17
+	elif resource_type == "herb_patch":
+		jitter_phase *= 1.31
+	var jitter := sin(jitter_phase + angle_offset) * resource_scatter_jitter
+	var angle := float(index + 1) * 2.39996323 + angle_offset
+	var candidate := gate_center + Vector3(cos(angle) * (radius + jitter), 0.0, sin(angle) * (radius + jitter))
+	return _constrain_resource_world_position(candidate, 6.0)
+
+
+func _resource_world_max_radius() -> float:
+	var half_extents := _resource_world_half_extents(6.0)
+	return max(min(half_extents.x, half_extents.y), resource_scatter_min_radius + 8.0)
+
+
+func _resource_world_half_extents(margin: float = 0.0) -> Vector2:
+	var half_width = max(pylon_floor_half_extent * 3.0 - margin, resource_scatter_min_radius + 4.0)
+	var half_length = max(pylon_floor_half_extent * 3.0 - margin, resource_scatter_min_radius + 4.0)
+	if world_generator != null:
+		half_width = max(float(world_generator.get("world_width")) * 0.5 - margin, resource_scatter_min_radius + 4.0)
+		half_length = max(float(world_generator.get("world_length")) * 0.5 - margin, resource_scatter_min_radius + 4.0)
+	return Vector2(half_width, half_length)
+
+
+func _constrain_resource_world_position(position: Vector3, margin: float = 0.0) -> Vector3:
+	var half_extents := _resource_world_half_extents(margin)
+	return Vector3(
+		clampf(position.x, gate_center.x - half_extents.x, gate_center.x + half_extents.x),
+		position.y,
+		clampf(position.z, gate_center.z - half_extents.y, gate_center.z + half_extents.y)
+	)
+
+
+func _resource_descriptor_world_position(descriptor: Dictionary) -> Vector3:
+	if descriptor.has("world_position"):
+		return descriptor.get("world_position", gate_center)
+	var local_position: Vector3 = descriptor.get("position", Vector3.ZERO)
+	if descriptor.has("position_is_world") and bool(descriptor.get("position_is_world", false)):
+		return local_position
+	return gate_center + local_position
 
 
 func _update_resource_reveal_states() -> void:
@@ -1350,7 +1487,7 @@ func get_material_ids() -> Array[String]:
 func _reset_material_inventory() -> void:
 	_stored_materials.clear()
 	for material_id in get_material_ids():
-		_stored_materials[String(material_id)] = 0
+		_stored_materials[String(material_id)] = max(starter_material_amount, 0)
 
 
 func _material_summary() -> String:
@@ -1364,9 +1501,9 @@ func _refresh_era_runtime_data() -> void:
 	if era_manager != null and era_manager.has_method("get_active_gate_era_id"):
 		_current_era_id = String(era_manager.get_active_gate_era_id())
 	if era_manager != null and era_manager.has_method("get_resource_nodes"):
-		_resource_definitions = era_manager.get_resource_nodes()
+		_resource_definitions = _build_scattered_resource_definitions(era_manager.get_resource_nodes())
 	else:
-		_resource_definitions = _build_resource_definitions()
+		_resource_definitions = _build_scattered_resource_definitions(_build_resource_definitions())
 	if _stored_materials.is_empty():
 		_reset_material_inventory()
 

@@ -176,3 +176,22 @@ This keeps the current overworld prototype compatible with a later procedurally 
 - Health bars for world entities should be drawn through the main screen-space UI overlay, not as 3D meshes in the scene.
 - Each world entity that needs a health bar should expose or retain a stable world anchor above the entity so the overlay can project the bar to screen space.
 - When adding a new health bar, follow the shared overlay pattern so health-bar readability stays consistent across camera angles and co-op play.
+
+---
+
+## System Test Launcher
+
+The project now includes a dedicated system test launcher for isolated runtime slices.
+
+Its role is to:
+- discover test-suite definitions from `res://resources/test_suites`
+- present them in a picker scene at startup
+- load the selected suite inside a shared host scene with reload and return controls
+
+This keeps focused testing separate from the full match bootstrap and avoids duplicating the entire main scene for every experiment.
+
+Architecture rules for test suites:
+- each suite should be a small scene focused on one system or interaction slice
+- suites should reuse the same gameplay scripts and authority boundaries as the live game whenever practical
+- suites may stub or omit unrelated systems, but they should not bypass server authority for shared gameplay state
+- the full game may remain available as one suite for comparison against isolated sandboxes

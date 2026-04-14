@@ -39,6 +39,7 @@ The project now has a working multiplayer gameplay prototype with shared players
 - basic player attack, enemy health, enemy death, and player/enemy health bars
 - first server-authoritative wall and turret placement prototype with replicated defense structures, structure health, and turret bullet projectiles
 - simple wave pacing with breather windows and in-session host restart flow for gate and raid pressure testing
+- system test picker with isolated sandbox suites for full game, combat, building, and enemy pressure validation
 - first confirmed gate prototype with build-first pylon setup, manual claim channeling, finite claim waves, cave activation, and extraction
 - shared session scrap storage plus a first base-side spend target that upgrades core max health
 - first town hall raid prototype with player-triggered upgrade channeling, finite raid waves, and no main-base enemy spawning outside active raids

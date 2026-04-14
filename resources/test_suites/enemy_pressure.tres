@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SystemTestSuiteDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/system_test_suite_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+suite_id = "enemy_pressure"
+title = "Enemy Pressure"
+summary = "Start raid or gate-style pressure waves against the isolated objective with optional free defenses. Use this to test spawn pacing, structure targeting, and objective damage without the rest of the run flow."
+scene_path = "res://scenes/tests/system_test_sandbox.tscn"
+tags = PackedStringArray("enemy", "waves", "raid", "gate")

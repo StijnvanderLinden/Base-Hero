@@ -4,10 +4,10 @@ signal world_generated()
 signal build_zone_changed()
 
 @export var world_center: Vector3 = Vector3(64.0, 0.0, 0.0)
-@export var world_width: float = 112.0
-@export var world_length: float = 112.0
-@export var terrain_resolution_x: int = 56
-@export var terrain_resolution_z: int = 56
+@export var world_width: float = 224.0
+@export var world_length: float = 224.0
+@export var terrain_resolution_x: int = 112
+@export var terrain_resolution_z: int = 112
 @export var base_height_scale: float = 3.6
 @export var hill_height_scale: float = 2.4
 @export var mountain_height_scale: float = 12.0

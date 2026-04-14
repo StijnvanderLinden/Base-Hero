@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SystemTestSuiteDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/system_test_suite_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+suite_id = "combat_arena"
+title = "Combat Arena"
+summary = "Host a tiny local combat sandbox with the player, a core objective, projectiles, and manual enemy spawns. This is the fast path for testing movement, weapon feel, and kill timing."
+scene_path = "res://scenes/tests/system_test_sandbox.tscn"
+tags = PackedStringArray("combat", "player", "sandbox")

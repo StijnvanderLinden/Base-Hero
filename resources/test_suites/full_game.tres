@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SystemTestSuiteDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/system_test_suite_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+suite_id = "full_game"
+title = "Full Game"
+summary = "Boot the existing main prototype inside the shared suite host. Use this as the baseline when you need to compare a focused sandbox against the full integrated flow."
+scene_path = "res://scenes/main.tscn"
+tags = PackedStringArray("baseline", "integration")

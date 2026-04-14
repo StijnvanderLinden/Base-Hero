@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SystemTestSuiteDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/system_test_suite_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+suite_id = "building_lab"
+title = "Building Lab"
+summary = "Run an isolated build sandbox with free wall and turret placement, repair loops, and a manual enemy spawn for turret validation. This avoids entering a full gate or raid just to test building changes."
+scene_path = "res://scenes/tests/system_test_sandbox.tscn"
+tags = PackedStringArray("building", "turrets", "repair")
