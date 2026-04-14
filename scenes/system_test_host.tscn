@@ -1,27 +1,24 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://d0s5dmmgn020a"]
 
-[ext_resource type="Script" path="res://scripts/system_test_host.gd" id="1"]
+[ext_resource type="Script" uid="uid://cdhi23oruojv4" path="res://scripts/system_test_host.gd" id="1"]
 
-[node name="SystemTestHost" type="Node"]
+[node name="SystemTestHost" type="Node" unique_id=334709383]
 script = ExtResource("1")
 
-[node name="ContentRoot" type="Node" parent="."]
+[node name="ContentRoot" type="Node" parent="." unique_id=1677416090]
 
-[node name="Overlay" type="CanvasLayer" parent="."]
+[node name="Overlay" type="CanvasLayer" parent="." unique_id=119920170]
 
-[node name="MarginContainer" type="MarginContainer" parent="Overlay"]
-anchors_preset = 10
-anchor_right = 1.0
-offset_left = 16.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 164.0
+[node name="TopBanner" type="PanelContainer" parent="Overlay" unique_id=317159507]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -52.5
+offset_right = 52.5
+offset_bottom = 51.0
 grow_horizontal = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="Overlay/MarginContainer"]
-layout_mode = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="Overlay/MarginContainer/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="Overlay/TopBanner" unique_id=1781028033]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 14
@@ -29,30 +26,11 @@ theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 14
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Overlay/MarginContainer/PanelContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Overlay/TopBanner/MarginContainer" unique_id=1453873832]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 4
 
-[node name="TitleLabel" type="Label" parent="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="Overlay/TopBanner/MarginContainer/VBoxContainer" unique_id=1826611115]
 layout_mode = 2
 text = "Suite Title"
-
-[node name="SummaryLabel" type="Label" parent="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Suite summary"
-autowrap_mode = 3
-
-[node name="ButtonsRow" type="HBoxContainer" parent="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="BackButton" type="Button" parent="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow"]
-layout_mode = 2
-text = "Back To Picker"
-
-[node name="ReloadButton" type="Button" parent="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow"]
-layout_mode = 2
-text = "Reload Suite"
-
-[connection signal="pressed" from="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/BackButton" to="." method="_on_back_button_pressed"]
-[connection signal="pressed" from="Overlay/MarginContainer/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/ReloadButton" to="." method="_on_reload_button_pressed"]
+horizontal_alignment = 1

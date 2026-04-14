@@ -9,10 +9,15 @@ const SUITE_ENEMY_PRESSURE := "enemy_pressure"
 @onready var building_manager = $BuildingManager
 @onready var era_manager = $EraManager
 @onready var core_objective = $World/CoreObjective
+@onready var menu_dimmer: ColorRect = $UI/MenuDimmer
+@onready var menu_panel: PanelContainer = $UI/PanelContainer
+@onready var menu_hint_label: Label = $UI/MenuHintLabel
 @onready var status_label: Label = $UI/PanelContainer/MarginContainer/VBoxContainer/StatusLabel
 @onready var wave_label: Label = $UI/PanelContainer/MarginContainer/VBoxContainer/WaveLabel
 @onready var objective_label: Label = $UI/PanelContainer/MarginContainer/VBoxContainer/ObjectiveLabel
 @onready var controls_label: Label = $UI/PanelContainer/MarginContainer/VBoxContainer/ControlsLabel
+@onready var back_button: Button = $UI/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/BackButton
+@onready var reload_button: Button = $UI/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/ReloadButton
 @onready var spawn_enemy_button: Button = $UI/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/SpawnEnemyButton
 @onready var start_raid_button: Button = $UI/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/StartRaidButton
 @onready var start_gate_button: Button = $UI/PanelContainer/MarginContainer/VBoxContainer/ButtonsRow/StartGateButton
@@ -28,6 +33,7 @@ const SUITE_ENEMY_PRESSURE := "enemy_pressure"
 var _manual_enemy_id: int = 1000
 var _suite_profile: Dictionary = {}
 var _suite_id: String = ""
+var _menu_open: bool = false
 
 
 func _ready() -> void:
@@ -41,6 +47,7 @@ func _ready() -> void:
 	var host_error = network_manager.host_game(network_manager.default_port)
 	if host_error != OK:
 		_status("Failed to host local sandbox on port %d." % network_manager.default_port)
+	_set_menu_open(false)
 	_refresh_runtime_labels()
 
 
@@ -50,6 +57,17 @@ func _process(_delta: float) -> void:
 
 func handle_local_interaction(_peer_id: int) -> bool:
 	return false
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_TAB:
+			_set_menu_open(not _menu_open)
+			get_viewport().set_input_as_handled()
+			return
+		if event.keycode == KEY_ESCAPE and _menu_open:
+			_set_menu_open(false)
+			get_viewport().set_input_as_handled()
 
 
 func _configure_runtime() -> void:
@@ -74,6 +92,8 @@ func _wire_signals() -> void:
 	core_objective.destroyed.connect(func() -> void:
 		_status("Objective destroyed. Use Reset Session to restart the sandbox.")
 	)
+	back_button.pressed.connect(_on_back_pressed)
+	reload_button.pressed.connect(_on_reload_pressed)
 	spawn_enemy_button.pressed.connect(_on_spawn_enemy_pressed)
 	start_raid_button.pressed.connect(_on_start_raid_pressed)
 	start_gate_button.pressed.connect(_on_start_gate_pressed)
@@ -144,6 +164,14 @@ func _current_suite_id() -> String:
 	if SystemTestRegistry.current_suite == null:
 		return ""
 	return SystemTestRegistry.current_suite.suite_id
+
+
+func _on_back_pressed() -> void:
+	SystemTestRegistry.return_to_picker()
+
+
+func _on_reload_pressed() -> void:
+	SystemTestRegistry.reload_current_suite()
 
 
 func _on_spawn_enemy_pressed() -> void:
@@ -240,3 +268,24 @@ func _refresh_runtime_labels() -> void:
 
 func _is_spawning_paused() -> bool:
 	return pause_button.text == "Resume Spawns"
+
+
+func _set_menu_open(open: bool) -> void:
+	_menu_open = open
+	menu_panel.visible = open
+	menu_dimmer.visible = open
+	var player := _local_player()
+	if player != null and player.has_method("set_ui_locked"):
+		player.set_ui_locked(open)
+	if open:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+func _local_player() -> Node:
+	var local_peer_id := multiplayer.get_unique_id()
+	var node_name := "Player_%d" % local_peer_id
+	if not players_root.has_node(node_name):
+		return null
+	return players_root.get_node(node_name)
