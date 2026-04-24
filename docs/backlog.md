@@ -16,9 +16,27 @@ Items here are not design truth unless promoted into the proper design documents
 ## High-Priority Ideas
 These are ideas that seem promising and may deserve testing or future commitment.
 
-- gate milestone reward thresholds
+- optional player weapon upgrades in the hub if turret progression alone is not enough
+- advanced turret transformations unlocked from the hub after basic turret upgrades feel good
+- extraction or manual run exit once base-destruction failure and repeat flow are proven
+
+---
+
+## Deferred Until Core Loop Is Fun
+These ideas are valid, but should not be implemented in the current vertical slice.
+
 - gate exploration points of interest outside the safe objective zone
-- multiple reward categories within gates
+- caves
+- deep map exploration
+- roaming gameplay
+- multiple worlds or eras
+- material-specific trees
+- meta-progression depth beyond simple essence unlocks
+- complex enemy variants
+- base building outside the preset layout
+- gold
+- materials beyond scrap and essence
+- complex resource systems
 - unique materials for weapon and structure variety
 - components used for turret and trap customization
 - extraction pressure spike as a defining gate mechanic
@@ -33,7 +51,7 @@ These are important questions that may significantly influence design.
 - should gate progression feel more like survival, exploration, or a hybrid
 - how much building should be allowed inside gates
 - should resources be fully shared in co-op by default
-- what is the best failure penalty for gate runs
+- should the final version keep the 70% essence failure rule or tune it after testing
 
 ---
 
@@ -47,6 +65,8 @@ These are lower-priority ideas that may be good once the core loop works.
 - local persistent gate-region state
 - support-oriented player tools
 - structure component sockets or modifications
+- POI rewards
+- material discovery unlocking research trees
 
 ---
 

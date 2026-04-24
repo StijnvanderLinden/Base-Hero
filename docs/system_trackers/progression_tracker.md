@@ -6,111 +6,91 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Stone Age Progression Slice Implemented On Top Of The Pylon Loop
+Refocused On Simple Essence-Based Hub Unlocks
 
 ---
 
 ## Current Design Summary
-Progression now centers on the pylon channeling loop and the split between tactical and long-term resources.
+Progression for the vertical slice is intentionally small.
 
-Current confirmed direction:
-- gold is a tactical resource used only for building structures
-- progression is fueled by gathered materials, material essence, and special materials
-- pylons convert matching material into matching material essence during active channeling
-- milestone rewards are always safe and bypass per-material essence capacity
-- advanced research nodes are gated by special materials rather than generic currencies
-- repeated pylon clears form a progression ladder through per-pylon modifier escalation
-- full completion reward quality scales with the number of active modifiers on that run
-- players do not manually choose pylon modifiers, keeping progression pacing structured
-- core research is unified per material tree across weapons, armor, abilities, and passives
+Players earn essence from runs, then spend it in the hub to unlock:
+- turret types
+- turret upgrade branches
+- base capacity
+- optional basic player weapon upgrades
+
+The goal is not depth yet. The goal is to make the next run feel stronger and more promising.
 
 ---
 
 ## Implemented
 - Gate rewards already feed back into base-side progression in a basic runtime form
-- Core upgrade progression already exists in the live prototype
-- Augment and weapon progression direction is already documented at a high level
-- Modifier-scaled pylon reward progression is now documented as confirmed design truth
-- Era-driven research definitions now exist at runtime
-- Stone Age now has a live first progression slice:
-	- Reinforced Wall unlock
-	- Improved Thrower unlock
-	- first augment slot unlock
-	- first branch unlock
-	- simple damage, attack-speed, range, and optional AoE augment nodes
-- Stone Age crystal spending is now intentionally small and focused
+- Core upgrade and research scaffolding exists and may be simplified
+- Era-driven research definitions exist at runtime
 
 ---
 
 ## In Progress
-- Tuning Stone Age essence and crystal costs for fast unlock pacing
-- Aligning the live Stone Age slice with the broader long-term material-specific progression plan
-- Defining how later eras should widen the research set without overloading the early UI
+- Simplifying progression from broader research/material plans into essence-based hub unlocks
+- Identifying which existing unlocks best support the first turret-focused loop
 
 ---
 
 ## Blockers / Problems
-- Runtime still uses one shared essence pool rather than per-material stored essence
-- The split between safe milestone rewards and vulnerable generated essence is still simplified in runtime
-- full modifier-count reward scaling is not implemented yet
-- the Stone Age slice is intentionally narrower than the long-term progression specification
+- Existing progression docs and runtime may still reference crystals, material essence, pylon rewards, or broader trees
+- Hub unlocks are not yet focused around turret branches and base capacity
+- Essence retention on base destruction is not yet implemented as the vertical-slice failure rule
 
 ---
 
 ## Must Have
-- Gold as a tactical resource for building structures only
-- Material gathering as the primary progression input
-- Fast first-era progression pacing
-- first augment slot and branch unlock path
-- first simple combat augment set
-- first structure upgrade unlocks
+- Essence earned from survival duration
+- Essence scaled by milestone progress
+- About 70% essence kept when the base is destroyed
+- Simple hub spending
+- At least one turret upgrade branch unlock
+- At least one base capacity unlock or turret type unlock
 
 ---
 
 ## Should Have
-- Clear UI feedback for banked material essence versus vulnerable generated material essence
-- Progression sinks that create meaningful spend decisions after each gate run
-- Unlock pacing that makes newer pylons more attractive than farming older ones forever
-- Shared co-op readability for milestone rewards and reward ownership rules
-- Clear reward previewing so teams understand why a higher-modifier clear is worth attempting
-- Clear communication of which materials feed which research trees
+- Locked branches visible but unavailable during runs
+- Clear next-unlock costs
+- Fast first unlock pacing
+- Optional simple player weapon upgrade if turret-only progression does not sell the fantasy
 
 ---
 
 ## Could Have
-- Multiple reward tables based on biome or pylon tier
-- Limited upgrades that increase specific material essence capacities in controlled steps
-- Milestone-specific bonus modifiers tied to gate depth or biome identity
-- Cosmetic or presentation upgrades tied to mastering higher modifier tiers on a pylon
-- Cross-material research nodes that require two specializations later in development
+- Multiple turret branches after the first loop works
+- Small permanent player survivability upgrade
+- Milestone first-clear bonuses
 
 ---
 
-## Won’t Have (for now)
-- Infinite uncapped material essence storage
-- Gold functioning as the main long-term progression currency
-- Generic universal essence as the main progression resource
-- Heavy economy micromanagement layers during the first multiplayer-safe prototype
+## Won't Have (for now)
+- Deep research trees
+- Material-specific trees
+- Special material gates
+- Multiple eras worth of progression
+- Complex augment webs
+- Long grind loops
 
 ---
 
 ## Open Questions
-- What is the first prototype per-material essence capacity value that creates pressure without feeling overly punitive?
-- Which material trees should be available in the first playable slice?
-- Which advanced nodes should require special materials in the first pass?
-- How should completion reward packages differ between material families?
-- How large should the reward jump be between modifier tiers to stay motivating without invalidating deeper content?
+- What is the first unlock that most clearly makes the next run feel better?
+- How many runs should the first hub unlock take?
+- Should base capacity or turret type unlock come first?
 
 ---
 
 ## Recent Decisions
-- Progression is now fed primarily by pylon channeling rather than cave expeditions
-- Stone Age uses a deliberately small, fast unlock set instead of a broad tree
-- structure upgrades and first augments are available inside Era 1
-- complex augment interactions are deferred until later eras
-- the first era keeps crystal spending minimal and focused
+- Essence is the only between-run progression resource for the MVP
+- Hub unlocks should be simple and directly improve the next run
+- Deep progression is deferred until the one-more-run loop is fun
 
 ---
 
 ## Next Recommended Task
-Playtest the Stone Age unlock cadence and then decide how much of the broader per-material essence plan should move from documentation into runtime for the next progression pass.
+Define the first three essence unlocks and connect at least one to an in-run turret upgrade branch.

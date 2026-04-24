@@ -49,6 +49,7 @@ var _raid_breather_duration_runtime: float = 5.0
 var _raid_wave_enemy_bonus_runtime: int = 2
 var _spawn_point_provider: Node
 var era_manager: Node
+var gate_manager: Node
 var _gate_wave_definitions: Array[Dictionary] = []
 
 
@@ -76,6 +77,10 @@ func set_spawn_point_provider(provider: Node) -> void:
 
 func set_era_manager(manager: Node) -> void:
 	era_manager = manager
+
+
+func set_gate_manager(manager: Node) -> void:
+	gate_manager = manager
 
 
 func get_current_objective() -> Node3D:
@@ -221,6 +226,20 @@ func schedule_enemy_despawn(enemy_id: int, delay: float) -> void:
 	_pending_despawns[enemy_id] = max(delay, 0.0)
 
 
+func notify_enemy_killed(enemy: Node) -> void:
+	if not multiplayer.is_server():
+		return
+	if _pressure_mode != "gate":
+		return
+	if gate_manager == null or not gate_manager.has_method("add_scrap"):
+		return
+	var enemy_kind := "enemy"
+	if enemy != null and enemy.has_method("get_enemy_scene_kind"):
+		enemy_kind = String(enemy.get_enemy_scene_kind())
+	var scrap_amount := _scrap_reward_for_enemy(enemy_kind)
+	gate_manager.add_scrap(scrap_amount, "%s defeated" % enemy_kind.capitalize())
+
+
 func despawn_enemy_for_all(enemy_id: int) -> void:
 	_remove_enemy_local(enemy_id)
 	if multiplayer.is_server():
@@ -307,6 +326,24 @@ func _current_enemy_start_health(enemy_kind: String) -> float:
 		base_health = construct_breaker_base_health
 	var wave_bonus := gate_enemy_health_bonus_per_wave if _pressure_mode == "gate" else raid_enemy_health_bonus_per_wave
 	return max(base_health + float(max(_wave_index - 1, 0)) * wave_bonus, 1.0)
+
+
+func _scrap_reward_for_enemy(enemy_kind: String) -> int:
+	var base_reward := 5
+	match enemy_kind:
+		"stone_caveman":
+			base_reward = 4
+		"stone_brute":
+			base_reward = 10
+		"stone_beast":
+			base_reward = 14
+		"stone_mech":
+			base_reward = 30
+		"construct_breaker":
+			base_reward = 12
+		"construct":
+			base_reward = 6
+	return max(base_reward + max(_wave_index - 1, 0), 1)
 
 
 func get_wave_index() -> int:

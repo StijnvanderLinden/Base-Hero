@@ -1,88 +1,40 @@
 # Biome System Tracker
 
-## Purpose
-Tracks implementation state, priorities, open questions, and design evolution for the Biome System.
-
----
-
 ## Current Status
-Design Confirmed, Not Implemented
-
----
+Deferred For Vertical Slice
 
 ## Current Design Summary
-Biomes define the identity of persistent gate regions.
-
-Current confirmed direction:
-- biome mechanics are biome-specific
-- the first biome should stay simple and readable
-- later biomes can introduce stronger local mechanics
-- exploration enemies should reflect the biome
-
----
+The MVP only needs enough Stone Age flavor to make one arena readable.
 
 ## Implemented
-- No dedicated biome system is implemented yet
-- The current gate prototype does not yet differentiate regions by biome mechanics
-
----
+- Some era/biome presentation hooks may exist
 
 ## In Progress
-- Defining the first biome at a high level
-- Separating biome identity from the generic gate prototype
-
----
+- No biome system work planned for MVP
 
 ## Blockers / Problems
-- No persistent gate region exists yet
-- No biome-specific exploration enemy family exists yet
-- No biome-specific hazards or material identity are implemented yet
-
----
+- Biome scope can distract from the first fun loop
 
 ## Must Have
-- One simple biome region
-- One exploration enemy family tied to that biome
-- One clear biome visual and material identity
-- Readable biome rules in co-op
-
----
+- Simple visual theme for the first arena
 
 ## Should Have
-- One biome-specific hazard or pressure element later
-- Distinct deeper-layer reward identity
-- Better biome-to-biome differentiation plan
-
----
+- Readable silhouettes and lanes
 
 ## Could Have
-- Weather systems
-- Traversal-specific rules
-- Visibility modifiers
-- Biome mutators
-- Unique deep-layer events
+- Stronger biome identity later
 
----
-
-## Won’t Have (for now)
-- Many complex biome gimmicks at once
-- Heavy environmental simulation
-- Large biome catalogs before the first one works
-- Globalized biome rules that flatten region identity
-
----
+## Won't Have (for now)
+- Multiple biomes
+- Biome mechanics
+- Biome enemy families
+- Environmental hazards
 
 ## Open Questions
-- What should the first biome actually be?
-- What is the minimum biome identity needed for the first persistent gate milestone?
-- Which biome mechanics are strong enough to matter without harming readability?
-- How much resource identity should be biome-specific early on?
+- None for MVP
 
----
+## Recent Decisions
+- Biomes are backlog until the Stone Age arena loop is fun
 
 ## Next Recommended Task
-Define and implement the first biome slice:
-- choose the first biome theme
-- define one exploration enemy family for it
-- define its basic materials and region identity
-- keep mechanics simple and readable
+Keep visual work minimal and prioritize gameplay readability.

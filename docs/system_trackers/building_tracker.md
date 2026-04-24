@@ -6,133 +6,104 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Wall And Turret Prototype Implemented With Gate Build-Zone Validation
+First Scrap-Paid Turret Upgrade Implemented
 
 ---
 
 ## Current Design Summary
-Building is one of the core identities of the game. Players create defensive layouts that shape enemy pressure and support combat.
+For the vertical slice, building means fighting alongside a preset base.
 
-The system should be:
-- strategic
-- readable
-- co-op friendly
-- easy enough to use under pressure
+The run starts with:
+- one central base/core
+- fixed-strength walls
+- level 1 turrets
+- limited capacity for extra turrets
 
-Main structure categories:
-- walls
-- turrets
-- support structures later
+During a run, players spend scrap to:
+- upgrade turrets
+- place limited additional turrets
 
-During expeditions, gate building is now constrained to the active pylon build zone so defenses stay readable and predictable on generated terrain.
+Freeform base building outside the preset layout is backlog.
 
 ---
 
 ## Implemented
 - One server-authoritative wall placement prototype
 - One server-authoritative turret placement prototype
-- Grid-snapped wall placement validation on the server
-- Gate-run placement validation now checks against the active pylon build zone
-- Gate-run structure Y placement now projects onto the pylon foundation surface
-- Local valid/invalid structure placement preview for the active player
-- Preview wall orientation now matches the final placed wall
-- Players can rotate build preview orientation and final wall/turret placement during a live session
-- Preview now shows explicit valid/blocked readability text
-- Players can switch between wall and turret building during a live session
-- Shared scrap costs now gate wall and turret placement with server-side refusal feedback
-- Players can repair damaged walls and turrets with the normal interact input when standing nearby
-- Damaged structures now show clearer repairable state feedback and a local repair prompt appears when the player is in range
-- Placement now follows the camera aim point with server-validated requested positions, and walls use snap-assist for cleaner chains and corner turns
-- A local ground reticle now shows the aimed placement target before the snapped ghost resolves
-- Turrets now snap into cleaner anchor positions around nearby walls to speed up support layouts
-- Wall placement now uses a selected start point and end point, with the live preview filling the line between the two clicks
-- Wall meshes now fill a full grid cell so perpendicular joins read as closed corners instead of leaving a visible gap
-- Active wall segments can now be cancelled before placement, and the preview explicitly indicates when it is waiting for the endpoint
+- Server-side placement validation foundations
+- Local valid/invalid placement preview foundations
 - Wall health and destruction
 - Turret health, target scanning, and server-spawned bullet projectiles that hit enemies
-- Wall replication to connected clients and late joiners
-- Turret replication to connected clients and late joiners
-- Enemies can now attack nearby placed defenses before reaching the core
+- Wall and turret replication to connected clients and late joiners
+- Enemies can attack nearby placed defenses before reaching the core
+- Shared scrap costs already exist in some prototype building flow and may be repurposed
+- Healthy turrets can now be upgraded through the existing E interaction prompt
+- The first turret upgrade improves fire rate, range, damage, and visual color
+- Turret upgrade requests and scrap spending are server-authoritative
 
 ---
 
 ## In Progress
-- Clarifying how building differs between main base and gates beyond the first build-zone rule set
-- Tuning first wall placement spacing, build distance, and first cost values
-- Tuning repair cost, repair amount, and interaction radius for early defense maintenance
-- Tuning turret range, bullet speed, rate of fire, and placement spacing
-- Tuning how forgiving wall line start and end selection should be around existing placed walls
-- Tuning the wall segment UX so start, cancel, and confirm states stay readable under pressure
+- Tuning scrap cost and impact for the first turret upgrade
+- Shifting from broad building placement toward preset base plus limited turret decisions
 
 ---
 
 ## Blockers / Problems
-- No final decision on shared resources vs individual building permissions
-- Gate build zones still use placeholder foundation visuals
-- Build preview readability at the edge of the circular zone still needs tuning
+- Existing placement systems may support more freeform building than the MVP needs
+- Walls may still imply upgrade or construction depth that is out of scope for the vertical slice
 
 ---
 
 ## Must Have
-- One wall type
-- One turret type
-- Server-authoritative placement validation
-- Clear valid/invalid placement behavior
-- Basic structure health
-- Building tied to objective defense
-- Legal gate placement only inside the active pylon build zone
+- Preset starter base layout
+- Fixed-strength walls
+- Level 1 turrets at run start
+- Server-authoritative turret upgrade requests
+- Scrap cost for turret upgrades
+- At least one impactful turret upgrade
+- Limited additional turret placement
 
 ---
 
 ## Should Have
-- Upgrades for walls or turrets
-- Cost system tied to progression resource
-- Co-op-friendly shared building interaction
-- Distinct difference between base building and gate building
-- Clearer edge feedback when a placement leaves the circular build zone
+- Locked upgrade branch display
+- Clear upgrade feedback
+- Turret range or targeting readability
+- Co-op-safe shared spending rules
 
 ---
 
 ## Could Have
-- limited gate deployables
-- repair interactions
-- support structures
-- specialized anti-air or anti-siege defenses
-- structure behavior modifiers through components
+- Turret transformation into advanced unlocked type
+- Repair interaction if the base loop needs it after turret upgrades feel good
 
 ---
 
-## Won’t Have (for now)
-- power-grid simulation
-- large structure dependency trees
-- highly complex snapping networks
-- deep upgrade UI
-- large trap catalog
+## Won't Have (for now)
+- Wall upgrades
+- Freeform base construction outside the preset layout
+- Deep trap catalog
+- Power-grid simulation
+- Large structure dependency trees
+- Complex component sockets
 
 ---
 
 ## Open Questions
-- Should placement be grid-based, snap-based, or more freeform?
-- How much building is allowed during gates?
-- How much should walls shape pathing in the early version?
-- Are resources fully shared across players in co-op?
-- Should repair be a separate mechanic or part of upgrades/support later?
+- Should scrap be shared across the team?
+- How many extra turrets should be allowed in the first arena?
+- Which first turret upgrade feels most impactful: fire rate, range, area damage, or burst?
 
 ---
 
 ## Recent Decisions
-- Building is a core pillar, not optional flavor
-- Walls and turrets are the first two important structure types
-- Building should support combat rather than replace combat
-- The first building step should be one simple wall with server-validated placement before adding turrets
-- The first turret should be a straightforward auto-fire defense, not a complex upgrade tree or ability platform
-- Gate structures are built on an automatic pylon foundation zone rather than directly on raw uneven terrain
+- Walls are fixed strength for the MVP
+- Turrets start at level 1 every run
+- Scrap spending should focus on turret upgrades and limited additional turrets
+- Building complexity is deferred until the survival loop is fun
 
 ---
 
 ## Next Recommended Task
-Validate gate build-zone readability and placement rules:
-- test wall and turret placement at the inner and outer edges of the pylon zone
-- verify structure heights stay consistent on generated terrain during expeditions
-- keep tuning wall line behavior so circular-zone limits remain readable under pressure
-- keep tuning turret placement readability separately from wall line placement
+Playtest whether the first turret upgrade is obvious enough under wave pressure, then tune fire rate, range, damage, and cost.

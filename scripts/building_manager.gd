@@ -17,6 +17,8 @@ signal status_changed(message: String)
 @export var turret_repair_amount: float = 60.0
 @export var wall_repair_cost: int = 2
 @export var turret_repair_cost: int = 4
+@export var turret_upgrade_base_cost: int = 18
+@export var turret_upgrade_cost_step: int = 14
 @export var wall_spacing: float = 2.0
 @export var turret_spacing: float = 2.4
 @export var wall_chain_spacing: float = 2.0
@@ -259,27 +261,48 @@ func request_structure_repair(peer_id: int) -> bool:
 	if player_node == null:
 		return false
 	var structure = _nearest_repairable_structure(player_node.global_position)
-	if structure == null:
+	if structure != null:
+		var structure_type := "wall"
+		if structure.has_method("get_structure_kind"):
+			structure_type = _normalized_structure_type(structure.get_structure_kind())
+		if not _can_afford_repair(structure_type):
+			status_changed.emit(_insufficient_repair_scrap_message(structure_type))
+			return true
+		if not structure.has_method("apply_server_repair"):
+			return false
+		var repaired_amount := float(structure.apply_server_repair(_repair_amount_for_type(structure_type)))
+		if repaired_amount <= 0.0:
+			return true
+		if not _spend_repair_cost(structure_type):
+			return true
+		status_changed.emit(_repair_success_message(structure_type, repaired_amount))
+		return true
+
+	if not _can_upgrade_turrets_now():
 		return false
-	var structure_type := "wall"
-	if structure.has_method("get_structure_kind"):
-		structure_type = _normalized_structure_type(structure.get_structure_kind())
-	if not _can_afford_repair(structure_type):
-		status_changed.emit(_insufficient_repair_scrap_message(structure_type))
-		return true
-	if not structure.has_method("apply_server_repair"):
+	var turret = _nearest_upgradable_turret(player_node.global_position)
+	if turret == null:
 		return false
-	var repaired_amount := float(structure.apply_server_repair(_repair_amount_for_type(structure_type)))
-	if repaired_amount <= 0.0:
+	var upgrade_cost := get_turret_upgrade_cost(_turret_upgrade_level(turret))
+	if not _can_afford_upgrade(upgrade_cost):
+		status_changed.emit("Need %d scrap to upgrade turret. Stored: %d." % [upgrade_cost, _current_stored_scrap()])
 		return true
-	if not _spend_repair_cost(structure_type):
+	if not turret.has_method("apply_server_upgrade"):
+		return false
+	if not turret.apply_server_upgrade():
 		return true
-	status_changed.emit(_repair_success_message(structure_type, repaired_amount))
+	if not _spend_upgrade_cost(upgrade_cost):
+		return true
+	status_changed.emit("Turret upgraded to Lv%d. Stored: %d." % [_turret_upgrade_level(turret), _current_stored_scrap()])
 	return true
 
 
 func get_repair_cost_for_type(structure_type: String) -> int:
 	return _repair_cost_for_type(structure_type)
+
+
+func get_turret_upgrade_cost(current_level: int) -> int:
+	return max(turret_upgrade_base_cost + max(current_level - 1, 0) * turret_upgrade_cost_step, 0)
 
 
 func get_repair_prompt_for_peer(peer_id: int) -> Dictionary:
@@ -289,20 +312,32 @@ func get_repair_prompt_for_peer(peer_id: int) -> Dictionary:
 	if player_node == null:
 		return {"visible": false, "text": ""}
 	var structure = _nearest_repairable_structure(player_node.global_position)
-	if structure == null:
+	if structure != null:
+		var structure_type := "wall"
+		if structure.has_method("get_structure_kind"):
+			structure_type = _normalized_structure_type(structure.get_structure_kind())
+		var cost := _repair_cost_for_type(structure_type)
+		var text := "Press E to repair %s" % _structure_display_name(structure_type)
+		if structure.has_method("get_current_health"):
+			text += " (%d/%d HP)" % [int(round(structure.get_current_health())), int(round(_max_health_for_structure(structure)))]
+		if cost > 0:
+			if _can_afford_repair(structure_type):
+				text += " for %d scrap" % cost
+			else:
+				text = "Need %d scrap to repair %s" % [cost, _structure_display_name(structure_type)]
+		return {"visible": true, "text": text}
+
+	if not _can_upgrade_turrets_now():
 		return {"visible": false, "text": ""}
-	var structure_type := "wall"
-	if structure.has_method("get_structure_kind"):
-		structure_type = _normalized_structure_type(structure.get_structure_kind())
-	var cost := _repair_cost_for_type(structure_type)
-	var text := "Press E to repair %s" % _structure_display_name(structure_type)
-	if structure.has_method("get_current_health"):
-		text += " (%d/%d HP)" % [int(round(structure.get_current_health())), int(round(_max_health_for_structure(structure)))]
-	if cost > 0:
-		if _can_afford_repair(structure_type):
-			text += " for %d scrap" % cost
-		else:
-			text = "Need %d scrap to repair %s" % [cost, _structure_display_name(structure_type)]
+	var turret = _nearest_upgradable_turret(player_node.global_position)
+	if turret == null:
+		return {"visible": false, "text": ""}
+	var upgrade_cost := get_turret_upgrade_cost(_turret_upgrade_level(turret))
+	var text := "Press E to upgrade turret to Lv%d" % (_turret_upgrade_level(turret) + 1)
+	if _can_afford_upgrade(upgrade_cost):
+		text += " for %d scrap" % upgrade_cost
+	else:
+		text = "Need %d scrap to upgrade turret" % upgrade_cost
 	return {"visible": true, "text": text}
 
 
@@ -453,6 +488,25 @@ func _nearest_repairable_structure(origin: Vector3) -> Node3D:
 			best_distance = distance
 			best_structure = structure
 	return best_structure
+
+
+func _nearest_upgradable_turret(origin: Vector3) -> Node3D:
+	if structures_root == null:
+		return null
+	var best_turret: Node3D = null
+	var best_distance := repair_interaction_radius * repair_interaction_radius
+	for structure in structures_root.get_children():
+		if not structure is Node3D:
+			continue
+		if not structure.has_method("get_structure_kind") or structure.get_structure_kind() != "turret":
+			continue
+		if not structure.has_method("can_be_upgraded") or not structure.can_be_upgraded():
+			continue
+		var distance := origin.distance_squared_to(structure.global_position)
+		if distance <= best_distance:
+			best_distance = distance
+			best_turret = structure
+	return best_turret
 
 
 func _build_position_for_player(player_node: Node3D, structure_type: String) -> Vector3:
@@ -1032,6 +1086,34 @@ func _spend_repair_cost(structure_type: String) -> bool:
 	return gate_manager.consume_scrap(cost)
 
 
+func _can_afford_upgrade(cost: int) -> bool:
+	if cost <= 0:
+		return true
+	if gate_manager == null or not gate_manager.has_method("can_afford_scrap"):
+		return true
+	return gate_manager.can_afford_scrap(cost)
+
+
+func _can_upgrade_turrets_now() -> bool:
+	if gate_manager == null or not gate_manager.has_method("is_gate_active"):
+		return true
+	return gate_manager.is_gate_active()
+
+
+func _spend_upgrade_cost(cost: int) -> bool:
+	if cost <= 0:
+		return true
+	if gate_manager == null or not gate_manager.has_method("consume_scrap"):
+		return true
+	return gate_manager.consume_scrap(cost)
+
+
+func _turret_upgrade_level(turret: Node) -> int:
+	if turret != null and turret.has_method("get_upgrade_level"):
+		return int(turret.get_upgrade_level())
+	return 1
+
+
 func _insufficient_repair_scrap_message(structure_type: String) -> String:
 	var cost := _repair_cost_for_type(structure_type)
 	return "Need %d scrap to repair %s. Stored: %d." % [cost, _structure_display_name(structure_type).to_lower(), _current_stored_scrap()]
@@ -1084,8 +1166,72 @@ func get_turret_bullet_scene() -> PackedScene:
 	return turret_bullet_scene
 
 
+func capture_layout_snapshot(reference_position: Vector3, capture_radius: float = -1.0) -> Array[Dictionary]:
+	var layout: Array[Dictionary] = []
+	if structures_root == null:
+		return layout
+	var effective_radius := floor_limit if capture_radius <= 0.0 else capture_radius
+	for structure in structures_root.get_children():
+		if not structure is Node3D:
+			continue
+		if not structure.has_method("get_structure_kind") or not structure.has_method("get_spawn_rotation_y"):
+			continue
+		var offset = structure.global_position - reference_position
+		var planar_offset = offset
+		planar_offset.y = 0.0
+		if planar_offset.length() > effective_radius:
+			continue
+		layout.append({
+			"structure_type": _normalized_structure_type(String(structure.get_structure_kind())),
+			"offset": offset,
+			"rotation_y": float(structure.get_spawn_rotation_y()),
+		})
+	return layout
+
+
+func clear_structures_in_radius(reference_position: Vector3, clear_radius: float = -1.0) -> void:
+	if not multiplayer.is_server():
+		return
+	if structures_root == null:
+		return
+	var effective_radius := floor_limit if clear_radius <= 0.0 else clear_radius
+	var removals: Array[Dictionary] = []
+	for structure in structures_root.get_children():
+		if not structure is Node3D:
+			continue
+		if not structure.has_method("get_structure_kind") or not structure.has_method("get_structure_id"):
+			continue
+		var planar_offset = structure.global_position - reference_position
+		planar_offset.y = 0.0
+		if planar_offset.length() > effective_radius:
+			continue
+		removals.append({
+			"structure_type": _normalized_structure_type(String(structure.get_structure_kind())),
+			"structure_id": int(structure.get_structure_id()),
+		})
+	for removal in removals:
+		despawn_structure_for_all(String(removal.get("structure_type", "wall")), int(removal.get("structure_id", 0)))
+
+
+func apply_layout_snapshot(layout: Array[Dictionary], reference_position: Vector3, clear_radius: float = -1.0) -> void:
+	if not multiplayer.is_server():
+		return
+	clear_structures_in_radius(reference_position, clear_radius)
+	for entry in layout:
+		var structure_type := _normalized_structure_type(String(entry.get("structure_type", "wall")))
+		var offset: Vector3 = entry.get("offset", Vector3.ZERO)
+		var structure_position := _project_to_active_surface(reference_position + offset, structure_type)
+		var structure_rotation_y := float(entry.get("rotation_y", 0.0))
+		var structure_id := _next_structure_id(structure_type)
+		_spawn_structure_for_all(structure_type, structure_id, structure_position, structure_rotation_y)
+		_increment_structure_id(structure_type)
+
+
 func _refresh_gate_linked_defenses() -> void:
 	if gate_manager == null:
+		return
+	if gate_manager.has_method("refresh_run_base_defenses"):
+		gate_manager.refresh_run_base_defenses()
 		return
 	if gate_manager.has_method("refresh_gate_pylon_defenses"):
 		gate_manager.refresh_gate_pylon_defenses()

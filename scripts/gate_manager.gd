@@ -66,9 +66,9 @@ var _stored_scrap: int = 0
 var _stored_materials: Dictionary = {"iron": 0}
 var _pending_essence: float = 0.0
 var _channel_elapsed: float = 0.0
-var _pylon_channeling: bool = false
-var _placed_pylon_positions: Array[Vector3] = []
-var _pylon_upgrades: Dictionary = {
+var _channel_active: bool = false
+var _run_base_positions: Array[Vector3] = []
+var _run_base_upgrades: Dictionary = {
 	"base_radius": 0,
 	"max_radius": 0,
 	"channel_efficiency": 0,
@@ -141,7 +141,7 @@ func _process(delta: float) -> void:
 		if _extraction_remaining <= 0.0:
 			_finish_gate(true)
 			return
-	elif _pylon_channeling and _gate_objective != null:
+	elif _channel_active and _gate_objective != null:
 		_channel_elapsed += delta
 		_pending_essence += _current_channel_rate() * delta
 		_apply_channel_growth()
@@ -162,8 +162,8 @@ func start_gate_run() -> void:
 		return
 	if gate_root == null or players_root == null or gate_objective_scene == null:
 		return
-	if era_manager != null and era_manager.has_method("get_default_gate_era_id"):
-		_current_era_id = String(era_manager.get_default_gate_era_id())
+	if era_manager != null and era_manager.has_method("get_active_gate_era_id"):
+		_current_era_id = String(era_manager.get_active_gate_era_id())
 		if era_manager.has_method("set_active_gate_era"):
 			era_manager.set_active_gate_era(_current_era_id)
 	_refresh_era_runtime_data()
@@ -172,12 +172,14 @@ func start_gate_run() -> void:
 	if world_generator != null and world_generator.has_method("generate_world"):
 		world_generator.generate_world(int(Time.get_unix_time_from_system()) + randi())
 	_gate_active = true
+	_activate_run_base_at(_gate_spawn_center())
+	_spawn_saved_run_base_layout()
 	spawn_resource_nodes_local()
 	_sync_gate_setup.rpc(true)
 	_teleport_players_to_gate()
 	_stop_enemy_pressure()
 	gate_state_changed.emit(true)
-	status_changed.emit("%s live. Gather stone, wood, and crystals, then press E to place the pylon." % get_current_era_name())
+	status_changed.emit("%s live. The run base is active. Gather materials, return to the core, and press E to start channeling." % get_current_era_name())
 	_emit_run_info()
 	_broadcast_gate_state()
 
@@ -197,11 +199,11 @@ func is_gate_active() -> bool:
 
 
 func is_build_phase_active() -> bool:
-	return _gate_active and not _extraction_active and not _pylon_channeling and get_gate_pylon_state() != "damaged"
+	return _gate_active and not _extraction_active and not _channel_active and get_gate_pylon_state() != "damaged"
 
 
 func is_cave_active() -> bool:
-	return _gate_active and _pylon_channeling
+	return _gate_active and _channel_active
 
 
 func is_cave_activation_channeling() -> bool:
@@ -230,8 +232,8 @@ func request_return_to_base() -> void:
 	if _extraction_active:
 		status_changed.emit("Return to base is already in progress.")
 		return
-	if _pylon_channeling:
-		_stop_pylon_channel(true)
+	if _channel_active:
+		_stop_core_channel(true)
 	_extraction_active = true
 	_extraction_remaining = extraction_countdown
 	status_changed.emit("Retreat started. Hold out until extraction completes.")
@@ -247,6 +249,10 @@ func get_current_reward_rate() -> float:
 
 
 func get_gate_pylon_state() -> String:
+	return get_run_base_state()
+
+
+func get_run_base_state() -> String:
 	if _gate_objective == null:
 		return "unplaced"
 	if _gate_objective.has_method("get_pylon_state"):
@@ -255,23 +261,27 @@ func get_gate_pylon_state() -> String:
 
 
 func get_cave_status_snapshot() -> Dictionary:
+	return get_channel_status_snapshot()
+
+
+func get_channel_status_snapshot() -> Dictionary:
 	return get_pylon_status_snapshot()
 
 
 func get_pylon_status_snapshot() -> Dictionary:
-	var pylon_state := get_gate_pylon_state()
+	var pylon_state := get_run_base_state()
 	var visible := _gate_active
-	var state_label := "Searching"
-	var detail_label := "Collect iron and place a pylon to begin channeling."
-	if pylon_state == "functional" and _pylon_channeling:
+	var state_label := "Core Ready"
+	var detail_label := "Return gathered materials here and interact to start or stop channeling."
+	if pylon_state == "functional" and _channel_active:
 		state_label = "Channeling"
-		detail_label = "Defend the pylon while essence builds and the radius expands."
+		detail_label = "Defend the core while primary resource builds and the safe zone expands."
 	elif pylon_state == "functional":
-		state_label = "Ready"
-		detail_label = "Interact with the pylon to start or stop channeling."
+		state_label = "Core Ready"
+		detail_label = "Interact with the core to start or stop channeling."
 	elif pylon_state == "damaged":
-		state_label = "Shattered"
-		detail_label = "The channel collapsed. Retreat or place a new pylon on the next run."
+		state_label = "Core Lost"
+		detail_label = "The channel collapsed. Extract if you can or regroup on the next run."
 	var reveal_counts := _revealed_resource_counts()
 	return {
 		"visible": visible,
@@ -280,11 +290,11 @@ func get_pylon_status_snapshot() -> Dictionary:
 		"pylon_state": pylon_state,
 		"reward_rate": _current_channel_rate(),
 		"current_reward": _pending_essence,
-		"channel_active": _pylon_channeling,
+		"channel_active": _channel_active,
 		"channel_elapsed": _channel_elapsed,
 		"channel_progress_ratio": clamp(_channel_elapsed / max(pylon_channel_stage_seconds * 2.0, 0.001), 0.0, 1.0),
-		"influence_radius": _current_pylon_influence_radius(),
-		"max_radius": _current_pylon_radius_cap(),
+		"influence_radius": _current_run_base_influence_radius(),
+		"max_radius": _current_run_base_radius_cap(),
 		"crystals_remaining": _crystals_remaining_in_radius(),
 		"ore_revealed": int(reveal_counts.get("stone_node", 0)),
 		"stone_revealed": int(reveal_counts.get("stone_node", 0)),
@@ -294,7 +304,7 @@ func get_pylon_status_snapshot() -> Dictionary:
 		"treasure_revealed": int(reveal_counts.get("treasure_spot", 0)),
 		"extraction_active": _extraction_active,
 		"extraction_remaining": _extraction_remaining,
-		"pylon_level": _current_pylon_level(),
+		"pylon_level": _current_run_base_level(),
 	}
 
 
@@ -327,6 +337,20 @@ func consume_scrap(amount: int) -> bool:
 	_stored_scrap -= safe_amount
 	_broadcast_gate_state()
 	return true
+
+
+func add_scrap(amount: int, reason: String = "") -> void:
+	if not multiplayer.is_server():
+		return
+	var safe_amount = max(amount, 0)
+	if safe_amount <= 0:
+		return
+	_stored_scrap += safe_amount
+	if reason == "":
+		status_changed.emit("+%d scrap. Stored: %d." % [safe_amount, _stored_scrap])
+	else:
+		status_changed.emit("%s: +%d scrap. Stored: %d." % [reason, safe_amount, _stored_scrap])
+	_broadcast_gate_state()
 
 
 func get_core_upgrade_level() -> int:
@@ -407,17 +431,17 @@ func request_objective_interaction(peer_id: int) -> void:
 	if _try_collect_resource(peer_id, player):
 		return
 	if _gate_objective == null:
-		_try_place_pylon(peer_id, player)
+		_try_activate_run_base(peer_id, player)
 		return
 	if player.global_position.distance_to(_gate_objective.global_position) > objective_interaction_radius:
 		return
 	if get_gate_pylon_state() == "damaged":
 		status_changed.emit("The pylon is shattered. Return to base and regroup.")
 		return
-	if _pylon_channeling:
-		_stop_pylon_channel(true)
+	if _channel_active:
+		_stop_core_channel(true)
 		return
-	_start_pylon_channel()
+	_start_core_channel()
 
 
 func request_local_objective_interaction(peer_id: int) -> void:
@@ -428,6 +452,10 @@ func request_local_objective_interaction(peer_id: int) -> void:
 
 
 func can_open_pylon_menu_for_peer(peer_id: int) -> bool:
+	return can_open_core_console_for_peer(peer_id)
+
+
+func can_open_core_console_for_peer(peer_id: int) -> bool:
 	if not _gate_active or _gate_objective == null:
 		return false
 	var player := _player_node(peer_id)
@@ -463,26 +491,30 @@ func get_interaction_prompt_for_peer(peer_id: int) -> Dictionary:
 		return {"visible": true, "text": resource_node.get_interaction_text()}
 	if _gate_objective == null:
 		var placement := _placement_position_for_player(player)
-		if _has_blocking_resources_near_pylon(placement):
+		if _has_blocking_resources_near_run_base(placement):
 			return {"visible": true, "text": "Clear stone, wood, and herbs from the pylon area"}
-		if _is_valid_pylon_position(placement):
+		if _is_valid_run_base_position(placement):
 			return {"visible": true, "text": "Press E to place pylon"}
 		return {"visible": true, "text": "Move to open ground to place the pylon"}
 	if player.global_position.distance_to(_gate_objective.global_position) > objective_interaction_radius:
 		return {"visible": false, "text": ""}
 	if get_gate_pylon_state() == "damaged":
-		return {"visible": true, "text": "Press E to open the shattered pylon menu"}
+		return {"visible": true, "text": "Press E to open the shattered core console"}
 	var costs := _current_channel_start_costs()
-	var prompt_text := "Press E to open pylon menu | Start channel (%s) | %d crystals in range" % [format_costs(costs), _crystals_remaining_in_radius()]
-	if _pylon_channeling:
-		prompt_text = "Press E to open pylon menu | Stop channel | Essence %d | Radius %d" % [int(floor(_pending_essence)), int(round(_current_pylon_influence_radius()))]
+	var prompt_text := "Press E to open core console | Start channel (%s) | %d crystals in range" % [format_costs(costs), _crystals_remaining_in_radius()]
+	if _channel_active:
+		prompt_text = "Press E to open core console | Stop channel | Essence %d | Radius %d" % [int(floor(_pending_essence)), int(round(_current_run_base_influence_radius()))]
 	return {"visible": true, "text": prompt_text}
 
 
 func can_purchase_pylon_upgrade(upgrade_type: String) -> bool:
+	return can_purchase_run_upgrade(upgrade_type)
+
+
+func can_purchase_run_upgrade(upgrade_type: String) -> bool:
 	if not multiplayer.is_server():
 		return false
-	if not _gate_active or _gate_objective == null or _pylon_channeling:
+	if not _gate_active or _gate_objective == null or _channel_active:
 		return false
 	if research_manager == null or not research_manager.has_method("can_afford_essence"):
 		return false
@@ -490,24 +522,28 @@ func can_purchase_pylon_upgrade(upgrade_type: String) -> bool:
 
 
 func purchase_pylon_upgrade(upgrade_type: String) -> bool:
+	return purchase_run_upgrade(upgrade_type)
+
+
+func purchase_run_upgrade(upgrade_type: String) -> bool:
 	if not multiplayer.is_server():
 		return false
 	if not _gate_active:
-		status_changed.emit("Start an expedition before upgrading the pylon.")
+		status_changed.emit("Start a run before upgrading the core defenses.")
 		return false
 	if _gate_objective == null:
-		status_changed.emit("Place a pylon before buying pylon upgrades.")
+		status_changed.emit("Activate the run base before buying core upgrades.")
 		return false
-	if _pylon_channeling:
-		status_changed.emit("Stop channeling before upgrading the pylon.")
+	if _channel_active:
+		status_changed.emit("Stop channeling before upgrading the run base.")
 		return false
 	var upgrade_cost := _pylon_upgrade_cost(upgrade_type)
 	if research_manager == null or not research_manager.has_method("consume_essence") or not research_manager.consume_essence(upgrade_cost):
-		status_changed.emit("Need %d essence for that pylon upgrade." % upgrade_cost)
+		status_changed.emit("Need %d essence for that run-base upgrade." % upgrade_cost)
 		return false
-	_pylon_upgrades[upgrade_type] = int(_pylon_upgrades.get(upgrade_type, 0)) + 1
-	_apply_pylon_upgrade_runtime(true)
-	status_changed.emit("Pylon upgraded: %s." % _upgrade_display_name(upgrade_type))
+	_run_base_upgrades[upgrade_type] = int(_run_base_upgrades.get(upgrade_type, 0)) + 1
+	_apply_run_base_upgrade_runtime(true)
+	status_changed.emit("Run base upgraded: %s." % _upgrade_display_name(upgrade_type))
 	_broadcast_gate_state()
 	return true
 	_broadcast_gate_state()
@@ -535,8 +571,8 @@ func _teleport_players_to_gate() -> void:
 func _finish_gate(success: bool) -> void:
 	if not multiplayer.is_server():
 		return
-	if _pylon_channeling:
-		_stop_pylon_channel(true)
+	if _channel_active:
+		_stop_core_channel(true)
 	_clear_gate_mode(false)
 	_sync_gate_setup.rpc(false)
 	if network_manager != null and network_manager.has_method("restart_match"):
@@ -556,7 +592,7 @@ func _on_gate_objective_destroyed() -> void:
 		return
 	if not _gate_active:
 		return
-	_stop_pylon_channel(false, true)
+	_stop_core_channel(false, true)
 	_stop_enemy_pressure()
 	status_changed.emit("The pylon collapsed. Unbanked essence was lost and the influence field shrank.")
 	_broadcast_gate_state()
@@ -622,21 +658,55 @@ func _spawn_gate_content_local() -> void:
 	_gate_objective = gate_objective_scene.instantiate()
 	_gate_objective.name = "GateObjective"
 	if _gate_objective.has_method("configure_objective"):
-		_gate_objective.configure_objective("Pylon", gate_objective_max_health)
+		_gate_objective.configure_objective("Core", gate_objective_max_health)
 	if _gate_objective.has_method("bind_network_manager") and network_manager != null:
 		_gate_objective.bind_network_manager(network_manager)
 	gate_root.add_child(_gate_objective)
-	_apply_pylon_upgrade_runtime(false)
+	_apply_run_base_upgrade_runtime(false)
 	refresh_gate_pylon_defenses()
 	if multiplayer.is_server() and _gate_objective.has_signal("destroyed"):
 		_gate_objective.destroyed.connect(_on_gate_objective_destroyed)
 
 
+func _activate_run_base_at(position: Vector3) -> void:
+	if _gate_objective != null:
+		return
+	_spawn_gate_content_local()
+	var final_position := position
+	if world_generator != null and world_generator.has_method("create_or_update_build_zone"):
+		world_generator.create_or_update_build_zone(position, pylon_build_radius, pylon_flatten_radius, enemy_spawn_min_radius, enemy_spawn_max_radius)
+		if world_generator.has_method("project_to_build_surface"):
+			final_position = world_generator.project_to_build_surface(position, 0.0)
+	_gate_objective.global_position = final_position
+	_run_base_positions.append(final_position)
+	_apply_run_base_upgrade_runtime(false)
+	_update_resource_reveal_states()
+
+
 func refresh_gate_pylon_defenses() -> void:
+	refresh_run_base_defenses()
+
+
+func refresh_run_base_defenses() -> void:
 	if _gate_objective == null:
 		return
 	if _gate_objective.has_method("refresh_linked_defenses"):
 		_gate_objective.refresh_linked_defenses()
+
+
+func _spawn_saved_run_base_layout() -> void:
+	if not multiplayer.is_server():
+		return
+	if _gate_objective == null:
+		return
+	if building_manager == null or not building_manager.has_method("apply_layout_snapshot"):
+		return
+	if era_manager == null or not era_manager.has_method("get_saved_run_base_layout"):
+		return
+	var layout = era_manager.get_saved_run_base_layout(_current_era_id)
+	if layout.is_empty():
+		return
+	building_manager.apply_layout_snapshot(layout, _gate_objective.global_position, pylon_base_radius)
 
 
 func _clear_gate_content_local(clear_resources: bool = true) -> void:
@@ -656,10 +726,10 @@ func _clear_gate_mode(reset_scrap: bool) -> void:
 	_extraction_remaining = 0.0
 	_pending_essence = 0.0
 	_channel_elapsed = 0.0
-	_pylon_channeling = false
+	_channel_active = false
 	_sync_timer = 0.0
 	_collected_resource_ids.clear()
-	_placed_pylon_positions.clear()
+	_run_base_positions.clear()
 	if reset_scrap:
 		_stored_scrap = max(starting_scrap, 0)
 		_reset_material_inventory()
@@ -675,11 +745,11 @@ func _reset_gate_runtime_state(reset_materials: bool) -> void:
 	_extraction_active = false
 	_pending_essence = 0.0
 	_channel_elapsed = 0.0
-	_pylon_channeling = false
+	_channel_active = false
 	_extraction_remaining = 0.0
 	_sync_timer = 0.0
 	_collected_resource_ids.clear()
-	_placed_pylon_positions.clear()
+	_run_base_positions.clear()
 	if reset_materials:
 		_reset_material_inventory()
 
@@ -688,13 +758,13 @@ func _emit_run_info() -> void:
 	if _gate_active:
 		var phase_text := "Explore"
 		if _gate_objective == null:
-			phase_text = "Find Ground"
-		elif _pylon_channeling:
+			phase_text = "Deploy Base"
+		elif _channel_active:
 			phase_text = "Channel %0.1fs" % _channel_elapsed
 		elif get_gate_pylon_state() == "damaged":
-			phase_text = "Pylon Lost"
+			phase_text = "Core Lost"
 		else:
-			phase_text = "Pylon Ready"
+			phase_text = "Core Ready"
 		if _extraction_active:
 			phase_text = "Extract %0.1fs" % _extraction_remaining
 		var essence_total = research_manager.get_essence() if research_manager != null and research_manager.has_method("get_essence") else 0
@@ -707,9 +777,9 @@ func _emit_run_info() -> void:
 
 
 func _current_channel_rate() -> float:
-	if not _pylon_channeling:
+	if not _channel_active:
 		return 0.0
-	return pylon_essence_rate * _current_pylon_efficiency() * _current_channel_stage_multiplier()
+	return pylon_essence_rate * _current_run_base_efficiency() * _current_channel_stage_multiplier()
 
 
 func _broadcast_gate_state() -> void:
@@ -743,11 +813,11 @@ func _sync_gate_state(snapshot: Dictionary) -> void:
 	_extraction_remaining = float(snapshot.get("extraction_remaining", 0.0))
 	_pending_essence = float(snapshot.get("pending_essence", 0.0))
 	_channel_elapsed = float(snapshot.get("channel_elapsed", 0.0))
-	_pylon_channeling = bool(snapshot.get("pylon_channeling", false))
+	_channel_active = bool(snapshot.get("pylon_channeling", false))
 	_stored_scrap = int(snapshot.get("stored_scrap", 0))
 	_stored_materials = (snapshot.get("stored_materials", _stored_materials) as Dictionary).duplicate(true)
 	_core_upgrade_level = int(snapshot.get("core_upgrade_level", 0))
-	_pylon_upgrades = (snapshot.get("pylon_upgrades", _pylon_upgrades) as Dictionary).duplicate(true)
+	_run_base_upgrades = (snapshot.get("pylon_upgrades", _run_base_upgrades) as Dictionary).duplicate(true)
 	_collected_resource_ids.clear()
 	for resource_id in snapshot.get("collected_resource_ids", []):
 		_collected_resource_ids[String(resource_id)] = true
@@ -768,7 +838,7 @@ func _sync_gate_state(snapshot: Dictionary) -> void:
 			if _gate_objective.has_method("apply_synced_state"):
 				_gate_objective.apply_synced_state(float(snapshot.get("objective_health", gate_objective_max_health)), bool(snapshot.get("objective_destroyed", false)), float(snapshot.get("objective_max_health", gate_objective_max_health)))
 			if _gate_objective.has_method("set_runtime_progress"):
-				_gate_objective.set_runtime_progress(int(snapshot.get("pylon_level", 1)), float(snapshot.get("base_radius", pylon_base_radius)), float(snapshot.get("influence_radius", pylon_base_radius)), float(snapshot.get("max_radius", pylon_base_max_radius)), _channel_elapsed, _pylon_channeling, float(snapshot.get("channel_efficiency", 1.0)))
+				_gate_objective.set_runtime_progress(int(snapshot.get("pylon_level", 1)), float(snapshot.get("base_radius", pylon_base_radius)), float(snapshot.get("influence_radius", pylon_base_radius)), float(snapshot.get("max_radius", pylon_base_max_radius)), _channel_elapsed, _channel_active, float(snapshot.get("channel_efficiency", 1.0)))
 			if _gate_objective.has_method("set_pylon_state_runtime"):
 				_gate_objective.set_pylon_state_runtime(String(snapshot.get("pylon_state", "functional")))
 	else:
@@ -792,7 +862,7 @@ func _reset_progression_state() -> void:
 	_reset_material_inventory()
 	_core_upgrade_level = 0
 	_collected_crystal_ids.clear()
-	_pylon_upgrades = {
+	_run_base_upgrades = {
 		"base_radius": 0,
 		"max_radius": 0,
 		"channel_efficiency": 0,
@@ -801,14 +871,14 @@ func _reset_progression_state() -> void:
 	_apply_progression_to_base_objective(false)
 
 
-func _set_pylon_runtime_state(new_state: String) -> void:
+func _set_run_base_runtime_state(new_state: String) -> void:
 	if _gate_objective == null:
 		return
 	if _gate_objective.has_method("set_pylon_state_runtime"):
 		_gate_objective.set_pylon_state_runtime(new_state)
 
 
-func _restore_pylon_runtime_state(new_state: String) -> void:
+func _restore_run_base_runtime_state(new_state: String) -> void:
 	if _gate_objective == null:
 		return
 	if _gate_objective.has_method("restore_runtime_state"):
@@ -822,7 +892,7 @@ func _apply_gate_objective_runtime_visuals() -> void:
 	if _gate_objective == null:
 		return
 	if _gate_objective.has_method("set_runtime_progress"):
-		_gate_objective.set_runtime_progress(_current_pylon_level(), _current_pylon_base_radius(), _current_pylon_influence_radius(), _current_pylon_radius_cap(), _channel_elapsed, _pylon_channeling, _current_pylon_efficiency())
+		_gate_objective.set_runtime_progress(_current_run_base_level(), _current_run_base_radius(), _current_run_base_influence_radius(), _current_run_base_radius_cap(), _channel_elapsed, _channel_active, _current_run_base_efficiency())
 
 
 
@@ -881,28 +951,19 @@ func _try_collect_resource(peer_id: int, player: Node3D) -> bool:
 	return false
 
 
-func _try_place_pylon(peer_id: int, player: Node3D) -> bool:
+func _try_activate_run_base(peer_id: int, player: Node3D) -> bool:
 	if _gate_objective != null:
 		return false
 	var placement_position := _placement_position_for_player(player)
-	if not _is_valid_pylon_position(placement_position):
-		if _has_blocking_resources_near_pylon(placement_position):
+	if not _is_valid_run_base_position(placement_position):
+		if _has_blocking_resources_near_run_base(placement_position):
 			status_changed.emit("Clear nearby stone, wood, and herbs before placing the pylon.")
 		else:
 			status_changed.emit("Find stable terrain with enough open space before placing the pylon.")
 		return false
-	_spawn_gate_content_local()
-	var final_pylon_position := placement_position
-	if world_generator != null and world_generator.has_method("create_or_update_build_zone"):
-		world_generator.create_or_update_build_zone(placement_position, pylon_build_radius, pylon_flatten_radius, enemy_spawn_min_radius, enemy_spawn_max_radius)
-		_snap_players_to_new_platform(placement_position)
-		if world_generator.has_method("project_to_build_surface"):
-			final_pylon_position = world_generator.project_to_build_surface(placement_position, 0.0)
-	_gate_objective.global_position = final_pylon_position
-	_placed_pylon_positions.append(final_pylon_position)
-	_apply_pylon_upgrade_runtime(false)
-	_update_resource_reveal_states()
-	status_changed.emit("Pylon placed. Build around it, then interact to begin channeling.")
+	_activate_run_base_at(placement_position)
+	_snap_players_to_new_platform(placement_position)
+	status_changed.emit("Run base activated. Build around the core, then interact to begin channeling.")
 	_broadcast_gate_state()
 	return true
 
@@ -915,8 +976,8 @@ func _placement_position_for_player(player: Node3D) -> Vector3:
 	return _project_to_terrain(position, 0.0)
 
 
-func _is_valid_pylon_position(position: Vector3) -> bool:
-	var required_half_extent := _pylon_slope_half_extent()
+func _is_valid_run_base_position(position: Vector3) -> bool:
+	var required_half_extent := _run_base_slope_half_extent()
 	if world_generator != null and world_generator.has_method("is_valid_pylon_position"):
 		if not world_generator.is_valid_pylon_position(position, required_half_extent):
 			return false
@@ -925,15 +986,15 @@ func _is_valid_pylon_position(position: Vector3) -> bool:
 			return false
 		if absf(position.z - gate_center.z) > pylon_floor_half_extent - required_half_extent:
 			return false
-	for existing_position in _placed_pylon_positions:
+	for existing_position in _run_base_positions:
 		if position.distance_to(existing_position) < pylon_min_spacing:
 			return false
-	if _has_blocking_resources_near_pylon(position):
+	if _has_blocking_resources_near_run_base(position):
 		return false
 	return true
 
 
-func _has_blocking_resources_near_pylon(position: Vector3) -> bool:
+func _has_blocking_resources_near_run_base(position: Vector3) -> bool:
 	var clearance_radius = max(pylon_resource_clearance_radius, pylon_build_radius)
 	for resource_node in _resource_nodes.values():
 		if resource_node == null or not resource_node.has_method("is_collected") or resource_node.is_collected():
@@ -948,13 +1009,13 @@ func _has_blocking_resources_near_pylon(position: Vector3) -> bool:
 	return false
 
 
-func _pylon_spawn_platform_half_extent() -> float:
+func _run_base_platform_half_extent() -> float:
 	return max(enemy_spawn_max_radius, pylon_build_radius + 1.0)
 
 
-func _pylon_slope_half_extent() -> float:
+func _run_base_slope_half_extent() -> float:
 	var slope_width = max(pylon_flatten_radius - pylon_build_radius, 2.0)
-	return _pylon_spawn_platform_half_extent() + slope_width
+	return _run_base_platform_half_extent() + slope_width
 
 
 func _snap_players_to_new_platform(platform_center: Vector3) -> void:
@@ -962,7 +1023,7 @@ func _snap_players_to_new_platform(platform_center: Vector3) -> void:
 		return
 	if world_generator == null or not world_generator.has_method("project_to_build_surface"):
 		return
-	var platform_half_extent := _pylon_spawn_platform_half_extent()
+	var platform_half_extent := _run_base_platform_half_extent()
 	for node in players_root.get_children():
 		if not node is Node3D:
 			continue
@@ -1042,33 +1103,33 @@ func _gate_spawn_center() -> Vector3:
 	return gate_center
 
 
-func _start_pylon_channel() -> void:
+func _start_core_channel() -> void:
 	if _gate_objective == null:
 		return
 	var costs := _current_channel_start_costs()
 	if not can_afford_costs(costs):
-		status_changed.emit("Need %s before channeling this pylon." % format_costs(costs))
+		status_changed.emit("Need %s before starting the core channel." % format_costs(costs))
 		return
 	consume_costs(costs)
 	_pending_essence = 0.0
 	_channel_elapsed = 0.0
-	_pylon_channeling = true
-	_set_pylon_runtime_state("functional")
+	_channel_active = true
+	_set_run_base_runtime_state("functional")
 	_apply_channel_growth()
 	_set_enemy_pressure_to_gate()
-	status_changed.emit("Channeling started. Hold the pylon while essence and influence build.")
+	status_changed.emit("Channeling started. Hold the core while primary resource and pressure build.")
 	_broadcast_gate_state()
 
 
-func _stop_pylon_channel(manual_stop: bool, collapsed: bool = false) -> void:
-	if not _pylon_channeling:
+func _stop_core_channel(manual_stop: bool, collapsed: bool = false) -> void:
+	if not _channel_active:
 		return
-	_pylon_channeling = false
+	_channel_active = false
 	_stop_enemy_pressure()
 	if collapsed:
 		_pending_essence = 0.0
 		_channel_elapsed = 0.0
-		_set_pylon_runtime_state("damaged")
+		_set_run_base_runtime_state("damaged")
 		_apply_channel_growth(true)
 		_broadcast_gate_state()
 		return
@@ -1077,9 +1138,9 @@ func _stop_pylon_channel(manual_stop: bool, collapsed: bool = false) -> void:
 		research_manager.add_essence(banked_essence)
 	var radius_bonus := _permanent_radius_bonus_from_channel()
 	if radius_bonus > 0:
-		_pylon_upgrades["max_radius"] = int(_pylon_upgrades.get("max_radius", 0))
+		_run_base_upgrades["max_radius"] = int(_run_base_upgrades.get("max_radius", 0))
 		if _gate_objective != null and _gate_objective.has_method("set_runtime_progress"):
-			_gate_objective.set_runtime_progress(_current_pylon_level(), _current_pylon_base_radius(), min(_current_pylon_influence_radius(), _current_pylon_radius_cap() + radius_bonus), _current_pylon_radius_cap() + radius_bonus, 0.0, false, _current_pylon_efficiency())
+			_gate_objective.set_runtime_progress(_current_run_base_level(), _current_run_base_radius(), min(_current_run_base_influence_radius(), _current_run_base_radius_cap() + radius_bonus), _current_run_base_radius_cap() + radius_bonus, 0.0, false, _current_run_base_efficiency())
 	_pending_essence = 0.0
 	_channel_elapsed = 0.0
 	_apply_channel_growth()
@@ -1090,18 +1151,18 @@ func _stop_pylon_channel(manual_stop: bool, collapsed: bool = false) -> void:
 func _apply_channel_growth(force_base_radius: bool = false) -> void:
 	if _gate_objective == null:
 		return
-	var influence_radius := _current_pylon_base_radius() if force_base_radius else _target_channel_radius()
+	var influence_radius := _current_run_base_radius() if force_base_radius else _target_channel_radius()
 	if _gate_objective.has_method("set_runtime_progress"):
-		_gate_objective.set_runtime_progress(_current_pylon_level(), _current_pylon_base_radius(), influence_radius, _current_pylon_radius_cap(), _channel_elapsed, _pylon_channeling, _current_pylon_efficiency())
+		_gate_objective.set_runtime_progress(_current_run_base_level(), _current_run_base_radius(), influence_radius, _current_run_base_radius_cap(), _channel_elapsed, _channel_active, _current_run_base_efficiency())
 	if _gate_objective.has_method("set_pylon_state_runtime") and get_gate_pylon_state() != "damaged":
 		_gate_objective.set_pylon_state_runtime("functional")
 	_update_resource_reveal_states()
 
 
 func _target_channel_radius() -> float:
-	var base_radius := _current_pylon_base_radius()
-	var radius_cap := _current_pylon_radius_cap()
-	if not _pylon_channeling:
+	var base_radius := _current_run_base_radius()
+	var radius_cap := _current_run_base_radius_cap()
+	if not _channel_active:
 		return min(base_radius, radius_cap)
 	if _channel_elapsed <= pylon_channel_stage_seconds:
 		return lerpf(base_radius, min(base_radius * 2.0, radius_cap), clamp(_channel_elapsed / max(pylon_channel_stage_seconds, 0.001), 0.0, 1.0))
@@ -1136,45 +1197,45 @@ func _current_channel_start_costs() -> Dictionary:
 	return runtime_costs
 
 
-func _current_pylon_level() -> int:
+func _current_run_base_level() -> int:
 	var total_upgrades := 0
-	for value in _pylon_upgrades.values():
+	for value in _run_base_upgrades.values():
 		total_upgrades += int(value)
 	return 1 + total_upgrades
 
 
-func _current_pylon_base_radius() -> float:
-	return pylon_base_radius + float(int(_pylon_upgrades.get("base_radius", 0))) * pylon_radius_upgrade_step
+func _current_run_base_radius() -> float:
+	return pylon_base_radius + float(int(_run_base_upgrades.get("base_radius", 0))) * pylon_radius_upgrade_step
 
 
-func _current_pylon_radius_cap() -> float:
-	return pylon_base_max_radius + float(int(_pylon_upgrades.get("max_radius", 0))) * pylon_max_radius_upgrade_step
+func _current_run_base_radius_cap() -> float:
+	return pylon_base_max_radius + float(int(_run_base_upgrades.get("max_radius", 0))) * pylon_max_radius_upgrade_step
 
 
-func _current_pylon_influence_radius() -> float:
+func _current_run_base_influence_radius() -> float:
 	if _gate_objective != null and _gate_objective.has_method("get_influence_radius"):
 		return _gate_objective.get_influence_radius()
-	return _current_pylon_base_radius()
+	return _current_run_base_radius()
 
 
-func _current_pylon_efficiency() -> float:
-	return 1.0 + float(int(_pylon_upgrades.get("channel_efficiency", 0))) * pylon_efficiency_upgrade_step
+func _current_run_base_efficiency() -> float:
+	return 1.0 + float(int(_run_base_upgrades.get("channel_efficiency", 0))) * pylon_efficiency_upgrade_step
 
 
-func _current_pylon_max_health() -> float:
-	return gate_objective_max_health + float(int(_pylon_upgrades.get("health", 0))) * pylon_health_upgrade_bonus
+func _current_run_base_max_health() -> float:
+	return gate_objective_max_health + float(int(_run_base_upgrades.get("health", 0))) * pylon_health_upgrade_bonus
 
 
-func _apply_pylon_upgrade_runtime(add_delta_to_current: bool) -> void:
+func _apply_run_base_upgrade_runtime(add_delta_to_current: bool) -> void:
 	if _gate_objective == null:
 		return
 	if _gate_objective.has_method("set_max_health_runtime"):
-		_gate_objective.set_max_health_runtime(_current_pylon_max_health(), add_delta_to_current)
+		_gate_objective.set_max_health_runtime(_current_run_base_max_health(), add_delta_to_current)
 	_apply_gate_objective_runtime_visuals()
 
 
 func _pylon_upgrade_cost(upgrade_type: String) -> int:
-	var level := int(_pylon_upgrades.get(upgrade_type, 0))
+	var level := int(_run_base_upgrades.get(upgrade_type, 0))
 	match upgrade_type:
 		"base_radius":
 			return 180 + level * 90
@@ -1329,7 +1390,7 @@ func _update_resource_reveal_states() -> void:
 	var reveal_center := gate_center
 	if _gate_objective != null and get_gate_pylon_state() != "damaged":
 		reveal_center = _gate_objective.global_position
-		reveal_radius = _current_pylon_influence_radius()
+		reveal_radius = _current_run_base_influence_radius()
 	for resource_node in _resource_nodes.values():
 		if resource_node == null or not resource_node.has_method("set_revealed"):
 			continue
@@ -1351,7 +1412,7 @@ func _revealed_resource_counts() -> Dictionary:
 	if _gate_objective == null or get_gate_pylon_state() == "damaged":
 		return counts
 	var center := _gate_objective.global_position
-	var radius := _current_pylon_influence_radius()
+	var radius := _current_run_base_influence_radius()
 	for resource_node in _resource_nodes.values():
 		if resource_node == null or resource_node.is_collected():
 			continue
@@ -1369,7 +1430,7 @@ func _crystals_remaining_in_radius() -> int:
 		return 0
 	var remaining := 0
 	var center := _gate_objective.global_position
-	var radius := _current_pylon_influence_radius()
+	var radius := _current_run_base_influence_radius()
 	for resource_node in _resource_nodes.values():
 		if resource_node == null or resource_node.is_collected():
 			continue
@@ -1388,11 +1449,11 @@ func _state_snapshot() -> Dictionary:
 		"extraction_remaining": _extraction_remaining,
 		"pending_essence": _pending_essence,
 		"channel_elapsed": _channel_elapsed,
-		"pylon_channeling": _pylon_channeling,
+		"pylon_channeling": _channel_active,
 		"stored_scrap": _stored_scrap,
 		"stored_materials": _stored_materials.duplicate(true),
 		"core_upgrade_level": _core_upgrade_level,
-		"pylon_upgrades": _pylon_upgrades.duplicate(true),
+		"pylon_upgrades": _run_base_upgrades.duplicate(true),
 		"collected_resource_ids": _collected_resource_ids.keys(),
 		"collected_crystal_ids": _collected_crystal_ids.keys(),
 		"pylon_present": _gate_objective != null,
@@ -1400,12 +1461,12 @@ func _state_snapshot() -> Dictionary:
 		"pylon_position": _gate_objective.global_position if _gate_objective != null else gate_center,
 		"objective_health": _gate_objective.get_current_health() if _gate_objective != null and _gate_objective.has_method("get_current_health") else gate_objective_max_health,
 		"objective_destroyed": _gate_objective.is_currently_destroyed() if _gate_objective != null and _gate_objective.has_method("is_currently_destroyed") else false,
-		"objective_max_health": _current_pylon_max_health(),
-		"pylon_level": _current_pylon_level(),
-		"base_radius": _current_pylon_base_radius(),
-		"influence_radius": _current_pylon_influence_radius(),
-		"max_radius": _current_pylon_radius_cap(),
-		"channel_efficiency": _current_pylon_efficiency(),
+		"objective_max_health": _current_run_base_max_health(),
+		"pylon_level": _current_run_base_level(),
+		"base_radius": _current_run_base_radius(),
+		"influence_radius": _current_run_base_influence_radius(),
+		"max_radius": _current_run_base_radius_cap(),
+		"channel_efficiency": _current_run_base_efficiency(),
 	}
 	return snapshot
 
@@ -1511,10 +1572,10 @@ func _refresh_era_runtime_data() -> void:
 func _on_gate_pressure_finished(cleared: bool) -> void:
 	if not multiplayer.is_server() or not cleared:
 		return
-	if not _pylon_channeling:
+	if not _channel_active:
 		return
 	status_changed.emit("Final Stone Age wave cleared. Essence banked and the pylon steadied.")
-	_stop_pylon_channel(true)
+	_stop_core_channel(true)
 
 
 func _set_player_channel_lock(peer_id: int, active: bool) -> void:

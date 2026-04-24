@@ -11,6 +11,7 @@ var _unlocked_era_ids: Array[String] = ["stone_age"]
 var _current_era_id: String = "stone_age"
 var _active_gate_era_id: String = "stone_age"
 var _enemy_scene_cache: Dictionary = {}
+var _saved_run_base_layouts: Dictionary = {}
 
 
 func _ready() -> void:
@@ -30,6 +31,13 @@ func get_active_gate_era_id() -> String:
 	return _active_gate_era_id
 
 
+func get_active_gate_era_display_name() -> String:
+	var era_data := get_active_gate_era_data()
+	if era_data == null:
+		return _active_gate_era_id.capitalize()
+	return era_data.display_name
+
+
 func get_current_era_data() -> EraData:
 	return get_era_data(_current_era_id)
 
@@ -47,6 +55,17 @@ func get_era_data(era_id: String) -> EraData:
 
 func get_unlocked_era_ids() -> Array[String]:
 	return _unlocked_era_ids.duplicate()
+
+
+func cycle_active_gate_era(direction: int = 1) -> String:
+	if _unlocked_era_ids.is_empty():
+		return _active_gate_era_id
+	var current_index := _unlocked_era_ids.find(_active_gate_era_id)
+	if current_index < 0:
+		current_index = 0
+	var next_index := posmod(current_index + direction, _unlocked_era_ids.size())
+	set_active_gate_era(String(_unlocked_era_ids[next_index]))
+	return _active_gate_era_id
 
 
 func get_default_gate_era_id() -> String:
@@ -77,6 +96,26 @@ func set_active_gate_era(era_id: String) -> bool:
 		_current_era_id = era_id
 		era_changed.emit(era_id)
 	return true
+
+
+func save_run_base_layout(layout: Array[Dictionary], era_id: String = "") -> bool:
+	var target_era_id := _active_gate_era_id if era_id == "" else era_id
+	if not can_enter_era(target_era_id):
+		return false
+	_saved_run_base_layouts[target_era_id] = layout.duplicate(true)
+	return true
+
+
+func get_saved_run_base_layout(era_id: String = "") -> Array[Dictionary]:
+	var target_era_id := _active_gate_era_id if era_id == "" else era_id
+	if not _saved_run_base_layouts.has(target_era_id):
+		return []
+	return (_saved_run_base_layouts.get(target_era_id, []) as Array[Dictionary]).duplicate(true)
+
+
+func has_saved_run_base_layout(era_id: String = "") -> bool:
+	var target_era_id := _active_gate_era_id if era_id == "" else era_id
+	return _saved_run_base_layouts.has(target_era_id) and not get_saved_run_base_layout(target_era_id).is_empty()
 
 
 func get_enemy_scene(enemy_kind: String) -> PackedScene:
@@ -182,7 +221,7 @@ func _build_stone_age_fallback() -> EraData:
 	var data := EraData.new()
 	data.era_id = "stone_age"
 	data.display_name = "Era 1: Stone Age"
-	data.description = "Primitive gate expedition focused on wood, stone, simple augments, and short pylon defense runs."
+	data.description = "Primitive era run focused on a prebuilt defense arena, core channel pressure, stone-age materials, and fast extraction decisions."
 	data.enemy_set = ["stone_caveman", "stone_brute", "stone_beast", "stone_mech"]
 	data.structure_set = ["wooden_wall", "reinforced_wall", "thrower_turret", "improved_thrower_turret"]
 	data.material_set = ["stone", "wood", "herbs"]
@@ -247,7 +286,7 @@ func _build_stone_age_fallback() -> EraData:
 		"heavy_attack": {"cooldown": 0.8, "damage": 42.0, "projectile_scale": 1.25, "range": 10.5, "speed": 21.0},
 		"weapon_name": "Stone Staff",
 	}
-	data.pylon_data = {"allowed_pylon_count": 1, "channel_summary": "Consumes raw stone and wood to generate essence.", "crystal_tracking": true}
+	data.pylon_data = {"saved_layout_count": 1, "channel_summary": "The run base core generates primary resource while active and escalates map-wide pressure.", "crystal_tracking": false}
 	return data
 
 

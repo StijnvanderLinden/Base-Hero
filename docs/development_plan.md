@@ -1,50 +1,49 @@
 # Development Plan
 
 ## Purpose
-This document defines the project roadmap at a high level.
+This document defines the current roadmap for proving the focused vertical slice.
 
-It should answer:
-- what phase the project is in
+The roadmap should answer:
 - what should be built next
 - what should deliberately wait
-- how to avoid overbuilding too early
-
-This is a practical roadmap, not a wish list.
+- how to keep the project focused on fun before complexity
 
 ---
 
 ## Development Philosophy
-Build the game in small, testable, multiplayer-safe steps.
-
-At every stage:
-- the game should still run
-- the game should still be testable
-- the next step should be clear
-- the current work should support the real game direction
+Build the smallest repeatable loop that can become fun.
 
 Always prefer:
-- a small working loop
-over
-- a large unfinished system
+- playable over elegant
+- fast iteration over broad systems
+- impactful choices over large feature lists
+- one good run loop over many unfinished systems
+
+If the loop is not fun, improve the loop before adding systems.
 
 ---
 
 ## Current Strategic Goal
-The current strategic goal is to create a working multiplayer-safe prototype of the core game loop.
+The current goal is to prove:
+
+**Main Hub -> Gate Run -> Survive -> Repeat**
 
 That means proving:
-- players can connect
-- players can share a world
-- players can defend a meaningful objective
-- players can fight enemies
-- gate-style pressure and extraction can become fun
-- base-defense gameplay can be built on a stable foundation
+- the player can start from the hub
+- the player can enter one small gate arena
+- a central base/core can be defended
+- wave enemies create early and escalating pressure
+- enemies drop scrap automatically on kill
+- scrap upgrades turrets during the run
+- essence is earned from survival and milestones
+- essence is spent in the hub for meaningful unlocks
+- each run makes the next run feel more promising
 
 ---
 
 ## Phase 1: Multiplayer Foundation
 ### Goal
-Create a working host/client foundation.
+Keep a working host/client foundation.
 
 ### Tasks
 - host flow
@@ -59,44 +58,45 @@ Two players can connect and move in the same shared world.
 
 ---
 
-## Phase 2: Basic Objective Defense
+## Phase 2: Defendable Base
 ### Goal
-Create the smallest defendable objective loop.
+Create the central objective for the run.
 
 ### Tasks
-- defendable core/objective
+- central base/core
 - objective health
 - objective damage
 - objective destruction handling
 - objective state synchronized and server-owned
 
 ### Success Condition
-Players can protect a shared objective that can be damaged and destroyed.
+Players can protect a shared base/core that can be damaged and destroyed.
 
 ---
 
-## Phase 3: Enemy Prototype
+## Phase 3: Enemy Waves
 ### Goal
-Introduce enemy pressure.
+Create early pressure.
 
 ### Tasks
-- server-spawned enemy
-- movement toward objective
-- enemy damage to objective
+- server-spawned wave enemies
+- movement toward the base/core
+- enemy damage to the base/core
+- basic escalation over time
 - synchronized enemy state
 
 ### Success Condition
-Players see the same enemy pressure attacking the same objective.
+Players immediately understand that the base is under threat.
 
 ---
 
 ## Phase 4: Basic Combat
 ### Goal
-Let players fight back.
+Let players actively defend.
 
 ### Tasks
 - one player weapon
-- one attack type
+- one primary attack
 - enemy health
 - server-authoritative damage
 - enemy death
@@ -106,116 +106,132 @@ Players can defeat enemies in multiplayer with correct authority handling.
 
 ---
 
-## Phase 5: First Gate Prototype
+## Phase 5: Scrap Loop
 ### Goal
-Prove the gate loop at a small scale.
+Make enemy kills feed survival decisions.
 
 ### Tasks
-- gate scene or gate mode
-- temporary objective
-- enemy scaling over time
-- one reward type
-- extraction countdown
-- gate success/failure resolution
+- scrap awarded automatically on enemy death
+- server-authoritative scrap totals
+- scrap UI
+- spend scrap during the run
 
 ### Success Condition
-Players can enter a gate, defend under pressure, extract, and gain rewards.
+Killing enemies gives immediate resources that matter during the same run.
 
 ---
 
-## Phase 6: First Building Prototype
+## Phase 6: Turret Upgrade Loop
 ### Goal
-Prove fortress-building interaction.
+Make scrap spending feel impactful.
 
 ### Tasks
-- place one wall
-- place one turret
-- server-authoritative placement validation
-- enemies interact meaningfully with structures
+- level 1 starter turrets
+- upgrade interaction
+- faster fire rate upgrade
+- range or burst upgrade
+- limited additional turret placement
+- locked branch display for hub-locked upgrades
 
 ### Success Condition
-Players can shape a minimal defense space with structures that matter.
+Spending scrap clearly improves survival in a way the player can feel.
 
 ---
 
-## Phase 7: Main Raid Prototype
+## Phase 7: Milestone Pressure
 ### Goal
-Connect preparation and payoff.
+Make the run escalate.
 
 ### Tasks
-- basic raid flow
-- wave progression
-- larger attack
-- raid success/failure
-- simple boss or raid climax if useful
+- five milestone bands
+- enemy strength increases
+- spawn rate increases
+- essence gain increases
+- milestone UI feedback
 
 ### Success Condition
-Players can prepare and then face a larger meaningful assault.
+The player can feel the run moving from early pressure toward endgame pressure.
 
 ---
 
-## Phase 8: Progression Prototype
+## Phase 8: Essence And Failure
 ### Goal
-Make gate rewards and raid preparation meaningfully connect.
+Create repeatable progression between runs.
 
 ### Tasks
-- core resource loop
-- at least one special material or component
-- player upgrade path
-- base upgrade path
-- link rewards to new defensive or combat options
+- essence generated over time
+- milestone-based essence scaling
+- base destruction ends the run
+- player keeps about 70% essence on failure
+- return to hub after failure
 
 ### Success Condition
-The loop of gate → upgrade → survive next raid feels meaningful.
+Even a failed run gives enough progress to make trying again feel worthwhile.
 
 ---
 
-## Phase 9: Expansion and Variety
+## Phase 9: Simple Hub Unlocks
 ### Goal
-Increase variety after the core loop is proven.
+Let players get stronger between runs.
 
-### Possible Tasks
-- additional enemy roles
-- additional structures
-- more weapons
-- more augments
-- gate biome variation
-- milestone reward system
-- elites and bosses
-- stronger co-op identity through differentiated roles
+### Tasks
+- hub unlock menu or small hub station
+- spend essence
+- unlock turret types
+- unlock turret upgrade branches
+- unlock base capacity
+- optional basic player weapon upgrade
 
 ### Success Condition
-The game becomes deeper without losing clarity or identity.
+The player can spend run rewards and feel stronger in the next gate run.
+
+---
+
+## Phase 10: Feel Iteration
+### Goal
+Make the core loop fun before adding scope.
+
+### Tasks
+- tune wave timing
+- tune scrap income and upgrade costs
+- tune essence income
+- tune turret impact
+- tune base durability
+- improve combat feedback
+- improve run restart speed
+
+### Success Condition
+The player wants one more run.
 
 ---
 
 ## Intentionally Delayed Work
-Do not prioritize these early unless explicitly needed:
-
-- deep crafting
-- large inventory systems
-- advanced procedural generation
-- heavy persistence systems
-- elaborate UI polish
-- lots of content at once
-- Steam integration specifics
-- optimization before real bottlenecks are known
+Do not prioritize these until the loop is proven fun:
+- POIs
+- caves
+- deep map exploration
+- roaming resource gathering
+- gold
+- material-specific economies
+- multiple worlds or eras
+- deep research trees
+- complex enemy variants
+- freeform base building outside the preset layout
+- Steam-specific implementation
 
 ---
 
 ## Roadmap Rules
 When deciding what to work on next:
-
-- do not skip directly to late systems
-- do not pile too many new systems into one phase
-- keep multiplayer testable as often as possible
-- confirm the fun of each layer before expanding the next layer
-- preserve system clarity and documentation as the project evolves
+- do not add systems to compensate for an unfun loop
+- do not add resources until scrap and essence feel good
+- do not add exploration until the arena survival loop works
+- do not add more eras until Stone Age is worth replaying
+- keep multiplayer authority intact
 
 ---
 
 ## Current Priority
 The current immediate priority is:
-**Phase 7: Main Raid Prototype**
 
-That means no major detours unless they directly stabilize the shared core-defense loop and its server-authoritative foundation.
+**Focused Vertical Slice: Hub Progression, Gate Arena, Scrap Upgrades, Essence Repeat Loop**

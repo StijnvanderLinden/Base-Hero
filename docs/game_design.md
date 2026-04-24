@@ -1,283 +1,202 @@
 # Detailed Game Design
 
 ## Purpose
-This document supports the GDD by describing the project’s systems at a higher level than implementation, but in more detail than the high-level GDD.
+This document explains how the confirmed vertical-slice loop works across systems.
 
-Use this file for:
-- cross-system design relationships
-- current design direction
-- project-wide gameplay structure
-- system interaction notes
+The current target is deliberately narrow:
 
-Use the system specs for deep per-system detail.
+**Main Hub -> Gate Run -> Survive -> Repeat**
+
+Use this file for cross-system design relationships. Use system specs and trackers for deeper implementation detail.
 
 ---
 
 ## Current Design Direction
-The game is currently centered on five major gameplay pillars:
+The project is currently centered on four working pieces:
 
-- main-base preparation
-- gate exploration
-- pylon defense events
-- raids
-- progression choices
+- simple hub progression
+- one arena-style gate run
+- active base defense with turrets
+- repeatable survival progression
 
-These systems feed into one larger structure centered on:
-- building a stronger base
-- exploring deeper into persistent gate regions
-- choosing when to trigger town hall upgrades
-- surviving the resulting raid checkpoints
-
----
-
-## Main Base vs Gate Relationship
-
-### Main Base
-The main base is:
-- more permanent
-- more strategic
-- more build-heavy
-- more about long-term investment
-
-The main base is where:
-- structure planning matters most
-- town hall progression happens
-- upgrades pay off over time
-- raids become the main progression test
-
-### Gates
-Gates are:
-- persistent biome zones
-- revisited over multiple runs
-- more exploratory than raids
-- more about layered risk over time
-- where players gather the materials needed to push progression forward
-
-Gates should create a different rhythm from raids.
-They should not feel like a copy of the same gameplay loop.
+The intended player read is:
+- I unlocked something in the hub
+- I survived longer in the run
+- I earned essence
+- I want to try again
 
 ---
 
-## Core Relationship Map
+## Hub vs Run Relationship
 
-### Gate
-Gate expeditions provide:
-- exploration pressure
-- layered depth progression
-- pylon capture opportunities
-- resource acquisition
-- biome-specific encounters
+### Hub
+The hub is the low-pressure progression space.
 
-### Pylon
-Pylons are the key foothold objective inside gates.
+For the vertical slice, the hub can be a simple menu or compact space.
 
-Pylon capture should:
-- trigger a mini defense event
-- spawn engineered construct enemies
-- unlock a safer local foothold on success
-- reveal map space
-- unlock local travel conveniences
-- enable limited nearby building
+The hub handles:
+- spending essence
+- unlocking turret types
+- unlocking turret upgrade branches
+- increasing base capacity
+- optionally upgrading the basic player weapon
 
-### Drill
-Drills are deployed at captured pylons.
+The hub should be quick. It should not become a town simulation before the run loop is fun.
 
-Drills should:
-- trigger escalating waves
-- generate increasing rewards
-- create a controlled risk-versus-reward defense loop
-- let players choose when to stop or extract
+### Gate Run
+The gate run is the high-pressure action space.
 
-### Town Hall Upgrade
-The town hall upgrade is the player-controlled progression trigger.
+For the vertical slice, it is:
+- one small arena
+- one central base/core
+- one preset starter base
+- continuous wave pressure
+- in-run scrap spending
+- survival milestones
+
+The run starts quickly and tests whether combat, defenses, and escalation feel good.
+
+---
+
+## Resource Relationship
+
+### Scrap
+Scrap is an in-run survival resource.
+
+Rules:
+- only wave enemies drop scrap
+- scrap is automatically collected on kill
+- scrap is not stored between runs
+- scrap is spent during the current run
+
+Scrap supports:
+- turret upgrades
+- limited additional turret placement
+
+Scrap must matter because it keeps the defense alive under pressure.
+
+### Essence
+Essence is the between-run progression resource.
+
+Rules:
+- generated over time during a run
+- improved by reaching milestones
+- kept at about 70% if the base is destroyed
+- spent in the hub
+
+Essence supports:
+- turret type unlocks
+- turret upgrade branch unlocks
+- base capacity
+- optional player weapon upgrades
+
+---
+
+## Base Relationship
+The base is the defended objective and the center of the run.
+
+For the vertical slice:
+- the base starts pre-configured
+- walls have fixed strength
+- turrets start at level 1 every run
+- the layout is strong enough for early waves
+- the layout is not strong enough to play without the player
+
+Players should fight alongside the base, not watch it play by itself.
+
+---
+
+## Turret Upgrade Direction
+Turret upgrades should be obvious and impactful.
+
+Good upgrade types:
+- faster firing
+- longer range
+- area damage
+- burst damage
+- transformation into a new unlocked turret type
+
+Avoid tiny upgrades that only shift numbers slightly.
+
+Locked advanced upgrades may be visible but unavailable so hub progression feels desirable.
+
+---
+
+## Wave And Milestone Direction
+The wave system is the main pressure driver.
 
 It should:
-- require gathered materials from gates
-- use a channeling or activation process
-- trigger a major raid
-- become the main gate between tech tiers
+- spawn enemies continuously
+- increase spawn rate over time
+- increase enemy strength over time
+- force active defense from early in the run
 
-### Raid
-Raids are the main progression checkpoints.
+Milestones split a run into five pressure bands:
+- 1/5: early
+- 2/5: mid
+- 3/5: high pressure
+- 4/5: extreme
+- 5/5: endgame
 
-They should:
-- test the current state of the base
-- use full construct armies rather than exploration creatures
-- determine whether the next town hall tier unlocks
-- expose weakness without causing overly punishing progression loss
-
----
-
-## Progression Tension
-One of the game’s key design tensions is the split between:
-
-### Personal power
-Examples:
-- stronger weapons
-- augments
-- mobility upgrades
-- combat utility
-
-### Base power
-Examples:
-- walls
-- turret strength
-- town hall upgrades
-- structural improvements
-- better raid readiness
-
-This tension should be present often enough to shape player identity and strategy.
+Each milestone should make both danger and rewards feel higher.
 
 ---
 
-## Failure And Recovery Direction
+## Death And Failure
+Player death should create a temporary loss of control, not immediate run failure.
 
-### Gate Failure
-Gate failure should cost:
-- time
-- local momentum
-- possibly run rewards
+Rules:
+- dead players respawn at the base after about 20 seconds
+- base destruction ends the run immediately
+- base destruction returns the player to the hub with about 70% of earned essence
 
-Gate failure should not erase all long-term progress casually.
-
-### Raid Failure
-Raid failure should:
-- stop the current town hall upgrade from completing
-- leave the base damaged
-- destroy structures when overwhelmed
-- force rebuilding and retrying
-- preserve gathered materials so failure is not catastrophic
-
-This keeps raids meaningful without making failure overly punishing.
+The run should be repeatable even when failed.
 
 ---
 
-## Enemy Relationship Direction
-Enemy design is split into two broad categories.
+## Multiplayer Direction
+The vertical slice must preserve server authority.
 
-### Exploration Enemies
-These belong to the biome.
-They create environmental pressure, roaming danger, and exploration identity.
+The server/host decides:
+- enemy spawning
+- enemy AI
+- damage
+- enemy death
+- scrap awards
+- essence awards
+- turret placement validity
+- turret upgrades
+- base health
+- run failure
 
-### Engineered Constructs
-These are organized enemies used in:
-- pylon defense events
-- main raids
-
-This split is important because it makes gate exploration feel distinct from deliberate defense events.
-
----
-
-## Biome Direction
-Biome mechanics are biome-specific, not universal.
-
-The first biome should:
-- stay simple
-- stay readable
-- avoid heavy gimmicks
-- establish the persistent gate structure clearly
-
-Later biomes should add stronger identity through mechanics unique to that biome rather than a single global gate ruleset.
+Clients request actions and show feedback.
 
 ---
 
-## Building Direction
-Building rules should differ by context.
+## Delayed Systems
+These ideas may be useful later, but they are not part of the vertical slice:
 
-### Main Base Building
-- broadest building freedom
-- long-term layouts
-- core identity of the defense game
+- POIs
+- caves
+- roaming exploration
+- gold
+- material-specific trees
+- deep research
+- multiple worlds or eras
+- complex enemy families
+- freeform base building outside the preset layout
 
-### Gate Building
-- limited
-- local to captured pylons
-- tactical rather than fortress-scale
-
-This keeps the base as the true center of the game while still allowing meaningful local setup in gates.
-
----
-
-## Gameplay Feel Goals
-Across all systems, the game should feel:
-- readable
-- punchy
-- cooperative
-- tense
-- scalable
-- intentional rather than chaotic
-
-This matters especially because the game is:
-- 3D
-- multiplayer
-- enemy-dense
-- structure-heavy
-
-Too much visual noise or system complexity will reduce the game’s strengths.
-
----
-
-## Co-op Design Goals
-Co-op should feel meaningful and additive.
-
-The game should support:
-- teamwork without requiring rigid classes
-- role preference without forcing role lock-in
-- strong save-the-base moments
-- shared exploration pressure
-- shared strategic progression decisions
-
-It should be easy for players to naturally drift into different tendencies, such as:
-- frontline defender
-- builder or repair-focused player
-- crowd-clear specialist
-- elite killer
-- exploration scout
-
-These roles should emerge from gameplay, not require hard class systems early.
-
----
-
-## Content Scaling Direction
-The game is expected to grow through:
-- new gate biomes
-- deeper pylon and drill variations
-- additional construct roles
-- new exploration enemy families
-- new structures
-- new weapons
-- new raid patterns
-
-However, content should only expand after the core loops are proven fun.
-
----
-
-## Early Prototype Focus
-The early playable target should focus on proving:
-- multiplayer foundation
-- defendable objectives
-- enemy pressure
-- basic combat
-- basic structure interaction
-- the first gate loop
-- the first player-triggered raid loop
-
-The prototype should avoid:
-- too many systems at once
-- deep progression trees too early
-- excessive UI complexity
-- too many resource types early
-- overcomplicated building rules
+Only promote these after the core loop already creates the one-more-run feeling.
 
 ---
 
 ## Design Risks To Watch
-Potential project risks include:
-- gates feeling too temporary instead of persistent
-- raids feeling like automatic timers rather than chosen checkpoints
-- combat becoming visually messy in co-op
-- building becoming too fiddly in gates
-- too many resource types diluting decision-making
-- enemy counts becoming unreadable in 3D
+Current risks:
+- the base becomes too passive and plays for the player
+- early waves are too slow or idle
+- scrap spending feels optional instead of necessary
+- essence rewards feel grindy instead of motivating
+- turret upgrades feel like small stat bumps
+- old exploration or era systems distract from the MVP
 
-These should be actively watched during prototyping.
+When in doubt, test the run loop before adding systems.

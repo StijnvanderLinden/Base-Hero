@@ -1,322 +1,245 @@
 # Game Design Document (GDD)
 
 ## High Concept
-This project is a 3D co-op base defense action game centered on a main base, player-triggered raids, and persistent gate expeditions that feed long-term progression.
+This project is a 3D co-op action base-defense game about getting stronger in a simple hub, entering a dangerous gate arena, defending a central base under escalating pressure, earning progression, and wanting to try one more run.
 
-The game combines:
-- active player combat
-- objective defense
-- base building
-- intentional raid escalation
-- persistent gate exploration
-- co-op progression
+The current project priority is a focused playable vertical slice:
 
-The game is not intended to be a generic open-world survival sandbox.
-Its identity is built around meaningful defense, escalating pressure, and progression through gate expeditions, town hall upgrades, and large raids.
+**Main Hub -> Gate Run -> Survive -> Repeat**
+
+Everything outside that loop is backlog until the core loop is proven fun.
 
 ---
 
 ## Core Player Fantasy
-Players should feel like:
-- defenders of a meaningful fortress
-- fighters who actively save collapsing situations
-- builders who improve a base over time
-- explorers pushing deeper into dangerous gate biomes
-- players choosing when they are ready to trigger the next major raid
+Players should feel:
+- "I got stronger in the hub"
+- "I can survive longer in the run"
+- "I want to try again"
+
+The game succeeds when the player wants one more run.
 
 ---
 
 ## Core Gameplay Loop
-The main gameplay loop is:
+The vertical-slice loop is:
 
-1. Prepare and upgrade the main base
-2. Enter a persistent gate biome
-3. Explore, capture pylons, and gather materials
-4. Return to the main base with resources and unlock options
-5. Start a town hall upgrade when ready
-6. Defend the base during the triggered major raid
-7. Complete the upgrade and unlock the next tier if successful
-8. Rebuild, improve, and push deeper into gates for the next checkpoint
+1. Start in the main hub
+2. Unlock or choose simple turret upgrades
+3. Enter a gate run
+4. Defend the central base/core
+5. Kill wave enemies for scrap
+6. Spend scrap during the run on turret upgrades or limited extra turrets
+7. Survive as long as possible while pressure escalates
+8. Earn essence based on survival time and milestones
+9. Return to the hub
+10. Spend essence on new turret types, upgrade branches, base capacity, or a simple player weapon upgrade
+11. Repeat
 
-This loop is the central structure that all major systems should support.
-
----
-
-## Main Game Modes
-
-### Main Base
-The main base is the long-term defensive home of the player group.
-
-It is:
-- the center of the broader progression loop
-- the place where long-term building matters most
-- the location of major raids
-- the anchor of emotional and strategic investment
-
-At the main base, players:
-- build and improve defenses
-- unlock stronger weapons and structures
-- prepare town hall upgrades
-- choose when to trigger raid checkpoints
-
-### Gate Expeditions
-Gate expeditions are persistent biome regions that players revisit over time.
-
-Gate expeditions are designed to be:
-- layered
-- replayable
-- more exploratory than raids
-- more reactive than prepared
-- strongly centered on risk-versus-reward decisions
-
-A gate region includes:
-- multiple depth layers
-- pylon objectives
-- biome-specific enemies and mechanics
-- resources and rare materials
-- safe footholds earned through progress
-
-Gate expeditions are not intended to replace raids. They support raid progression and provide the exploration and resource-gathering side of the loop.
+This loop is the project's design center until it is fun.
 
 ---
 
-## Main Base Gameplay
-The main base should be a meaningful place, not just a storage hub.
+## Core Design Principle
+Validate fun before adding complexity.
 
-It should matter as:
-- an objective
-- a strategic defense space
-- a progression anchor
-- a visual representation of player investment
+If the core loop is not fun:
+- do not add new systems
+- do not add broad content
+- fix the base loop
 
-The main base includes:
-- a central town hall or main core
-- walls
-- turrets
-- support structures later
-- upgrade-dependent tech progression
-
-Major raids are the main test of everything the players have prepared.
+The project should favor:
+- playable over elegant
+- clear over clever
+- impactful upgrades over small stat tuning
+- fast repetition over long setup
 
 ---
 
-## Town Hall Upgrades And Raids
-Raids are not automatic.
+## Main Game Spaces
 
-Raids only begin when players start upgrading the town hall.
+### Main Hub
+The hub is the simple between-run progression space.
 
-The town hall upgrade flow is:
-1. gather required materials from gates
-2. start the town hall upgrade through a channeling process
-3. trigger a major raid immediately
-4. defend the base until the event resolves
-5. complete the upgrade and unlock a new tier if successful
+It may be a menu or a small playable area. It does not need NPCs, complex UI, deep research trees, or a large town simulation for the vertical slice.
 
-If players fail:
-- the upgrade does not complete
-- the base can be damaged and structures can be destroyed
-- players keep their gathered materials
-- players rebuild and try again later
+Hub progression can unlock:
+- turret types
+- turret upgrade branches
+- base capacity
+- optional basic player weapon upgrades
 
-These raids are intentional progression checkpoints, not random interruptions.
+The hub's job is to make the player feel stronger before the next run.
 
----
+### Gate Run
+The first gate run is a small arena, not an exploration map.
 
-## Gate Gameplay
-Gate gameplay should differ from main-base raid gameplay.
+It contains:
+- one central base/core
+- a starter base layout
+- level 1 turrets at run start
+- fixed-strength walls
+- enemy wave pressure
+- scrap earned from enemy kills
+- milestone-based escalation
 
-Gates should feel:
-- more exploratory
-- more layered
-- more risky when pushing deeper
-- more about creating footholds over time
-- more about deciding what depth the team can handle
-
-The intended tension of a gate is:
-- establish a foothold
-- capture pylons under pressure
-- drill for rewards at secured positions
-- push deeper than feels safe
-- return later if the current depth is too dangerous
-
-Players are not expected to fully clear a gate in one tier.
-They should revisit the same gate and progress deeper over time.
+The run's job is to test whether upgrades, pressure, and survival create the "one more run" feeling.
 
 ---
 
-## Pylons And Drills
-Pylons are the main objectives inside gates.
+## Scrap
+Scrap is the core in-run resource.
 
-Capturing a pylon should:
-- trigger a defense event
-- spawn engineered construct enemies
-- create a safer foothold on success
-- reveal local map space
-- unlock fast travel or return options
-- allow limited local building
+Rules:
+- dropped only by wave enemies
+- automatically collected on enemy kill
+- spent during the run
+- not stored between runs
+- required to keep the base defense alive
 
-Drills are placed at captured pylons.
-They:
-- trigger escalating waves
-- generate increasing rewards
-- create a push-your-luck defense loop
-- let players choose when to stop
+Scrap can be spent on:
+- upgrading existing turrets
+- placing a limited number of extra turrets
+
+There is no manual pickup for the vertical slice.
 
 ---
 
-## Progression
-Progression is split between two major targets:
+## Essence
+Essence is the core between-run progression resource.
 
-### Player Power
-Players may improve:
-- weapons
-- augments
-- abilities
-- personal combat options
-- mobility or survivability tools
+Rules:
+- generated over time during a run
+- scales with survival duration and milestone progress
+- spent in the main hub
+- retained at about 70% when the base is destroyed
 
-### Base Power
-Players may improve:
-- walls
-- turrets
-- support systems
-- town hall tiers
-- structure effectiveness
-- base survivability and tech access
+Essence unlocks long-term options such as:
+- turret types
+- upgrade branches
+- base capacity
+- optional simple player weapon upgrades
 
-A core strategic tension of the game is:
-**do we invest in ourselves, or in the base?**
-
-That choice is central to the game’s identity.
+Essence exists to create the feeling that each run makes the next run more promising.
 
 ---
 
-## Resource Direction
-Gate expeditions provide the materials required for progression.
+## Base And Turrets
+The first run uses a pre-configured starter base.
 
-The reward direction includes:
+The starter base should:
+- survive early waves
+- create pressure quickly
+- not play the game for the player
+- be readable in 3D and co-op
 
-### Core Resource
-A dependable progression currency used for repeatable growth.
+Turrets:
+- start at level 1 every run
+- upgrade with scrap during the run
+- should receive impactful upgrades rather than tiny percentage bumps
 
-### Rare Materials
-Layer-specific or biome-specific resources used for stronger unlocks and town hall progression.
+Good upgrade directions:
+- faster fire rate
+- longer range
+- area attacks
+- single-target burst
+- transformation into an unlocked advanced type
 
-### Components
-Parts used for special defenses, weapon upgrades, or structure variants.
+Locked upgrade branches may be visible but unavailable with a lock or question mark.
 
-The exact final economy may evolve, but gate rewards should always support meaningful choices and raid readiness.
-
----
-
-## Building
-Building is one of the project’s core pillars.
-
-Players should be able to shape the battlefield through:
-- walls
-- turrets
-- support structures later
-
-Building should feel:
-- strategic
-- readable
-- impactful
-- cooperative
-
-At the main base, building is long-term and central.
-Inside gates, building is limited, local, and tied to captured pylons.
+Walls are fixed strength for the vertical slice and are not upgraded.
 
 ---
 
-## Enemies
-Enemy design is split into two categories.
+## Wave And Milestone Pressure
+The gate run uses continuous enemy pressure that escalates over time.
 
-### Gate Exploration Enemies
-These enemies belong to the biome and pressure players during exploration.
+Milestones divide run progression into five pressure bands:
+- 1/5: early
+- 2/5: mid
+- 3/5: high pressure
+- 4/5: extreme
+- 5/5: endgame
 
-They may include:
-- wildlife
-- goblins
-- corrupted creatures
-- biome-specific threats
+Milestones should increase:
+- enemy strength
+- spawn rate
+- pressure on the base
+- essence gain
 
-### Engineered Construct Enemies
-These enemies appear in:
-- pylon defense events
-- main base raids
-
-Constructs should feel:
-- organized
-- engineered
-- fantasy-built rather than sci-fi
-- readable in silhouette and role
-
-Construct roles include:
-- small swarm units
-- shield units
-- heavy breakers
-- siege units
-- elites
+Early pressure must exist. The player should not be waiting around for the game to begin.
 
 ---
 
-## Biomes
-Gate mechanics are biome-specific, not global.
+## Death And Failure
+Player death:
+- respawn after about 20 seconds at the base
+- does not end the run by itself
 
-The first biome should be:
-- simple
-- readable
-- mechanically clean
-- low on gimmicks
+Base destruction:
+- ends the run immediately
+- returns the player to the hub
+- keeps about 70% of earned essence
 
-Later biomes may introduce stronger identity through unique mechanics such as visibility pressure, environmental threats, or traversal constraints.
+Failure should sting, but still make the next run feel worth attempting.
 
 ---
 
 ## Multiplayer
-The game is fundamentally co-op.
+The game is fundamentally co-op and host-authoritative.
 
-Multiplayer should support:
-- shared pressure
-- teamwork
-- role flexibility
-- collaborative defense
-- cooperative survival moments
+Clients may request actions and show presentation.
+The host/server decides enemy spawning, damage, death, rewards, base state, progression, and run outcomes.
 
-The intended multiplayer model is:
-- one player hosts
-- the host acts as the authoritative server
-- other players join as clients
-
-The game should eventually support online co-op smoothly, with future Steam integration in mind.
+The vertical slice should remain multiplayer-safe even while simple.
 
 ---
 
-## Design Goals
-The game should aim for:
-- intentional raid progression
-- meaningful gate exploration
-- strong co-op defense moments
-- satisfying growth in both player power and base power
-- readable large-scale encounters
-- a clear difference between gate expeditions and main-base raids
+## Prototype Scope
+The vertical slice should prove only:
+- simple hub progression
+- one small gate arena
+- one central defendable base/core
+- enemy waves with escalating pressure
+- automatic scrap from wave enemy kills
+- turret upgrades and limited extra turret placement using scrap
+- essence earned from survival and milestones
+- base destruction failure and player respawn
+- repeatable hub-to-run loop
+
+Everything else waits until this loop is fun.
+
+---
+
+## Explicit Backlog
+Do not build these for the vertical slice:
+- POIs
+- caves
+- deep map exploration
+- roaming resource gathering
+- gold
+- complex material systems
+- multiple worlds or eras
+- material-specific research trees
+- deep meta-progression
+- complex enemy variants
+- base building outside the preset layout
+
+These are valid future ideas, but they must not compete with the first fun loop.
 
 ---
 
 ## Design Boundaries
-The project should avoid drifting into:
-- generic open-world survival
-- fully clearing giant gates in a single pass by default
-- automatic raid timers that remove player choice
-- deep crafting complexity too early
-- excessive inventory management
-- passive tower defense with weak player agency
-- feature bloat that weakens the core loop
+The project should avoid:
+- generic open-world survival drift
+- passive or AFK tower defense
+- grind loops
+- idle waiting before pressure begins
+- small unnoticeable upgrades
+- unnecessary resource complexity
+- systems that delay proving the core loop
 
-The heart of the game is:
-- build
-- explore
-- trigger the next test
-- defend
-- upgrade
-- push deeper
+The heart of the current game is:
+- unlock options in the hub
+- make survival decisions in the run
+- earn enough progress to try again stronger

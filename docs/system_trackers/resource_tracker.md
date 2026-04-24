@@ -1,55 +1,65 @@
 # Resource System Tracker
 
 ## Current Status
-First Expedition Resource Slice Implemented
+Scrap Kill Reward Slice Started
 
 ## Current Design Summary
-- iron is the first gathered raw material
-- iron fuels pylon channel starts
-- crystals are a separate universal progression resource
-- resource signals inside pylon influence are counted and highlighted without full map reveal
+The vertical slice uses two resources:
+
+- scrap: earned during a run from wave enemy kills and spent during that same run
+- essence: earned from survival and milestones, then spent in the hub between runs
+
+Gold, materials, crystals, herbs, and complex resource families are backlog.
 
 ## Implemented
-- authoritative iron collection from expedition resource nodes
-- authoritative crystal collection from expedition pickups
-- fixed expedition resource placements for iron, herbs, cave entrances, treasure spots, and crystals
-- pylon-range counting for crystals remaining in area
+- Some older resource collection and reward foundations exist
+- Existing progression resources may be repurposed into essence if that is the simplest path
+- Wave enemies now award server-authoritative scrap on death during gate pressure
+- Scrap reward amounts vary by enemy kind, with a small wave-index bonus
 
 ## In Progress
-- tuning iron distribution against the first pylon channel costs
-- deciding which non-iron resource signals become interactive next
+- Connecting scrap income to turret upgrade spending
+- Simplifying resource direction around scrap and essence
 
 ## Blockers / Problems
-- non-iron signal nodes are reveal targets only in the first slice
-- there is no persistence layer beyond the current session
+- Runtime may still expose older iron, crystal, pylon, or material assumptions
+- Essence is not yet clearly generated from survival duration and milestones
 
 ## Must Have
-- raw material pickups for channel starts
-- finite crystal pickups
-- server-authoritative collection
-- crystal count remaining in pylon radius
+- Server-authoritative scrap total during a run
+- Scrap awarded automatically on enemy death
+- Scrap not stored between runs
+- Scrap spent on turret upgrades or limited extra turrets
+- Server-authoritative essence reward total
+- Essence generated from survival duration and milestones
+- About 70% essence kept when the base is destroyed
 
 ## Should Have
-- more distinct marker visuals per resource family
-- broader resource spending beyond iron and crystals
+- Clear UI for current scrap
+- Clear UI for earned essence
+- Clear feedback when scrap is spent
+- Clear run-end reward summary
 
 ## Could Have
-- procedural placement later
-- rare treasure pickups that convert into scrap or special resources
+- Bonus essence for reaching later milestone bands
+- Small essence streak or first-time milestone bonus after the base loop is fun
 
-## Won’t Have (for now)
-- multiple crystal types
-- a full crafting web
-- world-generation driven distribution logic
+## Won't Have (for now)
+- Gold
+- Iron, wood, herbs, crystals, or other material economies
+- Manual resource pickup
+- Crafting webs
+- Multiple resource families
 
 ## Open Questions
-- should herbs or treasure become spendable in the next pass
-- should iron respawn between expeditions or remain depleted per map
+- What scrap income rate makes turret upgrades feel necessary but not spammy?
+- What essence payout makes failed runs motivating without becoming grindy?
+- Should scrap be team-shared in co-op for the MVP?
 
 ## Recent Decisions
-- crystals remain universal
-- crystal tracking is count-only through pylon influence
-- iron is the first channel material
+- Scrap is the only in-run resource for the vertical slice
+- Essence is the only between-run progression resource for the vertical slice
+- Manual pickup and additional materials are deferred
 
 ## Next Recommended Task
-Decide the next interactable expedition resource after iron.
+Playtest scrap income against the first turret upgrade cost, then tune rewards and costs until the upgrade arrives during pressure.

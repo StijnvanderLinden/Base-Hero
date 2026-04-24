@@ -1,73 +1,40 @@
-# World Generation System Tracker
+# World Generation Tracker
 
 ## Current Status
-First Runtime Slice Implemented
+Deferred For Vertical Slice
 
 ## Current Design Summary
-- each expedition now generates one finite terrain playspace
-- the terrain uses gentle height variation with occasional mountains
-- hard world boundaries keep the run contained
-- pylon placement validates against terrain slope and world bounds
-- placing a pylon creates a flat circular build zone
-- enemy spawning can use an outer ring around that pylon zone
+The MVP should use one small readable arena. Procedural world generation is backlog.
 
 ## Implemented
-- dedicated world generation runtime with synchronized expedition seed state
-- finite terrain mesh generation with collision
-- boundary blockers around the generated world
-- terrain height sampling and projection helpers
-- pylon placement validation against bounds and slope
-- circular build zone creation with a flat foundation surface
-- enemy spawn position sampling outside the build zone
-- gate and building runtime hooks for terrain/build-zone-aware placement
+- Older generation hooks may exist
 
 ## In Progress
-- tuning terrain amplitude for combat readability
-- tuning build radius versus spawn ring spacing
-- verifying multiplayer sync timing for generated-world-dependent local presentation
+- No world generation work planned for MVP
 
 ## Blockers / Problems
-- the first terrain slice has no biome-specific variation yet
-- resource placement currently uses fixed descriptor layouts projected onto generated terrain
-- the generated foundation is functional but still visually placeholder
+- Generated-map work can slow iteration before the arena loop is fun
 
 ## Must Have
-- finite expedition terrain
-- world bounds and blockers
-- terrain-aware pylon placement
-- pylon-linked build zone creation
-- enemy spawn support outside the build zone
-- server-authoritative validation for placement and spawning
+- One readable arena layout
 
 ## Should Have
-- stronger visual readability for world edges
-- clearer build-zone presentation in moment-to-moment combat
-- better tuning for flatter usable terrain pockets
+- Clear spawn lanes and movement room
 
 ## Could Have
-- biome-driven terrain presets
-- point-of-interest placement on generated terrain
-- more varied boundary treatments by biome
+- Arena variants later
 
-## Won’t Have (for now)
-- infinite world generation
-- destructible terrain
-- fully procedural biome population
-- underground terrain layers
+## Won't Have (for now)
+- Procedural exploration maps
+- POI generation
+- Cave generation
+- Terrain-based pylon placement
 
 ## Open Questions
-- how large should the first expedition terrain be relative to player count
-- how strict should pylon slope validation be before placement feels frustrating
-- should later pylons create different build-zone shapes or only larger radii
+- None for MVP
 
 ## Recent Decisions
-- expeditions use finite generated terrain rather than a flat temporary floor
-- pylon placement creates a flat defense foundation automatically
-- gate building is constrained to the pylon build zone during expeditions
-- enemy spawn pressure should approach from outside the foundation ring
+- Static or simple arena layout is acceptable for the vertical slice
 
 ## Next Recommended Task
-Run multiplayer tuning on the first world slice:
-- test pylon placement on a range of generated slopes
-- verify build-zone readability while under attack
-- tune spawn ring distances so enemies enter from readable angles without feeling too distant
+Use the simplest arena layout that supports fast wave, turret, and base-defense testing.

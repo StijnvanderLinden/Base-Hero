@@ -1,112 +1,128 @@
 # Current State
 
 ## Purpose
-This document tracks the overall current implementation state of the project.
+This document tracks the overall implementation state after the vertical-slice refocus.
 
 It should answer:
-- what is already implemented
-- what is partially implemented
-- what is not implemented
+- what is already usable
+- what is placeholder-heavy
+- what is intentionally deferred
 - what the current focus is
 
-This is the project-wide implementation snapshot.
-
-For system-specific implementation detail, use the system trackers.
+For system-specific detail, use the system trackers.
 
 ---
 
 ## Project Status
-Early Multiplayer Prototype
+Early Multiplayer Prototype Refocused On Vertical Slice
 
-The project now has a working multiplayer gameplay prototype with shared players, a defendable core objective, basic enemies, and basic combat. The implementation is still placeholder-heavy, but the first server-authoritative loop exists in-project.
+The project has a working server-authoritative multiplayer foundation, shared players, a defendable core, basic enemies, basic combat, and prototype defense structures.
+
+The current design target is now narrower:
+
+**Main Hub -> Gate Run -> Survive -> Repeat**
+
+The goal is to prove the fun of one small arena-style gate run with scrap, turret upgrades, essence progression, and fast repetition before adding exploration or broader era systems.
 
 ---
 
 ## Implemented
-### Documentation
-- high-level GDD created
-- detailed design support documents created
-- architecture and networking direction documented
-- system specs created for core gameplay systems
-- system trackers created for core gameplay systems
-- documentation workflow and update rules defined
 
-### Prototype Gameplay
+### Documentation
+- core docs now prioritize the focused vertical slice
+- Stone Age now describes the first arena-style MVP rather than a broader era/exploration slice
+- deferred systems are routed to backlog
+
+### Prototype Gameplay Foundation
 - host/join flow using ENet
 - synchronized player spawning and movement
-- server-authoritative enemy spawning and enemy movement replication
+- server-authoritative enemy spawning and movement replication
 - server-authoritative core objective with replicated health and destroyed state
 - basic player attack, enemy health, enemy death, and player/enemy health bars
-- first server-authoritative wall and turret placement prototype with replicated defense structures, structure health, and turret bullet projectiles
-- simple wave pacing with breather windows and in-session host restart flow for gate and raid pressure testing
-- system test picker with isolated sandbox suites for full game, combat, building, and enemy pressure validation
-- first confirmed gate prototype with build-first pylon setup, manual claim channeling, finite claim waves, cave activation, and extraction
-- shared session scrap storage plus a first base-side spend target that upgrades core max health
-- first town hall raid prototype with player-triggered upgrade channeling, finite raid waves, and no main-base enemy spawning outside active raids
-- first runtime pylon slice with functional versus damaged state and nearby defense deactivation
-- first cave activation slice with a sustained pylon channel that opens and closes the cave entrance
-- first visible cave barrier and entrance presentation on the live pylon objective
-- first cave-manager integration slice where claimed pylons prepare a cave descriptor and opened barriers mark that cave active
-- first sustained cave-open pressure slice where enemy pressure keeps ramping while the cave remains open
-- first damaged-pylon repair slice with a locked repair channel and lighter repair waves
-- repair channel interruption on player death or movement, with restartable repair attempts
-- dedicated gate HUD feedback for cave state, pressure wave, reward gain, and cave-open timing
-- first authored cave-side reward cache objective that can be collected while the cave is open
+- wall and turret prototypes with replicated placement and projectile behavior
+- gate-pressure enemy deaths now award scrap automatically
+- turrets can now be upgraded with scrap through the existing interaction flow
+- in-session restart flow for repeated multiplayer testing
+- system test picker with isolated sandbox suites
 
-### Design Direction
-- core game identity is defined
-- multiplayer direction is defined
-- gate/main-base relationship is defined at a high level
-- primary systems have initial specifications
+### Reusable Systems Worth Keeping
+- core objective health and failure handling
+- enemy pressure spawning and wave pacing foundations
+- building and defense structure foundations
+- era data and era manager foundations, if kept lightweight
+- research and unlock scaffolding, if simplified into essence-based hub unlocks
 
 ---
 
 ## Partially Implemented
-- the smallest multiplayer-safe defense loop exists, but it still uses placeholder visuals and placeholder combat feel
-- enemy behavior currently uses direct pursuit and objective pressure only, even though pacing now ramps by wave
-- restart flow exists for repeated testing, but full match recovery/results flow is not implemented
-- building now has wall and turret prototypes plus local preview feedback, but costs and repair/upgrades are not implemented yet
-- gate flow now uses a first pylon foothold instead of the old drill objective, now supports manual claim waves, visible cave barrier states, sustained cave-open pressure, and a first repair loop, but real cave generation, deeper objectives, and revisit persistence are not implemented yet
-- raid flow now exists in first prototype form and now uses a first dedicated construct swarm unit, but broader construct role variety is not implemented yet
+- the smallest multiplayer-safe defense loop exists, but the run is not yet the final MVP loop
+- turrets now have a first scrap-paid upgrade, but it still needs playtesting and tuning as the core survival sink
+- enemy spawning exists, but needs vertical-slice milestone escalation
+- progression scaffolding exists, but needs simplification around essence
+- some runtime and docs still contain legacy assumptions from broader gate, pylon, era, material, or raid directions
 
 ---
 
 ## Not Yet Implemented
-- progression systems
-- broader progression systems beyond the first core upgrade
+- simple hub progression loop for essence spending
+- limited additional turret placement paid with scrap
+- five milestone pressure bands
+- essence generation based on survival and milestones
+- 70% essence retention on base destruction
+- 20-second player respawn at base
+- locked turret upgrade branches shown but unavailable until hub unlocks
+
+---
+
+## Intentionally Deprioritized Or Removed
+- POIs and cave exploration
+- roaming material gathering
+- gold and complex material economies
+- multiple worlds or eras
+- material-specific research trees
+- deep meta-progression
+- complex enemy variants
+- freeform base building outside the preset layout
+- pylon-first gate progression
+- town-hall-upgrade-driven major raids as the main progression test
 
 ---
 
 ## Current Project Focus
 The current focus is:
-**Phase 7: Main Raid Prototype plus first pylon foothold integration**
 
-That means the next practical targets are:
-- validate that no enemies spawn at the base outside active raids
-- validate town hall upgrade channeling and raid success/failure in multiplayer sessions
-- validate the first construct raid unit and add the next construct role after it
-- tune the current cave-open HUD and pressure readability during multiplayer gate runs
+**Focused Vertical Slice: Hub Progression, Gate Arena, Scrap Upgrades, Essence Repeat Loop**
+
+The next practical targets are:
+- make one run arena start quickly
+- create early wave pressure
+- award scrap automatically on enemy kill
+- spend scrap on impactful turret upgrades
+- generate essence from survival and milestones
+- end the run cleanly when the base is destroyed
+- return to the hub and spend essence
 
 ---
 
 ## Current Risks
-- project scope is large
-- many systems are still conceptual
-- it will be important not to overbuild late systems before the prototype loop is working
-- gates must remain distinct from main raids
-- documentation must stay clean as ideas evolve
+- old exploration, material, era, pylon, or raid assumptions may distract from the MVP
+- turret upgrades may feel too small if they are only percentage bumps
+- early waves may feel idle if pressure starts too slowly
+- scrap may feel optional instead of necessary
+- essence may feel grindy if rewards are too small or unlocks are too incremental
+- the base may become too strong and make players passive
 
 ---
 
 ## What To Update Here
 Update this file when:
 - a new project-wide milestone is implemented
-- a phase meaningfully changes
-- overall project focus changes
-- implementation reaches a new stage that future work depends on
+- the prototype loop meaningfully changes
+- legacy systems are fully retired from the runtime
+- the project focus moves to the next validated slice
 
 Do not update this file for:
-- small polish changes
-- one-off tuning
+- small feel tuning
+- visual polish only
 - minor scene cleanup
 - system details that belong only in trackers

@@ -1,208 +1,116 @@
 # Building System Specification
 
 ## Purpose
-The Building System allows players to place and upgrade defensive structures that protect objectives and shape the battlefield.
+The Building System supports active base defense during the vertical slice.
 
-This system is central to the game's fortress-defense identity.
+For the MVP, building is not a broad construction sandbox. It is a small set of turret decisions made under pressure.
 
 ---
 
 ## Design Goals
-- Building should be strategic but not tedious
-- Placement should be clear and readable
-- Structures should support active combat
-- The system should work cleanly in co-op
-- Placement and costs must be server-authoritative
+- Make the base matter
+- Make players fight alongside defenses
+- Keep defense decisions readable
+- Make scrap spending feel impactful
+- Preserve server authority
+- Avoid setup friction before the run becomes fun
 
 ---
 
-## Core Fantasy
-Players build a fortress that matters.
+## Starter Base
+Each run starts with a pre-configured starter base.
 
-Building should let players:
-- shape enemy paths
-- create safety zones
-- support combat roles
-- improve over time
-- feel attached to the base
+The starter base contains:
+- one central base/core
+- fixed-strength walls
+- level 1 turrets
+- limited capacity for extra turrets
+- clear enemy approach lanes
 
-The base should feel like something players created and defended, not just scenery.
-
----
-
-## Main Structure Categories
-Core categories:
-- walls
-- turrets
-- support structures
-
-Future categories:
-- traps
-- repair stations
-- shield emitters
-- utility buildings
-- power systems
+The base should survive early pressure but should not be able to survive without active player help.
 
 ---
 
 ## Walls
-Walls are the simplest and most important defensive structure.
+Walls are fixed strength for the vertical slice.
 
-### Purpose
+Purpose:
 - delay enemies
-- create choke points
-- shape space
-- protect critical structures
+- shape readable lanes
+- protect the core briefly
 
-### Design Goals
-- easy to place
-- easy to understand
-- visually readable in a fight
-- meaningful without overcomplicating pathing
-
-Walls should buy time, not solve the whole fight alone.
+Rules:
+- no wall upgrades in the MVP
+- no wall progression in the MVP
 
 ---
 
 ## Turrets
-Turrets provide automated offensive support.
+Turrets are the primary structure focus.
 
-### Purpose
-- reduce pressure
-- help with crowd control or priority targets
-- reward good placement
+Rules:
+- start at level 1 every run
+- upgrade using scrap during the run
+- can have locked advanced branches based on hub unlocks
+- should support player combat rather than replace it
 
-### Design Goals
-- useful but not dominant
-- readable target behavior
-- distinct roles when expanded later
-- support player action rather than replace it
+Good upgrade directions:
+- faster fire rate
+- longer range
+- area attack
+- single-target burst
+- transformation into a hub-unlocked advanced type
 
-Early prototype direction:
-- start with one simple turret type
-
----
-
-## Support Structures
-Support structures improve defense quality rather than acting as direct damage tools.
-
-Possible examples:
-- repair station
-- buff beacon
-- ammo or energy relay
-- shield generator
-
-These should be introduced later, after walls and turrets work.
+Upgrades should be felt immediately.
 
 ---
 
-## Placement Rules
-Placement should be predictable.
+## Limited Extra Turrets
+Players may place a limited number of additional turrets during a run if the MVP needs more tactical decision-making.
 
-Possible rules:
-- snap placement
-- valid/invalid preview
-- collision checks
-- range restrictions
-- no overlap
-- terrain restrictions
+Rules:
+- paid with scrap
+- capacity-limited
+- server-authoritative placement validation
+- no broad freeform base construction
 
-### Authority Rule
-Clients may preview and request placement.
+---
+
+## Authority Rule
+Clients may preview and request placement or upgrades.
 
 The server decides:
 - whether placement is valid
-- whether cost is paid
-- where final structure is spawned
-
----
-
-## Economy Relation
-Building should connect to progression and resources.
-
-Likely uses:
-- core resource for basic upgrades and building
-- components or rare materials for advanced structures
-
-For early prototypes:
-- use simple costs or free placement if needed for testing
-
-Design rule:
-- building cost should create meaningful choices, not busywork
-
----
-
-## Upgrades
-Structures may be upgraded over time.
-
-Possible upgrade directions:
-- more health
-- more damage
-- better range
-- special attack behavior
-- utility improvements
-
-Important:
-- do not overbuild full upgrade trees early
-
----
-
-## Main Base vs Gates
-The system may behave differently in different contexts.
-
-### Main Base
-- deeper building system
-- more persistent structures
-- stronger long-term planning
-
-### Gates
-Open question:
-- full building
-- limited deployables
-- temporary defensive placements only
-
-Current likely direction:
-- deeper building at main base
-- lighter or more temporary defenses in gates
+- whether the player/team can pay the cost
+- whether an upgrade is unlocked
+- where final structures are spawned
+- final turret behavior and damage
 
 ---
 
 ## Co-op Considerations
-Multiple players should be able to contribute.
-
 Open questions:
-- shared resource pool vs individual resources
-- who can place or upgrade what
-- how repairs work in co-op
+- should scrap be shared by the whole team?
+- can any player spend team scrap?
+- should turret upgrade choices require confirmation later?
 
-Current likely direction:
-- co-op-friendly by default
-- low friction collaboration
+For the MVP, use the simplest co-op-friendly rule that keeps the run moving.
 
 ---
 
-## Future Extensions
-Possible later additions:
-- trap networks
-- anti-air structures
-- siege counters
-- repair interactions
-- structure synergies
-- upgrade branches
-- structure specialization
+## Scope Boundaries
+Do build now:
+- preset base
+- fixed walls
+- level 1 turrets
+- scrap-paid turret upgrades
+- limited extra turret placement if needed
 
----
-
-## Early Prototype Scope
-The first building prototype should include:
-- one wall
-- one turret
-- basic placement validation
-- server-authoritative placement
-- simple or no-cost testing mode
-
-Do not build yet unless explicitly requested:
-- advanced snap networks
+Do not build yet:
+- freeform base building outside the preset layout
+- wall upgrades
+- deep trap catalog
 - power-grid simulation
-- complex upgrade UI
-- dependency chains
+- structure dependency chains
+- complex component sockets
+- large building UI

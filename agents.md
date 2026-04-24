@@ -19,11 +19,11 @@ This project is a 3D co-op base defense action game made in Godot 4.
 
 Players:
 - defend a central main base
-- enter dangerous gate missions to gather resources
+- enter dangerous gate runs
 - survive escalating enemy pressure
-- extract with rewards
+- earn scrap during runs to sustain defenses
+- earn essence between runs
 - choose between improving themselves and improving the base
-- prepare for increasingly large raids
 
 This game is not intended to become a generic open-world survival sandbox.
 Its identity is built around:
@@ -31,23 +31,28 @@ Its identity is built around:
 - fighting alongside defenses
 - risk-versus-reward gate runs
 - co-op teamwork
-- progression through raids and upgrades
+- progression through repeatable survival attempts and upgrades
 
 ---
 
 ## Core Gameplay Loop
-The core loop of the game is:
+The current vertical-slice loop is:
 
-1. Prepare and upgrade the main base
-2. Enter a gate run
-3. Defend a temporary objective while under pressure
-4. Leave safety to secure higher-value rewards
-5. Choose when to extract
-6. Return with resources
-7. Upgrade player power or base power
-8. Survive the next major raid
+1. Start in the main hub
+2. Unlock or choose simple upgrades
+3. Enter a gate run
+4. Defend the central base/core
+5. Kill wave enemies for scrap
+6. Upgrade turrets or place limited extra turrets during the run
+7. Survive as long as possible
+8. Earn essence from survival and milestones
+9. Return to the hub
+10. Spend essence to improve the next run
+11. Repeat
 
 Whenever design decisions are made, they should support this loop.
+
+Everything beyond this loop is backlog until the loop is proven fun.
 
 ---
 
@@ -397,7 +402,7 @@ The assistant should:
 ---
 
 ## Current Development Priority
-The current project priority is to build a working multiplayer-safe prototype first.
+The current project priority is to build a focused, playable, multiplayer-safe vertical slice first.
 
 Priority order:
 1. multiplayer foundation
@@ -405,11 +410,14 @@ Priority order:
 3. defendable objective
 4. enemy spawning and targeting
 5. basic combat
-6. first gate prototype
-7. first building prototype
-8. first raid prototype
+6. first small gate arena
+7. scrap awarded automatically from wave enemy kills
+8. turret upgrades and limited extra turret placement using scrap
+9. milestone pressure escalation
+10. essence rewards and simple hub unlocks
+11. repeatable run failure and retry flow
 
-Do not jump deep into late-game systems unless explicitly requested.
+Do not jump into exploration, multiple eras, complex resources, deep research, raids, or late-game systems unless explicitly requested and confirmed as post-MVP work.
 
 ---
 
@@ -423,3 +431,6 @@ Always favor:
 playable > elegant  
 clear > clever  
 confirmed truth > vague possibility
+
+Most important:
+fun vertical slice > broad feature stack

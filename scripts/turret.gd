@@ -8,11 +8,16 @@ extends StaticBody3D
 @export var projectile_lifetime: float = 1.2
 @export var projectile_hit_radius: float = 0.22
 @export var hit_flash_duration: float = 0.12
+@export var max_upgrade_level: int = 2
+@export var upgrade_fire_rate_multiplier: float = 0.62
+@export var upgrade_range_bonus: float = 3.0
+@export var upgrade_damage_bonus: float = 10.0
 
 var turret_id: int = 0
 var spawn_position: Vector3 = Vector3.ZERO
 var spawn_rotation_y: float = 0.0
 var current_health: float = 120.0
+var upgrade_level: int = 1
 var turret_manager: Node
 var projectiles_root: Node3D
 var projectile_scene: PackedScene
@@ -23,6 +28,9 @@ var _damaged_color: Color = Color(0.98, 0.5, 0.32)
 var _inactive_color: Color = Color(0.38, 0.37, 0.25)
 var _next_bullet_id: int = 1
 var _defense_active: bool = true
+var _base_attack_range: float = 8.0
+var _base_attack_damage: float = 16.0
+var _base_attack_cooldown: float = 0.4
 
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var body_mesh: MeshInstance3D = $BodyMesh
@@ -50,6 +58,10 @@ func _ready() -> void:
 	add_to_group("structures")
 	add_to_group("blocking_structures")
 	add_to_group("defense_structures")
+	_base_attack_range = attack_range
+	_base_attack_damage = attack_damage
+	_base_attack_cooldown = attack_cooldown
+	_apply_upgrade_stats()
 	global_position = spawn_position
 	rotation.y = spawn_rotation_y
 	_update_label()
@@ -99,8 +111,16 @@ func get_current_health() -> float:
 	return current_health
 
 
+func get_upgrade_level() -> int:
+	return upgrade_level
+
+
 func can_be_repaired() -> bool:
 	return current_health > 0.0 and current_health < max_health
+
+
+func can_be_upgraded() -> bool:
+	return current_health > 0.0 and upgrade_level < max(max_upgrade_level, 1)
 
 
 func get_spawn_rotation_y() -> float:
@@ -154,6 +174,20 @@ func apply_server_repair(amount: float) -> float:
 	_start_hit_flash()
 	_play_hit_feedback.rpc()
 	return current_health - previous_health
+
+
+func apply_server_upgrade() -> bool:
+	if not multiplayer.is_server():
+		return false
+	if not can_be_upgraded():
+		return false
+	upgrade_level += 1
+	_apply_upgrade_stats()
+	_sync_upgrade.rpc(upgrade_level)
+	_update_label()
+	_start_hit_flash()
+	_play_hit_feedback.rpc()
+	return true
 
 
 func notify_bullet_finished(bullet_id: int) -> void:
@@ -251,7 +285,14 @@ func _update_label() -> void:
 			return
 		label.text = "Turret HP:%d | E Repair" % int(round(current_health))
 		return
-	label.text = "Turret HP:%d" % int(round(current_health))
+	if can_be_upgraded():
+		var upgrade_cost := _upgrade_cost()
+		if upgrade_cost > 0:
+			label.text = "Turret Lv%d HP:%d | E Upgrade (%d)" % [upgrade_level, int(round(current_health)), upgrade_cost]
+			return
+		label.text = "Turret Lv%d HP:%d | E Upgrade" % [upgrade_level, int(round(current_health))]
+		return
+	label.text = "Turret Lv%d HP:%d" % [upgrade_level, int(round(current_health))]
 
 
 func _start_hit_flash() -> void:
@@ -272,13 +313,29 @@ func _update_body_visuals() -> void:
 		material.albedo_color = _inactive_color
 		return
 	var health_ratio = clamp(current_health / max(max_health, 0.001), 0.0, 1.0)
-	material.albedo_color = _damaged_color.lerp(_base_color, health_ratio)
+	var healthy_color := _base_color
+	if upgrade_level > 1:
+		healthy_color = Color(0.45, 1.0, 0.55)
+	material.albedo_color = _damaged_color.lerp(healthy_color, health_ratio)
 
 
 func _repair_cost() -> int:
 	if turret_manager == null or not turret_manager.has_method("get_repair_cost_for_type"):
 		return 0
 	return int(turret_manager.get_repair_cost_for_type("turret"))
+
+
+func _upgrade_cost() -> int:
+	if turret_manager == null or not turret_manager.has_method("get_turret_upgrade_cost"):
+		return 0
+	return int(turret_manager.get_turret_upgrade_cost(upgrade_level))
+
+
+func _apply_upgrade_stats() -> void:
+	var upgrade_steps = max(upgrade_level - 1, 0)
+	attack_range = _base_attack_range + float(upgrade_steps) * max(upgrade_range_bonus, 0.0)
+	attack_damage = _base_attack_damage + float(upgrade_steps) * max(upgrade_damage_bonus, 0.0)
+	attack_cooldown = max(_base_attack_cooldown * pow(clampf(upgrade_fire_rate_multiplier, 0.1, 1.0), float(upgrade_steps)), 0.08)
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
@@ -308,6 +365,16 @@ func _sync_health(server_health: float) -> void:
 		return
 	current_health = server_health
 	_update_label()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_upgrade(server_upgrade_level: int) -> void:
+	if multiplayer.is_server():
+		return
+	upgrade_level = max(server_upgrade_level, 1)
+	_apply_upgrade_stats()
+	_update_label()
+	_update_body_visuals()
 
 
 @rpc("authority", "call_remote", "reliable")

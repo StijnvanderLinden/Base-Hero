@@ -10,7 +10,6 @@ const ERA_MANAGER_SCRIPT := preload("res://scripts/era_manager.gd")
 @onready var gate_manager = $GateManager
 @onready var world_generator = $WorldGenerator
 @onready var research_manager = $ResearchManager
-@onready var raid_manager = $RaidManager
 @onready var core_objective = $World/CoreObjective
 @onready var startup_camera: Camera3D = $World/StartupCamera
 @onready var build_grid_overlay: MeshInstance3D = $World/BuildGridOverlay
@@ -90,6 +89,7 @@ func _ready() -> void:
 	enemy_manager.set_objective(core_objective)
 	enemy_manager.bind_network_manager(network_manager)
 	enemy_manager.set_era_manager(era_manager)
+	enemy_manager.set_gate_manager(gate_manager)
 	world_generator.set_dependencies($World, $World/GateFloor)
 	world_generator.bind_network_manager(network_manager)
 	building_manager.set_roots($World/Walls, $World/Projectiles, $World/Players, core_objective)
@@ -107,21 +107,17 @@ func _ready() -> void:
 	gate_manager.bind_network_manager(network_manager)
 	research_manager.bind_network_manager(network_manager)
 	research_manager.set_era_manager(era_manager)
-	raid_manager.set_dependencies(enemy_manager, gate_manager, core_objective)
-	raid_manager.bind_network_manager(network_manager)
 	core_objective.bind_network_manager(network_manager)
 	network_manager.status_changed.connect(_on_status_changed)
 	building_manager.status_changed.connect(_on_status_changed)
 	gate_manager.status_changed.connect(_on_status_changed)
 	research_manager.status_changed.connect(_on_status_changed)
-	raid_manager.status_changed.connect(_on_status_changed)
 	gate_manager.run_info_changed.connect(_on_run_info_changed)
 	gate_manager.gate_state_changed.connect(_on_gate_state_changed)
 	gate_manager.progression_changed.connect(_refresh_progression_ui)
 	research_manager.progression_changed.connect(_refresh_progression_ui)
-	raid_manager.progression_changed.connect(_refresh_progression_ui)
-	raid_manager.raid_state_changed.connect(_on_raid_state_changed)
 	network_manager.session_changed.connect(_on_session_changed)
+	era_manager.era_changed.connect(_on_era_changed)
 	core_objective.destroyed.connect(_on_core_destroyed)
 	enemy_manager.wave_changed.connect(_on_wave_changed)
 	info_menu_button.pressed.connect(_on_info_menu_pressed)
@@ -202,17 +198,18 @@ func _on_gate_pressed() -> void:
 	gate_manager.start_gate_run()
 
 
-func _on_town_hall_upgrade_pressed() -> void:
-	if not multiplayer.is_server():
-		return
-	raid_manager.start_town_hall_upgrade()
+func _on_era_changed(_era_id: String) -> void:
 	_refresh_progression_ui()
+	_refresh_tooltip_modal()
+
+
+func _on_town_hall_upgrade_pressed() -> void:
+	_show_action_modal("hub")
 
 
 func _on_restart_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	raid_manager.restart_match()
 	gate_manager.restart_match()
 	cave_manager.clear_all_runtime_state()
 	building_manager.restart_match()
@@ -220,7 +217,7 @@ func _on_restart_pressed() -> void:
 	core_objective.restart_match()
 	network_manager.restart_match()
 	restart_button.disabled = false
-	status_label.text = "Base idle. Start a gate run or begin a town hall upgrade."
+	status_label.text = "Hub idle. Configure a run layout or enter the selected era."
 	_refresh_progression_ui()
 
 
@@ -261,28 +258,28 @@ func _on_branch_unlock_pressed() -> void:
 func _on_pylon_radius_upgrade_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	gate_manager.purchase_pylon_upgrade("base_radius")
+	gate_manager.purchase_run_upgrade("base_radius")
 	_refresh_progression_ui()
 
 
 func _on_pylon_cap_upgrade_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	gate_manager.purchase_pylon_upgrade("max_radius")
+	gate_manager.purchase_run_upgrade("max_radius")
 	_refresh_progression_ui()
 
 
 func _on_pylon_efficiency_upgrade_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	gate_manager.purchase_pylon_upgrade("channel_efficiency")
+	gate_manager.purchase_run_upgrade("channel_efficiency")
 	_refresh_progression_ui()
 
 
 func _on_pylon_health_upgrade_pressed() -> void:
 	if not multiplayer.is_server():
 		return
-	gate_manager.purchase_pylon_upgrade("health")
+	gate_manager.purchase_run_upgrade("health")
 	_refresh_progression_ui()
 
 
@@ -325,7 +322,7 @@ func _on_session_changed(in_session: bool) -> void:
 		_latest_run_info_base = "Base | Scrap 0 | Stone 0 | Wood 0 | Herbs 0 | Essence 0 | Crystals 0 | Core Lv 0 | Max HP 300"
 		run_info_label.text = _compose_run_info(_latest_run_info_base)
 	else:
-		status_label.text = "Base idle. Start a gate run or begin a town hall upgrade."
+		status_label.text = "Hub idle. Start an era run when ready."
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
 	_refresh_progression_ui()
@@ -337,8 +334,6 @@ func _on_session_changed(in_session: bool) -> void:
 
 
 func _on_core_destroyed() -> void:
-	if raid_manager.is_raid_active():
-		return
 	status_label.text = "Core destroyed. Press Restart Session to rerun the defense test."
 
 
@@ -350,19 +345,11 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 			if is_breather:
 				status_label.text = "Stone Age wave %d cleared. Short breather before the next push." % wave_index
 				return
-			status_label.text = "Stone Age wave %d live. Keep the pylon standing through the pressure." % wave_index
+			status_label.text = "Stone Age wave %d live. Keep the core standing through the pressure." % wave_index
 			return
 	if gate_manager.is_gate_active():
 		return
 	if not network_manager.multiplayer.multiplayer_peer:
-		return
-	if raid_manager.is_raid_active():
-		if is_breather:
-			status_label.text = "Raid wave %d cleared. Brace for the next assault." % wave_index
-			return
-		status_label.text = "Raid wave %d live. Defend the Town Hall upgrade." % wave_index
-		return
-	if raid_manager.is_upgrade_channeling():
 		return
 	if enemy_manager.get_pressure_mode() == "idle":
 		return
@@ -374,52 +361,36 @@ func _on_wave_changed(wave_index: int, is_breather: bool) -> void:
 
 func _on_gate_state_changed(is_active: bool) -> void:
 	if is_active:
-		gate_button.text = "Return to Base"
+		gate_button.text = "Leave Run"
 		_refresh_claim_progress_ui()
 		_refresh_cave_status_ui()
 		_refresh_progression_ui()
 		return
-	gate_button.text = "Start Gate Run"
+	gate_button.text = "Start Era Run"
 	_refresh_claim_progress_ui()
 	_refresh_cave_status_ui()
 	_refresh_progression_ui()
 	_refresh_status_overview()
 	_refresh_controls_panel()
-
-
-func _on_raid_state_changed(is_active: bool) -> void:
-	if is_active:
-		town_hall_upgrade_button.text = "Raid In Progress"
-	else:
-		town_hall_upgrade_button.text = "Start Town Hall Upgrade"
-	run_info_label.text = _compose_run_info(_latest_run_info_base)
-	_refresh_claim_progress_ui()
-	_refresh_cave_status_ui()
-	_refresh_progression_ui()
-	_refresh_status_overview()
-	_refresh_controls_panel()
-	_refresh_tooltip_modal()
 
 
 func _refresh_progression_ui() -> void:
 	var has_session := network_manager.multiplayer.multiplayer_peer != null
 	var is_host := has_session and multiplayer.is_server()
-	var progression_locked = raid_manager.is_progression_locked()
 	var gate_active = gate_manager.is_gate_active()
 	var next_cost = gate_manager.get_next_core_upgrade_cost()
 	var next_level = gate_manager.get_core_upgrade_level() + 1
-	var next_town_hall_cost = raid_manager.get_next_town_hall_upgrade_cost()
-	var next_town_hall_level = raid_manager.get_town_hall_level() + 1
+	var selected_era_name := _selected_era_name()
 	if gate_active:
-		gate_button.text = "Returning..." if gate_manager.is_extraction_active() else "Return to Base"
+		gate_button.text = "Extracting..." if gate_manager.is_extraction_active() else "Leave Run"
 		gate_button.disabled = not is_host or not gate_manager.can_return_to_base()
 	else:
-		gate_button.text = "Start Gate Run"
-		gate_button.disabled = not is_host or progression_locked
-	town_hall_upgrade_button.text = "Upgrade Town Hall to Lv %d (%d Scrap)" % [next_town_hall_level, next_town_hall_cost]
-	town_hall_upgrade_button.disabled = not is_host or not raid_manager.can_start_town_hall_upgrade()
+		gate_button.text = "Enter %s" % selected_era_name
+		gate_button.disabled = not is_host
+	town_hall_upgrade_button.text = "Hub Console"
+	town_hall_upgrade_button.disabled = true
 	core_upgrade_button.text = "Upgrade Core to Lv %d (%d Scrap)" % [next_level, next_cost]
-	core_upgrade_button.disabled = not is_host or progression_locked or not gate_manager.can_purchase_core_upgrade()
+	core_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_core_upgrade()
 	_refresh_research_buttons(is_host, has_session, gate_active)
 	_refresh_pylon_upgrade_buttons(is_host)
 	_configure_side_menu_buttons()
@@ -450,11 +421,11 @@ func _refresh_pylon_upgrade_buttons(is_host: bool) -> void:
 	pylon_radius_upgrade_button.text = "Upgrade Base Radius (%d Essence)" % gate_manager._pylon_upgrade_cost("base_radius")
 	pylon_cap_upgrade_button.text = "Upgrade Radius Cap (%d Essence)" % gate_manager._pylon_upgrade_cost("max_radius")
 	pylon_efficiency_upgrade_button.text = "Upgrade Channel Efficiency (%d Essence)" % gate_manager._pylon_upgrade_cost("channel_efficiency")
-	pylon_health_upgrade_button.text = "Upgrade Pylon Integrity (%d Essence)" % gate_manager._pylon_upgrade_cost("health")
-	pylon_radius_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("base_radius")
-	pylon_cap_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("max_radius")
-	pylon_efficiency_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("channel_efficiency")
-	pylon_health_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_pylon_upgrade("health")
+	pylon_health_upgrade_button.text = "Upgrade Core Integrity (%d Essence)" % gate_manager._pylon_upgrade_cost("health")
+	pylon_radius_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_run_upgrade("base_radius")
+	pylon_cap_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_run_upgrade("max_radius")
+	pylon_efficiency_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_run_upgrade("channel_efficiency")
+	pylon_health_upgrade_button.disabled = not is_host or not gate_manager.can_purchase_run_upgrade("health")
 	pylon_radius_upgrade_button.visible = false
 	pylon_cap_upgrade_button.visible = false
 	pylon_efficiency_upgrade_button.visible = false
@@ -495,7 +466,7 @@ func _research_action_verb(node_state: Dictionary) -> String:
 
 
 func _compose_run_info(base_message: String) -> String:
-	return "%s%s" % [base_message, raid_manager.get_run_info_suffix()]
+	return base_message
 
 
 func _refresh_scrap_display() -> void:
@@ -515,7 +486,7 @@ func _refresh_scrap_display() -> void:
 func _refresh_claim_progress_ui() -> void:
 	if claim_panel == null:
 		return
-	var snapshot = gate_manager.get_cave_status_snapshot()
+	var snapshot = gate_manager.get_channel_status_snapshot()
 	var visible = gate_manager.is_gate_active() and bool(snapshot.get("channel_active", false)) and not _tooltip_modal_open
 	claim_panel.visible = visible
 	if not visible:
@@ -532,7 +503,7 @@ func _refresh_claim_progress_ui() -> void:
 func _refresh_cave_status_ui() -> void:
 	if cave_panel == null:
 		return
-	var snapshot = gate_manager.get_cave_status_snapshot()
+	var snapshot = gate_manager.get_channel_status_snapshot()
 	var visible := bool(snapshot.get("visible", false))
 	cave_panel.visible = false
 	if not visible:
@@ -559,7 +530,7 @@ func _refresh_cave_status_ui() -> void:
 		timer_label = " | Stop with E"
 	elif bool(snapshot.get("extraction_active", false)):
 		timer_label = " | Extract %0.1fs" % float(snapshot.get("extraction_remaining", 0.0))
-	cave_state_value_label.text = "%s | Pylon Lv %d%s" % [state_label, int(snapshot.get("pylon_level", 1)), timer_label]
+	cave_state_value_label.text = "%s | Channel Tier %d%s" % [state_label, int(snapshot.get("pylon_level", 1)), timer_label]
 	cave_pressure_value_label.text = "Influence %d/%d | Crystals in range %d" % [influence_radius, max_radius, crystals_remaining]
 	cave_reward_value_label.text = "Reveal Stone %d | Wood %d | Herbs %d | Treasure %d | +%0.1f/s | Pending %d" % [stone_revealed, wood_revealed, herbs_revealed, treasure_revealed, reward_rate, pending_essence]
 	cave_detail_label.text = detail_label
@@ -630,25 +601,21 @@ func _local_player_node() -> Node:
 
 
 func _current_mode_label(player: Node) -> String:
-	if raid_manager.is_raid_active():
-		return "Mode: Raid Defense"
-	if raid_manager.is_upgrade_channeling():
-		return "Mode: Town Hall Upgrade"
 	if gate_manager.is_gate_active():
 		if gate_manager.is_extraction_active():
 			return "Mode: Extraction"
-		if gate_manager.get_gate_pylon_state() == "unplaced":
-			return "Mode: Expedition Search"
-		if gate_manager.get_gate_pylon_state() == "damaged":
-			return "Mode: Pylon Lost"
-		if bool(gate_manager.get_pylon_status_snapshot().get("channel_active", false)):
-			return "Mode: Pylon Channeling"
+		if gate_manager.get_run_base_state() == "unplaced":
+			return "Mode: Run Setup"
+		if gate_manager.get_run_base_state() == "damaged":
+			return "Mode: Core Lost"
+		if bool(gate_manager.get_channel_status_snapshot().get("channel_active", false)):
+			return "Mode: Core Channeling"
 		if gate_manager.is_extraction_active():
 			return "Mode: Extraction"
-		return "Mode: Pylon Setup"
+		return "Mode: Core Ready"
 	if player != null and player.has_method("is_build_mode_active") and player.is_build_mode_active():
 		return "Mode: Base Building"
-	return "Mode: Base Defense"
+	return "Mode: Hub"
 
 
 func _controls_hint_text(player: Node) -> String:
@@ -673,12 +640,12 @@ func _controls_hint_text(player: Node) -> String:
 	if player != null and player.has_method("is_wall_segment_active"):
 		wall_segment_active = player.is_wall_segment_active()
 
-	if gate_manager.is_gate_active() and gate_manager.get_gate_pylon_state() == "unplaced":
-		hints.append("Place pylon with E")
-	if gate_manager.is_gate_active() and gate_manager.get_gate_pylon_state() != "unplaced":
-		hints.append("E open pylon menu")
+	if gate_manager.is_gate_active() and gate_manager.get_run_base_state() == "unplaced":
+		hints.append("E activate run base")
+	if gate_manager.is_gate_active() and gate_manager.get_run_base_state() != "unplaced":
+		hints.append("E open core console")
 	if not gate_manager.is_gate_active():
-		hints.append("E town hall menu")
+		hints.append("E hub console")
 	if build_active:
 		if wall_segment_active:
 			hints.append("Q cancel wall")
@@ -847,16 +814,20 @@ func _refresh_overlay_input_state() -> void:
 func handle_local_interaction(peer_id: int) -> bool:
 	if _is_any_overlay_open():
 		return false
-	if gate_manager != null and gate_manager.has_method("can_open_pylon_menu_for_peer") and gate_manager.can_open_pylon_menu_for_peer(peer_id):
-		_show_action_modal("pylon")
+	if building_manager != null and building_manager.has_method("get_repair_prompt_for_peer"):
+		var structure_prompt: Dictionary = building_manager.get_repair_prompt_for_peer(peer_id)
+		if bool(structure_prompt.get("visible", false)):
+			return false
+	if gate_manager != null and gate_manager.has_method("can_open_core_console_for_peer") and gate_manager.can_open_core_console_for_peer(peer_id):
+		_show_action_modal("core")
 		return true
-	if _can_open_town_hall_menu_for_peer(peer_id):
-		_show_action_modal("town_hall")
+	if _can_open_hub_console_for_peer(peer_id):
+		_show_action_modal("hub")
 		return true
 	return false
 
 
-func _can_open_town_hall_menu_for_peer(peer_id: int) -> bool:
+func _can_open_hub_console_for_peer(peer_id: int) -> bool:
 	if network_manager.multiplayer.multiplayer_peer == null:
 		return false
 	if gate_manager.is_gate_active():
@@ -870,8 +841,8 @@ func _can_open_town_hall_menu_for_peer(peer_id: int) -> bool:
 
 
 func _get_base_interaction_prompt(peer_id: int) -> Dictionary:
-	if _can_open_town_hall_menu_for_peer(peer_id):
-		return {"visible": true, "text": "Press E to manage Town Hall"}
+	if _can_open_hub_console_for_peer(peer_id):
+		return {"visible": true, "text": "Press E to open hub console"}
 	return {"visible": false, "text": ""}
 
 
@@ -884,7 +855,7 @@ func _refresh_tooltip_modal() -> void:
 	tooltip_controls_button.disabled = _selected_tooltip_id == "controls"
 	match _selected_tooltip_id:
 		"pylon":
-			tooltip_title_label.text = "Pylon Status"
+			tooltip_title_label.text = "Channel Status"
 			tooltip_body_label.text = _tooltip_pylon_text()
 		"status":
 			tooltip_title_label.text = "Status"
@@ -912,7 +883,7 @@ func _tooltip_pylon_text() -> String:
 	if cave_detail_label.text != "":
 		sections.append("Detail\n%s" % cave_detail_label.text)
 	if sections.is_empty():
-		return "No active pylon information right now."
+		return "No active channel information right now."
 	return "\n\n".join(sections)
 
 
@@ -931,23 +902,38 @@ func _refresh_action_modal() -> void:
 		action_buttons_container.remove_child(child)
 		child.queue_free()
 	match _action_modal_kind:
-		"town_hall":
-			action_title_label.text = "Town Hall"
-			action_body_label.text = _town_hall_modal_text()
+		"hub":
+			action_title_label.text = "Hub Console"
+			action_body_label.text = _hub_console_text()
 			_add_action_button(
-				"Start Town Hall Upgrade (%d Scrap)" % raid_manager.get_next_town_hall_upgrade_cost(),
-				Callable(self, "_action_start_town_hall_upgrade"),
-				not (multiplayer.is_server() and raid_manager.can_start_town_hall_upgrade())
+				"Select Next Era: %s" % _selected_era_name(),
+				Callable(self, "_action_cycle_era"),
+				not multiplayer.is_server()
 			)
-		"pylon":
-			action_title_label.text = "Pylon Console"
+			_add_action_button(
+				"Save %s Layout" % _selected_era_name(),
+				Callable(self, "_action_save_active_era_layout"),
+				not multiplayer.is_server()
+			)
+			_add_action_button(
+				"Load %s Layout" % _selected_era_name(),
+				Callable(self, "_action_load_active_era_layout"),
+				not (multiplayer.is_server() and _has_saved_layout_for_selected_era())
+			)
+			_add_action_button(
+				"Enter %s" % _selected_era_name(),
+				Callable(self, "_action_start_selected_era_run"),
+				not (multiplayer.is_server() and not gate_manager.is_gate_active())
+			)
+		"core":
+			action_title_label.text = "Core Console"
 			action_body_label.text = _pylon_modal_text()
-			var pylon_snapshot = gate_manager.get_pylon_status_snapshot()
+			var pylon_snapshot = gate_manager.get_channel_status_snapshot()
 			var pylon_action_text := "Stop Channel" if bool(pylon_snapshot.get("channel_active", false)) else "Start Channel"
 			_add_action_button(
 				pylon_action_text,
 				Callable(self, "_action_toggle_pylon_channel"),
-				gate_manager.get_gate_pylon_state() == "damaged"
+				gate_manager.get_run_base_state() == "damaged"
 			)
 			_add_action_button(
 				pylon_radius_upgrade_button.text,
@@ -983,18 +969,20 @@ func _refresh_action_modal() -> void:
 		_add_action_button("No Actions Available", Callable(), true)
 
 
-func _town_hall_modal_text() -> String:
-	if raid_manager.is_upgrade_channeling():
-		return "Town Hall upgrade channeling is already active. A raid is about to begin."
-	if raid_manager.is_raid_active():
-		return "A raid is already in progress. Defend the Town Hall until it ends."
-	return "Town Hall Level %d\nNext upgrade cost: %d Scrap\n\nPress the button below to begin the upgrade and trigger the next raid." % [raid_manager.get_town_hall_level(), raid_manager.get_next_town_hall_upgrade_cost()]
+func _hub_console_text() -> String:
+	var lines: Array[String] = []
+	lines.append("Selected Era: %s" % _selected_era_name())
+	lines.append("Saved Layout Pieces: %d" % _selected_era_layout_count())
+	lines.append("")
+	lines.append("Build near the hub core to configure this era's starting defense layout.")
+	lines.append("Save that layout here, then enter the run to spawn it around the run base.")
+	return "\n".join(lines)
 
 
 func _pylon_modal_text() -> String:
-	var snapshot = gate_manager.get_pylon_status_snapshot()
+	var snapshot = gate_manager.get_channel_status_snapshot()
 	var lines: Array[String] = []
-	lines.append(String(snapshot.get("state_label", "Pylon")))
+	lines.append(String(snapshot.get("state_label", "Core")))
 	lines.append(String(snapshot.get("detail_label", "")))
 	lines.append("Radius %d / %d" % [int(round(float(snapshot.get("influence_radius", 0.0)))), int(round(float(snapshot.get("max_radius", 0.0))))])
 	lines.append("Pending Essence %d" % int(floor(float(snapshot.get("current_reward", 0.0)))))
@@ -1011,9 +999,42 @@ func _add_action_button(text: String, action: Callable, disabled: bool) -> void:
 	action_buttons_container.add_child(button)
 
 
-func _action_start_town_hall_upgrade() -> void:
+func _action_cycle_era() -> void:
+	if multiplayer.is_server() and era_manager != null and era_manager.has_method("cycle_active_gate_era"):
+		era_manager.cycle_active_gate_era(1)
+		status_label.text = "Selected era: %s." % _selected_era_name()
+	_refresh_action_modal()
+
+
+func _action_save_active_era_layout() -> void:
+	if not multiplayer.is_server():
+		return
+	if building_manager == null or era_manager == null or core_objective == null:
+		return
+	if not building_manager.has_method("capture_layout_snapshot") or not era_manager.has_method("save_run_base_layout"):
+		return
+	var layout = building_manager.capture_layout_snapshot(core_objective.global_position, _hub_layout_radius())
+	era_manager.save_run_base_layout(layout)
+	status_label.text = "Saved %d layout pieces for %s." % [layout.size(), _selected_era_name()]
+	_refresh_action_modal()
+
+
+func _action_load_active_era_layout() -> void:
+	if not multiplayer.is_server():
+		return
+	if building_manager == null or era_manager == null or core_objective == null:
+		return
+	if not building_manager.has_method("apply_layout_snapshot") or not era_manager.has_method("get_saved_run_base_layout"):
+		return
+	var layout = era_manager.get_saved_run_base_layout()
+	building_manager.apply_layout_snapshot(layout, core_objective.global_position, _hub_layout_radius())
+	status_label.text = "Loaded %d layout pieces for %s." % [layout.size(), _selected_era_name()]
+	_refresh_action_modal()
+
+
+func _action_start_selected_era_run() -> void:
 	if multiplayer.is_server():
-		raid_manager.start_town_hall_upgrade()
+		_on_gate_pressed()
 	_close_action_modal()
 
 
@@ -1041,6 +1062,30 @@ func _action_upgrade_pylon_efficiency() -> void:
 func _action_upgrade_pylon_health() -> void:
 	_on_pylon_health_upgrade_pressed()
 	_refresh_action_modal()
+
+
+func _selected_era_name() -> String:
+	if era_manager != null and era_manager.has_method("get_active_gate_era_display_name"):
+		return String(era_manager.get_active_gate_era_display_name())
+	return "Stone Age"
+
+
+func _selected_era_layout_count() -> int:
+	if era_manager == null or not era_manager.has_method("get_saved_run_base_layout"):
+		return 0
+	return era_manager.get_saved_run_base_layout().size()
+
+
+func _has_saved_layout_for_selected_era() -> bool:
+	if era_manager == null or not era_manager.has_method("has_saved_run_base_layout"):
+		return false
+	return bool(era_manager.has_saved_run_base_layout())
+
+
+func _hub_layout_radius() -> float:
+	if building_manager != null and building_manager.has_method("get_active_build_area_size"):
+		return max(float(building_manager.get_active_build_area_size()) * 0.5, 1.0)
+	return 18.0
 
 
 func _action_purchase_field_tools() -> void:

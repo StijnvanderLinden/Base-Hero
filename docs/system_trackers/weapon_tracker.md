@@ -6,97 +6,67 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-First Runtime Family Slice Started
+Minimal MVP Weapon Only
 
 ---
 
 ## Current Design Summary
-The player uses one evolving weapon platform rather than collecting many active weapons.
+The vertical slice needs one simple weapon profile so the player can actively defend the base.
 
-Current confirmed direction:
-- the player chooses a weapon type family
-- the weapon evolves through a material slot and augment slots
-- weapon identity grows through progression rather than replacement
-- forge-style progression unlocks stronger material tiers
+Weapon families, material slots, and deep weapon evolution are backlog.
 
 ---
 
 ## Implemented
-- Design direction for a single evolving weapon platform is now documented
-- Weapon type abstraction is now defined for melee, ranged, and magic families
-- Material slot behavior and progression hooks are now specified
-- The first runtime weapon family slice now exists as a rifle-style ranged projectile prototype
+- Basic player attack foundation exists
+- A prototype ranged weapon slice may exist in runtime
 
 ---
 
 ## In Progress
-- Tuning the first runtime ranged weapon presentation in prototype combat
-- Clarifying when weapon type choice becomes available in progression
-- Deciding the first implementation slice for material application and visuals
+- Tuning the starter attack for arena survival
 
 ---
 
 ## Blockers / Problems
-- No runtime weapon-selection or weapon-configuration system exists yet
-- The runtime still has no weapon family selection or material slot configuration despite the first ranged slice existing
-- Material slot behavior is defined in design only, not implemented in code
-- No forge or material-tier unlock runtime exists yet
+- Weapon complexity can distract from validating the turret/base loop
 
 ---
 
 ## Must Have
-- One active weapon platform rule
-- Weapon family abstraction for melee, ranged, and magic
-- Direct material slot application
-- Progression hooks for material tier unlocks
-- Clear separation between weapon identity and combat resolution
+- One primary attack
+- Server-authoritative damage
+- Clear hit feedback
 
 ---
 
 ## Should Have
-- Clear visual differences per material family
-- First runtime weapon-selection interface
-- Strong relation between weapon type and augment synergy
-- Clean forge-side unlock path for material tiers
+- Optional basic hub weapon upgrade if needed
 
 ---
 
 ## Could Have
-- Alternate stance or sub-mode per weapon family
-- Cosmetic-only weapon visual variants
-- Material-specific idle or impact presentation
-- Later weapon mastery hooks
+- A second attack only after the first attack and turret loop feel good
 
 ---
 
-## Won’t Have (for now)
-- large weapon inventory loot system
-- many swappable weapon drops per run
-- manual weapon-shape forging
-- broad weapon catalog expansion before the first runtime slice works
+## Won't Have (for now)
+- Multiple weapon families
+- Material slots
+- Weapon crafting
+- Deep augment sockets
 
 ---
 
 ## Open Questions
-- Which weapon family should be implemented first in runtime: melee, ranged, or magic?
-- Should weapon type choice happen immediately or unlock through progression?
-- How much of weapon appearance should come from materials versus weapon family?
-- Should material insertion be reversible freely or require base-side handling?
-- How early should forge upgrades unlock higher material tiers?
+- Does the MVP need a player weapon upgrade, or are turret/base upgrades enough?
 
 ---
 
 ## Recent Decisions
-- The player uses one evolving weapon instead of juggling many active weapons
-- Weapon growth should come from materials, augments, and progression hooks
-- Material application is direct through slots rather than manual weapon-shape forging
-- The first defined weapon families are melee, ranged, and magic only
-- The first runtime weapon slice now tests the ranged family with a simple rifle-style projectile
+- Weapon scope is reduced to one useful starter weapon for MVP
 
 ---
 
 ## Next Recommended Task
-Define the first runtime weapon implementation slice:
-- define the minimal runtime data structure for weapon family plus material slot
-- decide whether the ranged prototype is the default starter weapon or just a test branch
-- add the first material-slot hook without redefining combat resolution
+Tune the starter weapon against early enemy waves.

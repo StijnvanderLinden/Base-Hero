@@ -205,7 +205,7 @@ icon = ExtResource("19")
 [node name="GateButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649418]
 layout_mode = 2
 disabled = true
-text = "Start Gate Run"
+text = "Start Era Run"
 icon = ExtResource("20")
 
 [node name="RestartButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649417]
@@ -218,7 +218,7 @@ icon = ExtResource("21")
 visible = false
 layout_mode = 2
 disabled = true
-text = "Start Town Hall Upgrade"
+text = "Hub Console"
 icon = ExtResource("22")
 
 [node name="CoreUpgradeButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1305649419]
@@ -268,7 +268,7 @@ text = "Upgrade Channel Efficiency"
 visible = false
 layout_mode = 2
 disabled = true
-text = "Upgrade Pylon Integrity"
+text = "Upgrade Core Integrity"
 
 [node name="InfoMenuButton" type="Button" parent="UI/Panel/VBoxContainer" unique_id=1479700307]
 layout_mode = 2
@@ -320,7 +320,7 @@ theme_override_constants/separation = 6
 
 [node name="TitleLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620093]
 layout_mode = 2
-text = "Pylon Status"
+text = "Channel Status"
 horizontal_alignment = 1
 
 [node name="StateCaptionLabel" type="Label" parent="UI/CavePanel/VBoxContainer" unique_id=675620094]
@@ -407,7 +407,7 @@ theme_override_constants/separation = 6
 
 [node name="TitleLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=675620099]
 layout_mode = 2
-text = "Pylon Channel"
+text = "Core Channel"
 horizontal_alignment = 1
 
 [node name="ClaimProgressLabel" type="Label" parent="UI/ClaimPanel/VBoxContainer" unique_id=636461640]
@@ -577,7 +577,7 @@ text = "Run Summary"
 
 [node name="PylonTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095983]
 layout_mode = 2
-text = "Pylon Status"
+text = "Channel Status"
 
 [node name="StatusTooltipButton" type="Button" parent="UI/TooltipModal/Card/MarginContainer/HBoxContainer/Nav" unique_id=1683095984]
 layout_mode = 2

@@ -1,56 +1,47 @@
-# Research System Tracker
+# Research Tracker
 
 ## Current Status
-First Core Research Slice Implemented
+Simplified To Essence Hub Unlocks
 
 ## Current Design Summary
-- research now spends essence and crystals instead of a single generic currency
-- basic nodes are essence-only
-- advanced nodes use essence plus crystals
-- branch unlocks use crystals as the main gate
+Research is not a deep system for the MVP.
+
+The hub may spend essence on:
+- turret types
+- turret upgrade branches
+- base capacity
+- optional basic player weapon upgrades
 
 ## Implemented
-- authoritative essence and crystal inventory
-- synchronized research node state and level data
-- first prototype nodes for a basic upgrade, an advanced unlock, and a branch unlock
-- base-side UI buttons for research spending
+- Older research scaffolding exists and may be repurposed
 
 ## In Progress
-- tuning costs for the first research nodes against expedition output
-- deciding whether research should stay global or split by player later
+- Simplifying unlocks around essence
 
 ## Blockers / Problems
-- there is no save system for research progression yet
-- only three prototype nodes exist in the first slice
-- the base-side UI is functional but still minimal
+- Old crystal or tree-based research assumptions may still appear in runtime
 
 ## Must Have
-- essence-only basic progression
-- crystal-gated unlocks
-- essence-plus-crystal advanced nodes
-- authoritative spending and synchronization
+- One simple essence spend flow
+- At least one unlock that changes a run decision
 
 ## Should Have
-- richer node presentation and clearer descriptions
-- additional branch nodes beyond the first augment examples
+- Clear locked/unlocked presentation
 
 ## Could Have
-- per-player research branches later
-- prerequisite chains beyond simple resource checks
+- Optional weapon upgrade if turret unlocks are not enough
 
-## Won’t Have (for now)
-- a full tech tree editor
-- many branch families at once
-- hidden or randomized research rolls
+## Won't Have (for now)
+- Crystals
+- Deep research trees
+- Material-specific research
+- Advanced augment webs
 
 ## Open Questions
-- which first combat or base stats should basic nodes affect directly
-- should crystal-gated branch unlocks remain global for the whole team
+- Which first unlock most improves the next-run fantasy?
 
 ## Recent Decisions
-- crystals gate unlocks rather than upgrades
-- essence remains the repeatable upgrade spend
-- augment slot and augment branch are the first crystal-facing examples
+- Research is reduced to simple essence hub unlocks for MVP
 
 ## Next Recommended Task
-Attach concrete gameplay effects to the first research nodes.
+Define and wire the first essence unlock.

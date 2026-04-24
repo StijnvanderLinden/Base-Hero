@@ -131,6 +131,8 @@ func apply_server_damage(amount: float) -> void:
 	if current_health <= 0.0:
 		_begin_death_feedback()
 		_play_death_feedback.rpc()
+		if enemy_manager != null and enemy_manager.has_method("notify_enemy_killed"):
+			enemy_manager.notify_enemy_killed(self)
 		if enemy_manager != null and enemy_manager.has_method("schedule_enemy_despawn"):
 			enemy_manager.schedule_enemy_despawn(enemy_id, death_feedback_duration)
 		return
