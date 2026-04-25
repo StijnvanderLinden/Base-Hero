@@ -39,6 +39,7 @@ The goal is to prove the fun of one small arena-style gate run with scrap, turre
 - server-authoritative enemy spawning and movement replication
 - server-authoritative core objective with replicated health and destroyed state
 - basic player attack, enemy health, enemy death, and player/enemy health bars
+- melee/ranged weapon switching with a server-authoritative melee arc slash
 - wall and turret prototypes with replicated placement and projectile behavior
 - gate-pressure enemy deaths now award scrap automatically
 - turrets can now be upgraded with scrap through the existing interaction flow
@@ -56,6 +57,7 @@ The goal is to prove the fun of one small arena-style gate run with scrap, turre
 
 ## Partially Implemented
 - the smallest multiplayer-safe defense loop exists, but the run is not yet the final MVP loop
+- melee exists now, but combat feel still needs playtesting and feedback polish
 - turrets now have a first scrap-paid upgrade, but it still needs playtesting and tuning as the core survival sink
 - enemy spawning exists, but needs vertical-slice milestone escalation
 - progression scaffolding exists, but needs simplification around essence
@@ -69,7 +71,6 @@ The goal is to prove the fun of one small arena-style gate run with scrap, turre
 - five milestone pressure bands
 - essence generation based on survival and milestones
 - 70% essence retention on base destruction
-- 20-second player respawn at base
 - locked turret upgrade branches shown but unavailable until hub unlocks
 
 ---

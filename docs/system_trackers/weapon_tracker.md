@@ -6,12 +6,12 @@ Tracks implementation state, priorities, open questions, and design evolution fo
 ---
 
 ## Current Status
-Minimal MVP Weapon Only
+Melee / Ranged MVP Slice Started
 
 ---
 
 ## Current Design Summary
-The vertical slice needs one simple weapon profile so the player can actively defend the base.
+The vertical slice needs two simple weapon modes so the player can actively defend the base at close range or distance.
 
 Weapon families, material slots, and deep weapon evolution are backlog.
 
@@ -20,11 +20,14 @@ Weapon families, material slots, and deep weapon evolution are backlog.
 ## Implemented
 - Basic player attack foundation exists
 - A prototype ranged weapon slice may exist in runtime
+- Melee mode exists as a horizontal arc slash
+- Ranged mode uses the existing projectile attack
+- Players can switch modes with a keybind
 
 ---
 
 ## In Progress
-- Tuning the starter attack for arena survival
+- Tuning melee feel for arena survival
 
 ---
 
@@ -34,7 +37,9 @@ Weapon families, material slots, and deep weapon evolution are backlog.
 ---
 
 ## Must Have
-- One primary attack
+- Melee primary arc slash
+- Ranged projectile attack
+- Weapon switch input
 - Server-authoritative damage
 - Clear hit feedback
 
@@ -59,14 +64,15 @@ Weapon families, material slots, and deep weapon evolution are backlog.
 ---
 
 ## Open Questions
+- Does melee feel satisfying enough to carry the action loop?
 - Does the MVP need a player weapon upgrade, or are turret/base upgrades enough?
 
 ---
 
 ## Recent Decisions
-- Weapon scope is reduced to one useful starter weapon for MVP
+- Weapon scope is reduced to two simple modes for MVP: melee and ranged
 
 ---
 
 ## Next Recommended Task
-Tune the starter weapon against early enemy waves.
+Playtest melee slash timing, range, arc, and feedback against early enemy waves.

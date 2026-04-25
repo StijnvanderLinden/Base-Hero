@@ -1,19 +1,21 @@
 # Weapon System Specification
 
 ## Status
-Minimal For MVP
+Melee / Ranged MVP Slice
 
 ## Purpose
 The Weapon System supports active player defense during the vertical slice.
 
-The MVP needs one simple weapon profile, not a broad weapon platform system.
+The MVP needs two simple weapon modes, not a broad weapon platform system.
 
 ## MVP Direction
 Use:
-- one primary attack
+- melee mode with a horizontal arc slash
+- ranged mode with a simple projectile
+- a keybind to switch between modes
 - generous hit validation
 - clear feedback
 - optional basic hub upgrade if needed to support the "I got stronger" fantasy
 
 ## Deferred
-Do not build material slots, multiple weapon families, deep weapon progression, augment sockets, or weapon crafting until the core loop is fun.
+Do not build material slots, additional weapon families, deep weapon progression, augment sockets, or weapon crafting until the melee/ranged combat loop is fun.

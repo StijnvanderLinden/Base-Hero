@@ -623,8 +623,12 @@ func _controls_hint_text(player: Node) -> String:
 		return "Movement limited while channeling. Stay in range and press E when the objective asks for it."
 
 	var hints: Array[String] = []
-	hints.append("LMB attack")
+	var weapon_mode := "melee"
+	if player != null and player.has_method("get_weapon_mode"):
+		weapon_mode = String(player.get_weapon_mode())
+	hints.append("LMB %s" % ("slash" if weapon_mode == "melee" else "shoot"))
 	hints.append("RMB heavy")
+	hints.append("F switch weapon")
 	hints.append("SPACE jump")
 	hints.append("E interact")
 	hints.append("1 wall")

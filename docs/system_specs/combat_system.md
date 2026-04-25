@@ -8,12 +8,39 @@ Combat must make players feel necessary beside turrets.
 ---
 
 ## MVP Goals
-- one primary player attack
+- two simple weapon modes: melee and ranged
+- keybind weapon switching between melee and ranged
+- melee primary attack as a horizontal arc slash
+- ranged primary attack as a simple projectile
 - server-authoritative damage
 - readable enemy hit and death feedback
 - generous hit validation
 - player death with delayed respawn at the base
 - enough combat feel that survival is active, not passive tower defense
+
+---
+
+## Melee Direction
+The melee weapon is the first combat-feel priority.
+
+The primary melee hit should:
+- be a horizontal arc slash
+- hit enemies in front of the player
+- feel broad and forgiving
+- produce immediate hit feedback
+- work well against small groups
+
+This is more important than adding extra systems while combat feels boring.
+
+---
+
+## Ranged Direction
+The ranged weapon remains a simple projectile mode.
+
+It exists to:
+- let players contribute at distance
+- give a clear contrast with melee
+- keep the first weapon-switching slice simple
 
 ---
 
@@ -37,4 +64,4 @@ Clients request attacks and show presentation.
 ---
 
 ## Deferred
-Do not build many weapon families, deep augment systems, class roles, or complex ability kits until the core loop is fun.
+Do not build many weapon families, deep augment systems, class roles, or complex ability kits until the melee/ranged feel is fun.

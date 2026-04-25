@@ -23,9 +23,17 @@ const PLAYER_PROJECTILE_SCENE := preload("res://scenes/player_projectile.tscn")
 @export var attack_cooldown: float = 0.18
 @export var projectile_speed: float = 28.0
 @export var projectile_hit_radius: float = 0.2
+@export var melee_damage: float = 34.0
+@export var melee_cooldown: float = 0.42
+@export var melee_range: float = 3.0
+@export var melee_arc_degrees: float = 115.0
+@export var melee_vertical_tolerance: float = 1.4
+@export var melee_knockback_strength: float = 8.0
+@export var melee_hit_stun_duration: float = 0.16
 @export var projectile_spawn_forward_offset: float = 0.9
 @export var projectile_spawn_height: float = 1.05
 @export var attack_visual_duration: float = 0.08
+@export var melee_visual_duration: float = 0.16
 @export var attack_visual_width: float = 0.18
 @export var attack_visual_height: float = 0.18
 @export var attack_visual_depth: float = 0.9
@@ -47,6 +55,7 @@ var _select_wall_was_pressed: bool = false
 var _select_turret_was_pressed: bool = false
 var _rotate_build_was_pressed: bool = false
 var _toggle_build_mode_was_pressed: bool = false
+var _weapon_switch_was_pressed: bool = false
 var _hit_flash_time_remaining: float = 0.0
 var _base_color: Color = Color.WHITE
 var _preview_valid_color: Color = Color(0.28, 0.95, 0.45, 0.45)
@@ -99,10 +108,16 @@ var _attack_visual_root: Node3D
 var _attack_visual_mesh: MeshInstance3D
 var _attack_visual_material: StandardMaterial3D
 var _attack_visual_fire_color: Color = Color(0.52, 0.9, 1.0, 0.46)
+var _attack_visual_melee_color: Color = Color(1.0, 0.72, 0.25, 0.58)
+var _attack_visual_mode: String = "ranged"
+var _weapon_mode: String = "melee"
+var _sword_rest_rotation: Vector3 = Vector3(deg_to_rad(-8.0), deg_to_rad(18.0), deg_to_rad(-18.0))
 
 @onready var look_pivot: Node3D = $LookPivot
 @onready var visual_pivot: Node3D = $VisualPivot
 @onready var body_mesh: MeshInstance3D = $VisualPivot/BodyMesh
+@onready var held_weapon_root: Node3D = $VisualPivot/HeldWeapon
+@onready var sword_pivot: Node3D = $VisualPivot/HeldWeapon/SwordPivot
 @onready var camera_pivot: Node3D = $LookPivot/CameraPivot
 @onready var spring_arm: SpringArm3D = $LookPivot/CameraPivot/SpringArm3D
 @onready var camera: Camera3D = $LookPivot/CameraPivot/SpringArm3D/Camera3D
@@ -132,6 +147,7 @@ func _ready() -> void:
 	_update_label()
 	_sync_visual_orientation()
 	_initialize_attack_visual()
+	_initialize_held_weapon()
 	if _is_local_player():
 		build_preview_root.top_level = true
 		build_preview_root.visible = true
@@ -160,10 +176,12 @@ func _process(delta: float) -> void:
 
 	if _hit_flash_time_remaining <= 0.0:
 		_update_attack_visual(delta)
+		_update_held_weapon_visual()
 		return
 	_hit_flash_time_remaining = max(_hit_flash_time_remaining - delta, 0.0)
 	_update_body_visuals()
 	_update_attack_visual(delta)
+	_update_held_weapon_visual()
 
 
 func _physics_process(delta: float) -> void:
@@ -171,6 +189,8 @@ func _physics_process(delta: float) -> void:
 	var action_locked := _channel_locked or _ui_locked
 	if _is_local_player() and not _ui_locked:
 		_update_build_selection()
+		if _consume_weapon_switch_pressed():
+			_request_weapon_switch()
 
 	_attack_cooldown_remaining = max(_attack_cooldown_remaining - delta, 0.0)
 	_heavy_attack_cooldown_remaining = max(_heavy_attack_cooldown_remaining - delta, 0.0)
@@ -346,9 +366,33 @@ func _initialize_attack_visual() -> void:
 	_attack_visual_material = StandardMaterial3D.new()
 	_attack_visual_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_attack_visual_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_attack_visual_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_attack_visual_material.albedo_color = _attack_visual_fire_color
 	_attack_visual_mesh.material_override = _attack_visual_material
 	_attack_visual_root.add_child(_attack_visual_mesh)
+
+
+func _initialize_held_weapon() -> void:
+	if held_weapon_root == null or sword_pivot == null:
+		return
+	sword_pivot.rotation = _sword_rest_rotation
+	_update_held_weapon_visual()
+
+
+func _update_held_weapon_visual() -> void:
+	if held_weapon_root == null or sword_pivot == null:
+		return
+	held_weapon_root.visible = _weapon_mode == "melee"
+	if not held_weapon_root.visible:
+		return
+	var rotation := _sword_rest_rotation
+	if _attack_visual_mode == "melee" and _attack_visual_time_remaining > 0.0 and melee_visual_duration > 0.0:
+		var remaining_ratio: float = clamp(_attack_visual_time_remaining / melee_visual_duration, 0.0, 1.0)
+		var progress: float = 1.0 - remaining_ratio
+		var eased_progress: float = sin(progress * PI * 0.5)
+		rotation.y += lerp(deg_to_rad(68.0), deg_to_rad(-72.0), eased_progress)
+		rotation.z += lerp(deg_to_rad(-18.0), deg_to_rad(26.0), sin(progress * PI))
+	sword_pivot.rotation = rotation
 
 
 func _update_attack_visual(delta: float) -> void:
@@ -362,26 +406,78 @@ func _update_attack_visual(delta: float) -> void:
 		_attack_visual_root.visible = false
 		return
 	var ratio := 1.0
-	if attack_visual_duration > 0.0:
-		ratio = clamp(_attack_visual_time_remaining / attack_visual_duration, 0.0, 1.0)
+	var visual_duration := melee_visual_duration if _attack_visual_mode == "melee" else attack_visual_duration
+	if visual_duration > 0.0:
+		ratio = clamp(_attack_visual_time_remaining / visual_duration, 0.0, 1.0)
 	_attack_visual_root.visible = true
-	_attack_visual_root.scale = Vector3(0.9 + (1.0 - ratio) * 0.2, 0.9 + (1.0 - ratio) * 0.2, 0.55 + (1.0 - ratio) * 0.35)
-	_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
+	if _attack_visual_mode == "melee":
+		_attack_visual_root.scale = Vector3(1.0 + (1.0 - ratio) * 0.18, 1.0, 1.0 + (1.0 - ratio) * 0.12)
+		_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, 0.0)
+	else:
+		_attack_visual_root.scale = Vector3(0.9 + (1.0 - ratio) * 0.2, 0.9 + (1.0 - ratio) * 0.2, 0.55 + (1.0 - ratio) * 0.35)
+		_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
 	if _attack_visual_material != null:
-		var color := _attack_visual_fire_color
-		color.a = _attack_visual_fire_color.a * ratio
+		var base_color := _attack_visual_melee_color if _attack_visual_mode == "melee" else _attack_visual_fire_color
+		var color := base_color
+		color.a = base_color.a * ratio
 		_attack_visual_material.albedo_color = color
 
 
-func _start_attack_feedback() -> void:
+func _start_attack_feedback(visual_mode: String = "ranged") -> void:
 	if _attack_visual_root == null:
 		return
-	_attack_visual_time_remaining = attack_visual_duration
+	_attack_visual_mode = visual_mode
+	_attack_visual_time_remaining = melee_visual_duration if visual_mode == "melee" else attack_visual_duration
 	_attack_visual_root.visible = true
 	_attack_visual_root.scale = Vector3.ONE
-	_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
+	if visual_mode == "melee":
+		_attack_visual_mesh.mesh = _make_melee_arc_mesh()
+	elif not (_attack_visual_mesh.mesh is BoxMesh):
+		var ranged_mesh := BoxMesh.new()
+		ranged_mesh.size = Vector3(attack_visual_width, attack_visual_height, attack_visual_depth)
+		_attack_visual_mesh.mesh = ranged_mesh
+	elif _attack_visual_mesh.mesh is BoxMesh:
+		var box_mesh := _attack_visual_mesh.mesh as BoxMesh
+		box_mesh.size = Vector3(attack_visual_width, attack_visual_height, attack_visual_depth)
+	if visual_mode == "melee":
+		_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, 0.0)
+	else:
+		_attack_visual_mesh.position = Vector3(0.0, projectile_spawn_height, -(projectile_spawn_forward_offset + attack_visual_depth * 0.5))
 	if _attack_visual_material != null:
-		_attack_visual_material.albedo_color = _attack_visual_fire_color
+		_attack_visual_material.albedo_color = _attack_visual_melee_color if visual_mode == "melee" else _attack_visual_fire_color
+
+
+func _make_melee_arc_mesh() -> ArrayMesh:
+	var mesh := ArrayMesh.new()
+	var vertices := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var half_arc := deg_to_rad(clamp(melee_arc_degrees, 1.0, 170.0) * 0.5)
+	var segments := 12
+	var inner_radius = max(melee_range * 0.28, 0.45)
+	var outer_radius = max(melee_range, inner_radius + 0.2)
+	for index in range(segments + 1):
+		var ratio := float(index) / float(segments)
+		var angle := lerpf(-half_arc, half_arc, ratio)
+		var direction := Vector3(sin(angle), 0.0, -cos(angle))
+		vertices.append(direction * inner_radius)
+		vertices.append(direction * outer_radius)
+	for index in range(segments):
+		var inner_a := index * 2
+		var outer_a := inner_a + 1
+		var inner_b := inner_a + 2
+		var outer_b := inner_a + 3
+		indices.append(inner_a)
+		indices.append(outer_a)
+		indices.append(outer_b)
+		indices.append(inner_a)
+		indices.append(outer_b)
+		indices.append(inner_b)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_INDEX] = indices
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 func _update_remote_visual_state(delta: float) -> void:
@@ -489,6 +585,16 @@ func _consume_toggle_build_mode_pressed() -> bool:
 	return just_pressed
 
 
+func _consume_weapon_switch_pressed() -> bool:
+	if _build_mode_active:
+		_weapon_switch_was_pressed = false
+		return false
+	var is_pressed := Input.is_key_pressed(KEY_F)
+	var just_pressed := is_pressed and not _weapon_switch_was_pressed
+	_weapon_switch_was_pressed = is_pressed
+	return just_pressed
+
+
 func _is_local_player() -> bool:
 	return multiplayer.get_unique_id() == peer_id
 
@@ -503,6 +609,10 @@ func is_wall_segment_active() -> bool:
 
 func get_current_build_type() -> String:
 	return _current_build_type
+
+
+func get_weapon_mode() -> String:
+	return _weapon_mode
 
 
 func is_channel_locked() -> bool:
@@ -656,6 +766,22 @@ func _projectile_name(projectile_id: int) -> String:
 	return "PlayerProjectile_%d_%d" % [peer_id, projectile_id]
 
 
+func _request_weapon_switch() -> void:
+	if multiplayer.is_server():
+		_switch_weapon_mode()
+		return
+	_request_weapon_switch_rpc.rpc_id(1)
+
+
+func _switch_weapon_mode() -> void:
+	if not multiplayer.is_server():
+		return
+	_weapon_mode = "ranged" if _weapon_mode == "melee" else "melee"
+	_sync_weapon_mode.rpc(_weapon_mode)
+	_update_label()
+	_update_held_weapon_visual()
+
+
 func teleport_to_position(target_position: Vector3, facing_y: float = 0.0, refill_health: bool = true) -> void:
 	if not multiplayer.is_server():
 		return
@@ -706,7 +832,7 @@ func _request_server_jump() -> void:
 
 
 func _update_label() -> void:
-	label.text = "P%d HP:%d" % [peer_id, int(round(current_health))]
+	label.text = "P%d %s HP:%d" % [peer_id, _weapon_mode.capitalize(), int(round(current_health))]
 
 
 func _update_build_preview() -> void:
@@ -1079,6 +1205,9 @@ func _perform_server_attack() -> void:
 		return
 	if _attack_cooldown_remaining > 0.0:
 		return
+	if _weapon_mode == "melee":
+		_perform_server_melee_slash()
+		return
 	var combat_profile := _current_combat_profile()
 	var basic_attack: Dictionary = combat_profile.get("basic_attack", {})
 	_attack_cooldown_remaining = float(basic_attack.get("cooldown", attack_cooldown))
@@ -1096,6 +1225,9 @@ func _perform_server_heavy_attack() -> void:
 	if not multiplayer.is_server():
 		return
 	if _heavy_attack_cooldown_remaining > 0.0:
+		return
+	if _weapon_mode == "melee":
+		_perform_server_melee_slash(true)
 		return
 	var combat_profile := _current_combat_profile()
 	var heavy_attack: Dictionary = combat_profile.get("heavy_attack", {})
@@ -1117,14 +1249,80 @@ func _spawn_attack_projectile(runtime_damage: float, runtime_speed: float, runti
 	var direction := _attack_direction()
 	if direction.length_squared() <= 0.001:
 		return
-	_start_attack_feedback()
-	_play_attack_feedback.rpc()
+	_start_attack_feedback("ranged")
+	_play_attack_feedback.rpc("ranged")
 	var spawn_position := global_position + Vector3(0.0, projectile_spawn_height, 0.0) + direction * projectile_spawn_forward_offset
 	var projectile_id := _next_projectile_id
 	_next_projectile_id += 1
 	var lifetime := _projectile_lifetime(runtime_range, runtime_speed)
 	_spawn_projectile_local(projectile_id, spawn_position, direction, runtime_damage, runtime_speed, lifetime, runtime_hit_radius, aoe_radius, visual_scale, true)
 	_spawn_projectile_remote.rpc(projectile_id, spawn_position, direction, runtime_damage, runtime_speed, lifetime, runtime_hit_radius, aoe_radius, visual_scale)
+
+
+func _perform_server_melee_slash(is_heavy: bool = false) -> void:
+	var combat_profile := _current_combat_profile()
+	var damage_bonus := float(combat_profile.get("melee_damage_multiplier", 1.0))
+	var speed_bonus := float(combat_profile.get("melee_speed_multiplier", 1.0))
+	var range_bonus := float(combat_profile.get("melee_range_bonus", 0.0))
+	var cooldown := melee_cooldown
+	var damage_multiplier := 1.0
+	var range_multiplier := 1.0
+	if is_heavy:
+		cooldown = melee_cooldown * 1.9
+		damage_multiplier = 1.65
+		range_multiplier = 1.15
+		_heavy_attack_cooldown_remaining = max(cooldown / max(speed_bonus, 0.1), 0.22)
+		_attack_cooldown_remaining = max(melee_cooldown * 0.65 / max(speed_bonus, 0.1), 0.12)
+	else:
+		_attack_cooldown_remaining = max(cooldown / max(speed_bonus, 0.1), 0.12)
+	_start_attack_feedback("melee")
+	_play_attack_feedback.rpc("melee")
+	var slash_damage := melee_damage * damage_bonus * damage_multiplier
+	var slash_range := (melee_range + range_bonus) * range_multiplier
+	var knockback_strength := melee_knockback_strength * (1.35 if is_heavy else 1.0)
+	var stun_duration := melee_hit_stun_duration * (1.35 if is_heavy else 1.0)
+	var hit_count := 0
+	for enemy in _enemies_in_melee_arc(slash_range):
+		var knockback_direction := enemy.global_position - global_position
+		if knockback_direction.length_squared() <= 0.001:
+			knockback_direction = _attack_direction()
+		if enemy.has_method("apply_server_knockback"):
+			enemy.apply_server_knockback(knockback_direction, knockback_strength, stun_duration)
+		if enemy.has_method("apply_server_damage"):
+			enemy.apply_server_damage(slash_damage)
+			hit_count += 1
+	if hit_count > 0:
+		_start_hit_flash()
+		_play_hit_feedback.rpc()
+
+
+func _enemies_in_melee_arc(slash_range: float) -> Array[CharacterBody3D]:
+	var hits: Array[CharacterBody3D] = []
+	var forward := _attack_direction()
+	if forward.length_squared() <= 0.001:
+		return hits
+	var half_arc_cos := cos(deg_to_rad(clamp(melee_arc_degrees, 1.0, 359.0) * 0.5))
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if not node is CharacterBody3D:
+			continue
+		if node.has_method("is_alive") and not node.is_alive():
+			continue
+		var to_enemy: Vector3 = node.global_position - global_position
+		if absf(to_enemy.y) > melee_vertical_tolerance:
+			continue
+		var planar := Vector3(to_enemy.x, 0.0, to_enemy.z)
+		var enemy_radius := 0.4
+		if node.has_method("get_hit_radius"):
+			enemy_radius = float(node.get_hit_radius())
+		if planar.length() > slash_range + enemy_radius:
+			continue
+		if planar.length_squared() <= 0.001:
+			hits.append(node)
+			continue
+		if forward.dot(planar.normalized()) < half_arc_cos:
+			continue
+		hits.append(node)
+	return hits
 
 
 func _perform_server_wall_build() -> void:
@@ -1301,6 +1499,9 @@ func _current_combat_profile() -> Dictionary:
 		"basic_attack": basic_attack,
 		"heavy_attack": heavy_attack,
 		"aoe_radius": 0.0,
+		"melee_damage_multiplier": 1.0,
+		"melee_speed_multiplier": 1.0,
+		"melee_range_bonus": 0.0,
 	}
 	var runtime_era_manager := _era_manager()
 	if runtime_era_manager != null and runtime_era_manager.has_method("get_combat_data"):
@@ -1314,6 +1515,9 @@ func _current_combat_profile() -> Dictionary:
 	var damage_bonus := 1.0 + float(runtime_research_manager.get_stat_total("damage_multiplier"))
 	var speed_bonus := 1.0 + float(runtime_research_manager.get_stat_total("attack_speed_multiplier"))
 	var range_bonus := float(runtime_research_manager.get_stat_total("range_bonus"))
+	profile["melee_damage_multiplier"] = damage_bonus
+	profile["melee_speed_multiplier"] = speed_bonus
+	profile["melee_range_bonus"] = range_bonus * 0.35
 	profile["aoe_radius"] = float(profile.get("aoe_radius", 0.0)) + float(runtime_research_manager.get_stat_total("aoe_radius"))
 	var runtime_basic: Dictionary = profile.get("basic_attack", {}).duplicate(true)
 	runtime_basic["damage"] = float(runtime_basic.get("damage", attack_damage)) * damage_bonus
@@ -1455,6 +1659,15 @@ func _request_heavy_attack() -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
+func _request_weapon_switch_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_switch_weapon_mode()
+
+
+@rpc("any_peer", "call_remote", "reliable")
 func _request_jump() -> void:
 	if not multiplayer.is_server():
 		return
@@ -1559,10 +1772,19 @@ func _play_hit_feedback() -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _play_attack_feedback() -> void:
+func _play_attack_feedback(visual_mode: String = "ranged") -> void:
 	if multiplayer.is_server():
 		return
-	_start_attack_feedback()
+	_start_attack_feedback(visual_mode)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_weapon_mode(server_weapon_mode: String) -> void:
+	if multiplayer.is_server():
+		return
+	_weapon_mode = "ranged" if server_weapon_mode == "ranged" else "melee"
+	_update_label()
+	_update_held_weapon_visual()
 
 
 @rpc("authority", "call_remote", "reliable")

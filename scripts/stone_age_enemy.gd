@@ -34,6 +34,8 @@ func _physics_process(delta: float) -> void:
 	if _is_dying:
 		velocity = Vector3.ZERO
 		return
+	if _apply_knockback_motion(delta):
+		return
 
 	var objective = _current_objective()
 	if objective == null:
@@ -105,3 +107,8 @@ func _begin_charge(target: Node3D) -> void:
 		return
 	_charge_time_remaining = charge_duration
 	_charge_cooldown_remaining = charge_cooldown
+
+
+func _on_server_knockback_applied() -> void:
+	_charge_time_remaining = 0.0
+	_charge_direction = Vector3.ZERO

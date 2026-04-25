@@ -9,6 +9,7 @@ extends CharacterBody3D
 @export var hit_flash_duration: float = 0.12
 @export var death_feedback_duration: float = 0.25
 @export var structure_notice_range: float = 4.5
+@export var knockback_drag: float = 16.0
 
 var enemy_id: int = 0
 var spawn_position: Vector3 = Vector3.ZERO
@@ -18,6 +19,8 @@ var _hit_flash_time_remaining: float = 0.0
 var _death_time_remaining: float = 0.0
 var _is_dying: bool = false
 var _base_color: Color = Color(0.93, 0.34, 0.27)
+var _stun_time_remaining: float = 0.0
+var _knockback_velocity: Vector3 = Vector3.ZERO
 
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var label: Label3D = $Label3D
@@ -61,6 +64,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if _is_dying:
 		velocity = Vector3.ZERO
+		return
+	if _apply_knockback_motion(delta):
 		return
 
 	var objective = _current_objective()
@@ -139,6 +144,41 @@ func apply_server_damage(amount: float) -> void:
 
 	_start_hit_flash()
 	_play_hit_feedback.rpc()
+
+
+func apply_server_knockback(direction: Vector3, strength: float, stun_duration: float) -> void:
+	if not multiplayer.is_server():
+		return
+	if current_health <= 0.0 or _is_dying:
+		return
+	var planar := Vector3(direction.x, 0.0, direction.z)
+	if planar.length_squared() <= 0.001:
+		return
+	_knockback_velocity = planar.normalized() * max(strength, 0.0)
+	_stun_time_remaining = max(stun_duration, 0.0)
+	_on_server_knockback_applied()
+
+
+func _apply_knockback_motion(delta: float) -> bool:
+	if _stun_time_remaining <= 0.0 and _knockback_velocity.length_squared() <= 0.01:
+		return false
+	_stun_time_remaining = max(_stun_time_remaining - delta, 0.0)
+	velocity.x = _knockback_velocity.x
+	velocity.z = _knockback_velocity.z
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+	else:
+		velocity.y = 0.0
+	move_and_slide()
+	_knockback_velocity = _knockback_velocity.move_toward(Vector3.ZERO, knockback_drag * delta)
+	if _knockback_velocity.length_squared() <= 0.01:
+		_knockback_velocity = Vector3.ZERO
+	_sync_state.rpc(global_position, velocity, rotation.y)
+	return true
+
+
+func _on_server_knockback_applied() -> void:
+	pass
 
 
 func _current_objective() -> Node3D:

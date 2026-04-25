@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://b1ckrq2g87kbo"]
 
 [ext_resource type="Script" uid="uid://biep04qttudk3" path="res://scripts/player.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/weapons/stone_sword_placeholder.glb" id="2"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
 radius = 0.35
@@ -29,6 +30,13 @@ shape = SubResource("1")
 [node name="BodyMesh" type="MeshInstance3D" parent="VisualPivot" unique_id=609156692]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("2")
+
+[node name="HeldWeapon" type="Node3D" parent="VisualPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.48, 1.02, -0.12)
+
+[node name="SwordPivot" type="Node3D" parent="VisualPivot/HeldWeapon"]
+
+[node name="SwordModel" parent="VisualPivot/HeldWeapon/SwordPivot" instance=ExtResource("2")]
 
 [node name="CameraPivot" type="Node3D" parent="LookPivot" unique_id=736462767]
 transform = Transform3D(1, 0, 0, 0, 0.90630776, -0.42261827, 0, 0.42261827, 0.90630776, 0, 1.5, 0)
